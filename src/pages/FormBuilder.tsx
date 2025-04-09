@@ -122,10 +122,10 @@ const FormBuilder = () => {
         await updateForm(id, formData);
       } else {
         const newForm = await createForm(formData);
-        id = newForm.id;
+        // Fix the assignment to id which was a const
+        // Instead, navigate to the new form after creation
+        navigate(`/forms/${newForm.id}/edit`);
       }
-      
-      navigate(`/forms/${id}/edit`);
     } catch (error) {
       console.error("Error saving form:", error);
     } finally {
