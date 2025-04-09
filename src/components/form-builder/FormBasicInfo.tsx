@@ -25,24 +25,24 @@ const FormBasicInfo = ({ formData, onTitleChange, onDescriptionChange }: FormBas
     <Card className="p-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="title" className="text-lg font-medium">Form Title</Label>
+          <Label htmlFor="title" className="text-lg font-medium">Título del Formulario</Label>
           <Input
             id="title"
             value={formData.title}
             onChange={handleTitleChange}
-            placeholder="Enter form title"
+            placeholder="Introduce el título del formulario"
             required
             className="text-lg"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-lg font-medium">Description (Optional)</Label>
+          <Label htmlFor="description" className="text-lg font-medium">Descripción (Opcional)</Label>
           <Textarea
             id="description"
             value={formData.description || ""}
             onChange={handleDescriptionChange}
-            placeholder="Enter form description"
+            placeholder="Introduce la descripción del formulario"
             rows={3}
           />
         </div>

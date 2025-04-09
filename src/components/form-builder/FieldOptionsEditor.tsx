@@ -16,7 +16,7 @@ const FieldOptionsEditor = ({ options, onChange }: FieldOptionsEditorProps) => {
     const newOptionId = String(options ? options.length + 1 : 1);
     const newOption: FormFieldOption = {
       id: newOptionId,
-      label: `Option ${newOptionId}`,
+      label: `Opción ${newOptionId}`,
       value: `option_${newOptionId}`
     };
     
@@ -41,7 +41,7 @@ const FieldOptionsEditor = ({ options, onChange }: FieldOptionsEditorProps) => {
   return (
     <div className="space-y-3 pt-2">
       <div className="flex items-center justify-between">
-        <Label>Options</Label>
+        <Label>Opciones</Label>
         <Button 
           type="button" 
           variant="outline" 
@@ -49,7 +49,7 @@ const FieldOptionsEditor = ({ options, onChange }: FieldOptionsEditorProps) => {
           onClick={addOption} 
           className="h-8 px-2"
         >
-          <Plus className="h-4 w-4 mr-1" /> Add Option
+          <Plus className="h-4 w-4 mr-1" /> Añadir Opción
         </Button>
       </div>
       
@@ -63,7 +63,7 @@ const FieldOptionsEditor = ({ options, onChange }: FieldOptionsEditorProps) => {
                 label: e.target.value, 
                 value: e.target.value.toLowerCase().replace(/\s+/g, '_') 
               })}
-              placeholder={`Option ${index + 1}`}
+              placeholder={`Opción ${index + 1}`}
               className="flex-1"
             />
             <Button 

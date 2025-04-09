@@ -26,8 +26,8 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
     let updatedField = { ...field, type };
     if (needsOptions && (!field.options || field.options.length === 0)) {
       updatedField.options = [
-        { id: '1', label: 'Option 1', value: 'option_1' },
-        { id: '2', label: 'Option 2', value: 'option_2' }
+        { id: '1', label: 'Opción 1', value: 'option_1' },
+        { id: '2', label: 'Opción 2', value: 'option_2' }
       ];
     }
     
@@ -77,7 +77,7 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
       
       <CardFooter className="p-4 pt-0">
         <Button variant="outline" onClick={onDelete} className="ml-auto text-red-600 border-red-200 hover:bg-red-50">
-          <Trash className="h-4 w-4 mr-2" /> Remove Field
+          <Trash className="h-4 w-4 mr-2" /> Eliminar Campo
         </Button>
       </CardFooter>
     </Card>

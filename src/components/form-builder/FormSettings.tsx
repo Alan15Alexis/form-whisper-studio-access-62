@@ -19,9 +19,9 @@ const FormSettings = ({ isPrivate, onPrivateChange }: FormSettingsProps) => {
             onCheckedChange={onPrivateChange}
           />
           <div>
-            <Label htmlFor="private-form" className="text-lg font-medium">Private Form</Label>
+            <Label htmlFor="private-form" className="text-lg font-medium">Formulario Privado</Label>
             <p className="text-sm text-gray-500">
-              When enabled, only specified users can access this form
+              Cuando está habilitado, solo usuarios especificados pueden acceder a este formulario
             </p>
           </div>
         </div>

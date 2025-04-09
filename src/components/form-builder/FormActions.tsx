@@ -12,7 +12,7 @@ const FormActions = ({ isSaving, isEditMode }: FormActionsProps) => {
     <div className="mt-8 flex justify-end">
       <Button type="submit" disabled={isSaving} className="px-8">
         <Save className="mr-2 h-4 w-4" />
-        {isSaving ? "Saving..." : isEditMode ? "Update Form" : "Save Form"}
+        {isSaving ? "Guardando..." : isEditMode ? "Actualizar Formulario" : "Guardar Formulario"}
       </Button>
     </div>
   );

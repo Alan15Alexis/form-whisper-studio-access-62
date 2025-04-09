@@ -36,34 +36,34 @@ const FieldBasicProperties = ({
   return (
     <>
       <div className="flex-1 space-y-1.5">
-        <Label htmlFor={`field-${id}-label`}>Field Label</Label>
+        <Label htmlFor={`field-${id}-label`}>Etiqueta del Campo</Label>
         <Input
           id={`field-${id}-label`}
           value={label}
           onChange={(e) => onLabelChange(e.target.value)}
-          placeholder="Field Label"
+          placeholder="Etiqueta del Campo"
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor={`field-${id}-type`}>Field Type</Label>
+          <Label htmlFor={`field-${id}-type`}>Tipo de Campo</Label>
           <Select
             value={type}
             onValueChange={(value: FormFieldType) => onTypeChange(value)}
           >
             <SelectTrigger id={`field-${id}-type`}>
-              <SelectValue placeholder="Select a field type" />
+              <SelectValue placeholder="Selecciona un tipo de campo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="text">Text</SelectItem>
-              <SelectItem value="textarea">Text Area</SelectItem>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="number">Number</SelectItem>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="select">Dropdown</SelectItem>
-              <SelectItem value="checkbox">Checkboxes</SelectItem>
-              <SelectItem value="radio">Radio Buttons</SelectItem>
+              <SelectItem value="text">Texto</SelectItem>
+              <SelectItem value="textarea">Área de Texto</SelectItem>
+              <SelectItem value="email">Correo electrónico</SelectItem>
+              <SelectItem value="number">Número</SelectItem>
+              <SelectItem value="date">Fecha</SelectItem>
+              <SelectItem value="select">Desplegable</SelectItem>
+              <SelectItem value="checkbox">Casillas de verificación</SelectItem>
+              <SelectItem value="radio">Botones de radio</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -74,18 +74,18 @@ const FieldBasicProperties = ({
             id={`field-${id}-placeholder`}
             value={placeholder || ''}
             onChange={(e) => onPlaceholderChange(e.target.value)}
-            placeholder="Placeholder text"
+            placeholder="Texto de ayuda"
           />
         </div>
       </div>
       
       <div>
-        <Label htmlFor={`field-${id}-desc`}>Description (Optional)</Label>
+        <Label htmlFor={`field-${id}-desc`}>Descripción (Opcional)</Label>
         <Textarea
           id={`field-${id}-desc`}
           value={description || ''}
           onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="Enter a description to help users understand this field"
+          placeholder="Introduce una descripción para ayudar a los usuarios a entender este campo"
           className="resize-none"
           rows={2}
         />
@@ -97,7 +97,7 @@ const FieldBasicProperties = ({
           checked={required}
           onCheckedChange={onRequiredChange}
         />
-        <Label htmlFor={`field-${id}-required`}>Required Field</Label>
+        <Label htmlFor={`field-${id}-required`}>Campo Obligatorio</Label>
       </div>
     </>
   );

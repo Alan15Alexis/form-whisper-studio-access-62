@@ -23,16 +23,16 @@ const AccessControl = ({
     <Card className="p-6">
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-medium mb-2">Allowed Users</h3>
+          <h3 className="text-lg font-medium mb-2">Usuarios Permitidos</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Add email addresses of users who are allowed to access this form
+            Añade direcciones de correo electrónico de usuarios que pueden acceder a este formulario
           </p>
           
           <div className="flex space-x-2 mb-4">
             <Input
               value={allowedUserEmail}
               onChange={(e) => onAllowedUserEmailChange(e.target.value)}
-              placeholder="user@example.com"
+              placeholder="usuario@ejemplo.com"
               type="email"
               className="flex-1"
             />
@@ -41,7 +41,7 @@ const AccessControl = ({
               onClick={onAddAllowedUser}
               disabled={!allowedUserEmail.trim()}
             >
-              Add
+              Añadir
             </Button>
           </div>
           
@@ -60,14 +60,14 @@ const AccessControl = ({
                     onClick={() => onRemoveAllowedUser(email)}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
-                    Remove
+                    Eliminar
                   </Button>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-6 border rounded-lg border-dashed">
-              <p className="text-gray-500">No users added yet</p>
+              <p className="text-gray-500">No hay usuarios añadidos aún</p>
             </div>
           )}
         </div>
