@@ -1,26 +1,52 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { FormProvider } from "./contexts/FormContext";
+
+// Pages
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import FormBuilder from "./pages/FormBuilder";
+import FormView from "./pages/FormView";
+import FormResponses from "./pages/FormResponses";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
+import PrivateRoute from "./components/PrivateRoute";
+import PublicRoute from "./components/PublicRoute";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <FormProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/forms/new" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
+              <Route path="/forms/:id/edit" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
+              <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />
+              <Route path="/forms/:id" element={<FormView />} />
+              <Route path="/forms/:id/access/:token" element={<FormView />} />
+              <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </FormProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

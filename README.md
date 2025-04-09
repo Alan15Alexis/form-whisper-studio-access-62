@@ -1,73 +1,32 @@
-# Welcome to your Lovable project
+
+# FormWhisper Studio - Minimalist Form Builder
+
+A beautiful, minimalist form builder with controlled access capabilities.
+
+## Features
+
+- **Dynamic Form Builder:** Create custom forms with various field types
+- **Access Control:** Set private forms with user-specific access
+- **Stunning Design:** Clean interface with subtle animations
+- **Form Responses:** Track and manage all form submissions
+- **User Management:** Control who can access your forms
 
 ## Project info
 
 **URL**: https://lovable.dev/projects/0d64ca72-1948-4e00-9a60-ba8dbcd25229
 
-## How can I edit this code?
+## Login Credentials
 
-There are several ways of editing your application.
+For demo purposes, you can use:
+- Admin: admin@beed.studio / password123
+- User: user@example.com / password123
 
-**Use Lovable**
+## How to use
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/0d64ca72-1948-4e00-9a60-ba8dbcd25229) and start prompting.
+1. Create an account or login
+2. Create a new form by adding fields
+3. Toggle private access if needed
+4. Share your form with the generated link
+5. View responses in the dashboard
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/0d64ca72-1948-4e00-9a60-ba8dbcd25229) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Enjoy creating beautiful forms with FormWhisper!
