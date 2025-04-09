@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FormField, FormFieldType } from "@/types/form";
+import { FormField, FormFieldType, FormFieldOption } from "@/types/form";
 import { Trash, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FieldBasicProperties from "./form-builder/FieldBasicProperties";
@@ -34,7 +34,7 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
     onChange(updatedField);
   };
 
-  const handleOptionsChange = (options: FormFieldType[]) => {
+  const handleOptionsChange = (options: FormFieldOption[]) => {
     onChange({
       ...field,
       options
