@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -13,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { FormField } from "@/types/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Mail, LockKeyhole } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -30,6 +29,7 @@ const FormView = () => {
   const [submitting, setSubmitting] = useState(false);
   const [accessGranted, setAccessGranted] = useState(false);
   const [accessEmail, setAccessEmail] = useState("");
+  const [validatingAccess, setValidatingAccess] = useState(false);
   
   useEffect(() => {
     if (!id) {
@@ -94,7 +94,7 @@ const FormView = () => {
     if (missingFields.length > 0) {
       toast({
         title: "Error",
-        description: `Please fill in all required fields: ${missingFields.map((f: FormField) => f.label).join(", ")}`,
+        description: `Por favor, complete todos los campos obligatorios: ${missingFields.map((f: FormField) => f.label).join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -105,8 +105,8 @@ const FormView = () => {
     try {
       await submitFormResponse(id!, formValues);
       toast({
-        title: "Success",
-        description: "Your response has been submitted",
+        title: "Éxito",
+        description: "Tu respuesta ha sido enviada",
       });
       
       // Reset form
@@ -119,7 +119,7 @@ const FormView = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to submit form response",
+        description: "Ha ocurrido un error al enviar la respuesta del formulario",
         variant: "destructive",
       });
     } finally {
@@ -127,30 +127,45 @@ const FormView = () => {
     }
   };
 
-  const handleAccessRequest = () => {
+  const handleAccessRequest = async () => {
     if (!accessEmail.trim()) {
       toast({
         title: "Error",
-        description: "Please enter your email address",
+        description: "Por favor, introduce tu correo electrónico",
         variant: "destructive",
       });
       return;
     }
+
+    setValidatingAccess(true);
     
-    const hasAccess = isUserAllowed(id!, accessEmail);
-    
-    if (hasAccess) {
-      setAccessGranted(true);
+    try {
+      // Simulate a server delay for validation
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const hasAccess = isUserAllowed(id!, accessEmail);
+      setAccessGranted(hasAccess);
+      
+      if (hasAccess) {
+        toast({
+          title: "Acceso Concedido",
+          description: "Tu correo electrónico ha sido verificado. Tienes acceso a este formulario.",
+        });
+      } else {
+        toast({
+          title: "Acceso Denegado",
+          description: "Tu correo electrónico no está en la lista de usuarios permitidos para este formulario.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Access Granted",
-        description: "You now have access to this form",
+        title: "Error",
+        description: "Ha ocurrido un error al verificar tu acceso.",
+        variant: "destructive", 
       });
-    } else {
-      toast({
-        title: "Access Denied",
-        description: "You do not have permission to access this form",
-        variant: "destructive",
-      });
+    } finally {
+      setValidatingAccess(false);
     }
   };
 
@@ -186,50 +201,63 @@ const FormView = () => {
     );
   }
 
-  if (!accessGranted && form.isPrivate) {
+  if (!accessGranted && form?.isPrivate) {
     return (
       <Layout hideNav>
         <div className="flex justify-center items-center min-h-[60vh]">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <ShieldAlert className="mr-2 h-5 w-5 text-amber-500" />
-                Private Form
+          <Card className="w-full max-w-md shadow-md border border-gray-100">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-xl">
+                <LockKeyhole className="mr-2 h-5 w-5 text-amber-500" />
+                Formulario Privado
               </CardTitle>
-              <CardDescription>
-                This form requires permission to access
+              <CardDescription className="text-base">
+                Este formulario requiere verificación de acceso
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <Alert>
-                  <AlertDescription>
-                    {isAuthenticated 
-                      ? "Your current account doesn't have access to this form."
-                      : "Please enter your email to verify your access or sign in."}
+              <div className="space-y-5">
+                <Alert className="bg-amber-50 border-amber-200">
+                  <ShieldAlert className="h-4 w-4 text-amber-500" />
+                  <AlertTitle className="text-amber-700 font-medium">Verificación requerida</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    Este formulario está restringido a usuarios autorizados. Por favor, introduce tu correo electrónico para verificar si tienes acceso.
                   </AlertDescription>
                 </Alert>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="access-email">Your Email</Label>
-                  <Input
-                    id="access-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={accessEmail}
-                    onChange={(e) => setAccessEmail(e.target.value)}
-                  />
+                <div className="space-y-3">
+                  <Label htmlFor="access-email" className="text-gray-700">Tu Correo Electrónico</Label>
+                  <div className="flex items-center space-x-2">
+                    <div className="relative flex-1">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="access-email"
+                        type="email"
+                        placeholder="usuario@ejemplo.com"
+                        value={accessEmail}
+                        onChange={(e) => setAccessEmail(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAccessRequest} 
+                      disabled={validatingAccess || !accessEmail.trim()}
+                      className="btn-primary"
+                    >
+                      {validatingAccess ? "Verificando..." : "Verificar Acceso"}
+                    </Button>
+                  </div>
+                  {!isAuthenticated && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      ¿Ya tienes una cuenta? <a href="/login" className="text-[#686df3] hover:underline">Iniciar sesión</a>
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              {!isAuthenticated && (
-                <Button variant="outline" asChild>
-                  <a href="/login">Sign In</a>
-                </Button>
-              )}
-              <Button onClick={handleAccessRequest} className="ml-auto">
-                Check Access
+            <CardFooter className="flex justify-between pt-2 border-t border-gray-100">
+              <Button variant="outline" onClick={() => navigate('/')} className="btn-minimal btn-outline">
+                Volver al inicio
               </Button>
             </CardFooter>
           </Card>
