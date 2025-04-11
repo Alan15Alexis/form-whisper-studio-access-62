@@ -16,7 +16,12 @@ const FormFieldsList = ({ formData, addField, updateField, removeField }: FormFi
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Campos del Formulario</h3>
-        <Button type="button" onClick={addField} variant="outline">
+        <Button 
+          type="button" 
+          onClick={addField} 
+          variant="outline" 
+          className="btn-minimal btn-outline"
+        >
           <Plus className="mr-2 h-4 w-4" /> Añadir Campo
         </Button>
       </div>
@@ -34,7 +39,12 @@ const FormFieldsList = ({ formData, addField, updateField, removeField }: FormFi
         ) : (
           <div className="text-center py-8 border rounded-lg border-dashed">
             <p className="text-gray-500 mb-4">No se han añadido campos aún</p>
-            <Button type="button" onClick={addField} variant="outline">
+            <Button 
+              type="button" 
+              onClick={addField} 
+              variant="outline" 
+              className="btn-minimal btn-outline"
+            >
               <Plus className="mr-2 h-4 w-4" /> Añadir Tu Primer Campo
             </Button>
           </div>

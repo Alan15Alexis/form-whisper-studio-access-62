@@ -60,45 +60,44 @@ const FormCard = ({ form }: FormCardProps) => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-3 grid grid-cols-2 gap-2">
-        <div className="flex gap-2">
-          <Button 
-            asChild 
-            variant="ghost" 
-            className="btn-minimal flex-1 h-9 hover:bg-gray-50 hover:text-[#686df3]"
-          >
-            <Link to={`/forms/${form.id}`}>
-              <Eye className="h-4 w-4" />
-              <span className="ml-1">Ver</span>
-            </Link>
-          </Button>
-          <Button 
-            asChild 
-            variant="ghost" 
-            className="btn-minimal flex-1 h-9 hover:bg-gray-50 hover:text-[#686df3]"
-          >
-            <Link to={`/forms/${form.id}/edit`}>
-              <Edit className="h-4 w-4" />
-              <span className="ml-1">Editar</span>
-            </Link>
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            asChild 
-            variant="ghost" 
-            className="btn-minimal flex-1 h-9 hover:bg-gray-50 hover:text-[#686df3]"
-          >
-            <Link to={`/forms/${form.id}/responses`}>
-              <BarChart className="h-4 w-4" />
-              <span className="ml-1">Respuestas</span>
-            </Link>
-          </Button>
+      <CardFooter className="pt-3 grid grid-cols-3 gap-2">
+        <Button 
+          asChild 
+          variant="ghost" 
+          className="btn-minimal btn-outline w-full h-9"
+        >
+          <Link to={`/forms/${form.id}`}>
+            <Eye className="h-4 w-4" />
+            <span className="ml-1">Ver</span>
+          </Link>
+        </Button>
+        <Button 
+          asChild 
+          variant="ghost" 
+          className="btn-minimal btn-outline w-full h-9"
+        >
+          <Link to={`/forms/${form.id}/edit`}>
+            <Edit className="h-4 w-4" />
+            <span className="ml-1">Editar</span>
+          </Link>
+        </Button>
+        <Button 
+          asChild 
+          variant="ghost" 
+          className="btn-minimal btn-outline w-full h-9"
+        >
+          <Link to={`/forms/${form.id}/responses`}>
+            <BarChart className="h-4 w-4" />
+            <span className="ml-1">Respuestas</span>
+          </Link>
+        </Button>
+        
+        <div className="col-span-3 mt-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button 
                 variant="ghost" 
-                className="btn-minimal flex-1 h-9 hover:bg-red-50 hover:text-red-600"
+                className="btn-minimal w-full h-9 hover:bg-red-50 hover:text-red-600 border border-gray-200"
               >
                 <Trash className="h-4 w-4" />
                 <span className="ml-1">Eliminar</span>
