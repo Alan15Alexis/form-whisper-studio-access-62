@@ -12,14 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { FormField } from "@/types/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, ShieldAlert, Mail, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Mail, LockKeyhole, Share2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ShareFormDialog from "@/components/ShareFormDialog";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
   const navigate = useNavigate();
-  const { getForm, submitFormResponse, isUserAllowed, validateAccessToken } = useForm();
+  const { getForm, submitFormResponse, isUserAllowed, validateAccessToken, generateAccessLink } = useForm();
   const { currentUser, isAuthenticated } = useAuth();
   
   const [form, setForm] = useState<any>(null);
@@ -30,6 +31,8 @@ const FormView = () => {
   const [accessGranted, setAccessGranted] = useState(false);
   const [accessEmail, setAccessEmail] = useState("");
   const [validatingAccess, setValidatingAccess] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
   
   useEffect(() => {
     if (!id) {
@@ -46,6 +49,10 @@ const FormView = () => {
     }
 
     setForm(formData);
+    
+    // Generate share URL with access token
+    const formShareUrl = generateAccessLink(id);
+    setShareUrl(formShareUrl);
     
     // Check if user has access to the form
     let hasAccess = false;
@@ -72,7 +79,7 @@ const FormView = () => {
     
     setAccessGranted(hasAccess);
     setLoading(false);
-  }, [id, token, getForm, isAuthenticated, currentUser, isUserAllowed, validateAccessToken]);
+  }, [id, token, getForm, isAuthenticated, currentUser, isUserAllowed, validateAccessToken, generateAccessLink]);
 
   const handleInputChange = (fieldId: string, value: any) => {
     setFormValues({
@@ -269,22 +276,35 @@ const FormView = () => {
   return (
     <Layout hideNav>
       <div className="container max-w-3xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+        <div className="flex justify-between items-center mb-6">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          
+          {form && (
+            <Button 
+              variant="outline" 
+              className="text-[#686df3] border-[#686df3] hover:bg-[#686df3]/10"
+              onClick={() => setShareDialogOpen(true)}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartir
+            </Button>
+          )}
+        </div>
         
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-2xl">{form.title}</CardTitle>
-            {form.description && (
+            <CardTitle className="text-2xl">{form?.title}</CardTitle>
+            {form?.description && (
               <CardDescription className="text-base mt-2">{form.description}</CardDescription>
             )}
           </CardHeader>
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
-              {form.fields.map((field: FormField) => (
+              {form?.fields.map((field: FormField) => (
                 <div key={field.id} className="space-y-2 form-field">
                   <Label htmlFor={field.id} className="font-medium">
                     {field.label}
@@ -433,6 +453,15 @@ const FormView = () => {
           </form>
         </Card>
       </div>
+      
+      {form && (
+        <ShareFormDialog 
+          open={shareDialogOpen} 
+          onOpenChange={setShareDialogOpen} 
+          shareUrl={shareUrl}
+          formTitle={form.title} 
+        />
+      )}
     </Layout>
   );
 };

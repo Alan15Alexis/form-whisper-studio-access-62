@@ -2,7 +2,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Mail, X } from "lucide-react";
+import { UserPlus, Mail, X, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AccessControlProps {
   allowedUsers: string[];
@@ -23,7 +24,24 @@ const AccessControl = ({
     <Card className="p-6">
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-medium mb-2">Control de Acceso</h3>
+          <div className="flex items-center mb-2">
+            <h3 className="text-lg font-medium">Control de Acceso</h3>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" className="p-0 ml-2 h-auto">
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>
+                    Los usuarios añadidos aquí podrán acceder al formulario privado. 
+                    Cuando compartas el formulario, se les pedirá verificar su correo electrónico.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-sm text-gray-500 mb-4">
             Añade direcciones de correo electrónico de usuarios que pueden acceder a este formulario privado
           </p>
@@ -43,7 +61,7 @@ const AccessControl = ({
               type="button" 
               onClick={onAddAllowedUser}
               disabled={!allowedUserEmail.trim()}
-              className="btn-primary px-4"
+              className="px-4"
             >
               <UserPlus className="mr-2 h-4 w-4" />
               Añadir
