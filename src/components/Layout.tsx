@@ -41,7 +41,7 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
               <div className="flex items-center">
                 <a href="https://beed.studio" target="_blank" rel="noopener noreferrer">
                   <img 
-                    src="https://cdn.gpteng.co/c/20c4a0a0-46f4-43f7-aa03-a7d01ada6911-beed-studio-logo.png" 
+                    src="/lovable-uploads/90fe245b-54ef-4362-85ea-387a90015ebb.png" 
                     alt="beedStudio" 
                     className="h-8" 
                     width="192" 

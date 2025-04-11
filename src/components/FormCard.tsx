@@ -25,7 +25,7 @@ const FormCard = ({ form }: FormCardProps) => {
   };
 
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
@@ -46,7 +46,7 @@ const FormCard = ({ form }: FormCardProps) => {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="text-sm">
+      <CardContent className="text-sm flex-grow">
         {form.description && (
           <p className="text-gray-600 mb-3">{form.description}</p>
         )}
@@ -60,50 +60,65 @@ const FormCard = ({ form }: FormCardProps) => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between gap-2 pt-3">
-        <div className="flex gap-2 w-full">
-          <Button asChild variant="outline" className="flex-1">
+      <CardFooter className="pt-3 grid grid-cols-2 gap-2">
+        <div className="flex gap-2">
+          <Button 
+            asChild 
+            variant="ghost" 
+            className="btn-minimal flex-1 h-9 hover:bg-gray-50 hover:text-[#686df3]"
+          >
             <Link to={`/forms/${form.id}`}>
-              <Eye className="mr-1 h-4 w-4" />
-              <span className="hidden sm:inline">View</span>
+              <Eye className="h-4 w-4" />
+              <span className="ml-1">Ver</span>
             </Link>
           </Button>
-          <Button asChild variant="outline" className="flex-1">
+          <Button 
+            asChild 
+            variant="ghost" 
+            className="btn-minimal flex-1 h-9 hover:bg-gray-50 hover:text-[#686df3]"
+          >
             <Link to={`/forms/${form.id}/edit`}>
-              <Edit className="mr-1 h-4 w-4" />
-              <span className="hidden sm:inline">Edit</span>
+              <Edit className="h-4 w-4" />
+              <span className="ml-1">Editar</span>
             </Link>
           </Button>
         </div>
-        <div className="flex gap-2 w-full">
-          <Button asChild variant="outline" className="flex-1">
+        <div className="flex gap-2">
+          <Button 
+            asChild 
+            variant="ghost" 
+            className="btn-minimal flex-1 h-9 hover:bg-gray-50 hover:text-[#686df3]"
+          >
             <Link to={`/forms/${form.id}/responses`}>
-              <BarChart className="mr-1 h-4 w-4" />
-              <span className="hidden sm:inline">Responses</span>
+              <BarChart className="h-4 w-4" />
+              <span className="ml-1">Respuestas</span>
             </Link>
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" className="flex-1 border-red-200 hover:bg-red-50 hover:text-red-600">
-                <Trash className="mr-1 h-4 w-4" />
-                <span className="hidden sm:inline">Delete</span>
+              <Button 
+                variant="ghost" 
+                className="btn-minimal flex-1 h-9 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash className="h-4 w-4" />
+                <span className="ml-1">Eliminar</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the form and all associated data.
+                  Esta acción no se puede deshacer. Eliminará permanentemente el formulario y todos los datos asociados.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={handleDelete} 
                   className="bg-red-600 hover:bg-red-700"
                   disabled={isDeleting}
                 >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? 'Eliminando...' : 'Eliminar'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

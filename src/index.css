@@ -91,7 +91,7 @@
 
   /* Botones con estilo minimalista */
   .btn-minimal {
-    @apply px-4 py-2 rounded-md shadow-sm transition-all duration-200 text-sm font-medium;
+    @apply px-3 py-1.5 rounded-md transition-all duration-200 text-sm font-medium flex items-center justify-center gap-1;
   }
 
   .btn-primary {
