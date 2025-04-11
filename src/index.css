@@ -1,4 +1,5 @@
 
+@import 'bootstrap/dist/css/bootstrap.min.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221 83% 53%;
+    --primary: 239 88% 68%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -31,7 +32,7 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --ring: 239 88% 68%;
 
     --radius: 0.5rem;
   }
@@ -46,7 +47,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 239 88% 68%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -63,7 +64,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 239 88% 68%;
   }
 }
 
@@ -85,6 +86,19 @@
   }
   
   .form-input {
-    @apply w-full p-3 rounded-md border border-border focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300;
+    @apply w-full p-3 rounded-md border border-border focus:ring-2 focus:ring-[#686df3] focus:border-[#686df3] transition-all duration-300;
+  }
+
+  /* Botones con estilo minimalista */
+  .btn-minimal {
+    @apply px-4 py-2 rounded-md shadow-sm transition-all duration-200 text-sm font-medium;
+  }
+
+  .btn-primary {
+    @apply bg-[#686df3] text-white hover:bg-[#686df3]/90;
+  }
+
+  .btn-outline {
+    @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-[#686df3]/50 hover:text-[#686df3];
   }
 }

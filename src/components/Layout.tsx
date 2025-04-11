@@ -39,10 +39,15 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
           <header className="border-b shadow-sm bg-white">
             <div className="container mx-auto px-4 py-3 flex justify-between items-center">
               <div className="flex items-center">
-                <Link to="/" className="text-xl font-bold text-primary flex items-center">
-                  <FileText className="mr-2" />
-                  FormWhisper
-                </Link>
+                <a href="https://beed.studio" target="_blank" rel="noopener noreferrer">
+                  <img 
+                    src="https://cdn.gpteng.co/c/20c4a0a0-46f4-43f7-aa03-a7d01ada6911-beed-studio-logo.png" 
+                    alt="beedStudio" 
+                    className="h-8" 
+                    width="192" 
+                    height="32"
+                  />
+                </a>
               </div>
               
               <div className="hidden md:flex items-center space-x-6">
@@ -58,8 +63,8 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
                       to={link.to}
                       className={`flex items-center px-3 py-2 rounded-md transition-colors ${
                         isActive(link.to) 
-                          ? 'text-primary font-medium bg-primary/5' 
-                          : 'text-gray-600 hover:text-primary hover:bg-gray-50'
+                          ? 'text-[#686df3] font-medium bg-[#686df3]/5' 
+                          : 'text-gray-600 hover:text-[#686df3] hover:bg-gray-50'
                       }`}
                     >
                       {link.icon}
@@ -87,7 +92,7 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
 
               {/* Mobile menu button */}
               <button 
-                className="md:hidden p-2 rounded-md text-gray-600 hover:text-primary hover:bg-gray-100"
+                className="md:hidden p-2 rounded-md text-gray-600 hover:text-[#686df3] hover:bg-gray-100"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 {menuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -111,8 +116,8 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
                       to={link.to}
                       className={`flex items-center px-3 py-2 rounded-md transition-colors ${
                         isActive(link.to) 
-                          ? 'text-primary font-medium bg-primary/5' 
-                          : 'text-gray-600 hover:text-primary hover:bg-gray-50'
+                          ? 'text-[#686df3] font-medium bg-[#686df3]/5' 
+                          : 'text-gray-600 hover:text-[#686df3] hover:bg-gray-50'
                       }`}
                       onClick={() => setMenuOpen(false)}
                     >
@@ -154,7 +159,7 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
       
       <footer className="bg-white border-t py-6">
         <div className="container mx-auto px-4 text-center text-gray-500">
-          <p>© {new Date().getFullYear()} FormWhisper Studio · <a href="https://beed.studio" className="text-primary hover:underline">beed.studio</a></p>
+          <p>© 2025. All rights reserved. | Proudly ⭐️ Powered by <a href="https://beed.studio" className="text-[#686df3] hover:underline">beedStudio</a></p>
         </div>
       </footer>
     </div>

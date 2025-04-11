@@ -10,7 +10,7 @@ interface FormActionsProps {
 const FormActions = ({ isSaving, isEditMode }: FormActionsProps) => {
   return (
     <div className="mt-8 flex justify-end">
-      <Button type="submit" disabled={isSaving} className="px-8">
+      <Button type="submit" disabled={isSaving} className="px-8 py-2 rounded-md">
         <Save className="mr-2 h-4 w-4" />
         {isSaving ? "Guardando..." : isEditMode ? "Actualizar Formulario" : "Guardar Formulario"}
       </Button>
