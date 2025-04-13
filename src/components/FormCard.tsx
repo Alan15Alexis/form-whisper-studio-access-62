@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,39 +68,39 @@ const FormCard = ({ form }: FormCardProps) => {
           asChild 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          title="Ver formulario"
         >
           <Link to={`/forms/${form.id}`}>
             <Eye className="h-4 w-4" />
-            <span className="ml-1">Ver</span>
           </Link>
         </Button>
         <Button 
           asChild 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          title="Editar formulario"
         >
           <Link to={`/forms/${form.id}/edit`}>
             <Edit className="h-4 w-4" />
-            <span className="ml-1">Editar</span>
           </Link>
         </Button>
         <Button 
           asChild 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          title="Ver respuestas"
         >
           <Link to={`/forms/${form.id}/responses`}>
             <BarChart className="h-4 w-4" />
-            <span className="ml-1">Respuestas</span>
           </Link>
         </Button>
         <Button 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
           onClick={() => setShareDialogOpen(true)}
+          title="Compartir formulario"
         >
           <Share2 className="h-4 w-4" />
-          <span className="ml-1">Compartir</span>
         </Button>
         
         <div className="col-span-4 mt-2">
@@ -110,9 +109,9 @@ const FormCard = ({ form }: FormCardProps) => {
               <Button 
                 variant="ghost" 
                 className="btn-minimal w-full h-9 hover:bg-red-50 hover:text-red-600 border border-gray-200"
+                title="Eliminar formulario"
               >
                 <Trash className="h-4 w-4" />
-                <span className="ml-1">Eliminar</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -137,7 +136,6 @@ const FormCard = ({ form }: FormCardProps) => {
         </div>
       </CardFooter>
 
-      {/* Share Dialog */}
       <ShareFormDialog
         open={shareDialogOpen}
         onOpenChange={setShareDialogOpen}
