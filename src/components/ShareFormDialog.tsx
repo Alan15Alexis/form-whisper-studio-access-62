@@ -23,8 +23,26 @@ const ShareFormDialog = ({ open, onOpenChange, shareUrl, formTitle }: ShareFormD
 
   const handleCopy = async () => {
     try {
-      // Still copy the full URL with access token, but display a simplified version
-      await navigator.clipboard.writeText(shareUrl);
+      // Use the navigator.clipboard API with proper error handling
+      if (!navigator.clipboard) {
+        // Fallback for browsers that don't support clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.style.position = 'fixed';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (!successful) {
+          throw new Error('Fallback copy method failed');
+        }
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+      
       setCopied(true);
       toast({
         title: 'Enlace copiado',
@@ -33,6 +51,7 @@ const ShareFormDialog = ({ open, onOpenChange, shareUrl, formTitle }: ShareFormD
       
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
+      console.error('Copy failed:', err);
       toast({
         title: 'Error',
         description: 'No se pudo copiar el enlace al portapapeles',
