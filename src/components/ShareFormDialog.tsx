@@ -17,9 +17,13 @@ interface ShareFormDialogProps {
 
 const ShareFormDialog = ({ open, onOpenChange, shareUrl, formTitle }: ShareFormDialogProps) => {
   const [copied, setCopied] = useState(false);
+  
+  // This will extract just the base form URL without the access token
+  const displayUrl = shareUrl.split('/access/')[0];
 
   const handleCopy = async () => {
     try {
+      // Still copy the full URL with access token, but display a simplified version
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       toast({
@@ -62,7 +66,7 @@ const ShareFormDialog = ({ open, onOpenChange, shareUrl, formTitle }: ShareFormD
           <TabsContent value="link" className="mt-4">
             <div className="flex items-center space-x-2">
               <Input
-                value={shareUrl}
+                value={displayUrl}
                 readOnly
                 className="flex-1"
               />
