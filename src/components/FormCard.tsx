@@ -4,25 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link } from "react-router-dom";
-import { Edit, Eye, Trash, Lock, Unlock, BarChart } from "lucide-react";
+import { Edit, Eye, Trash, Lock, Unlock, BarChart, Share2 } from "lucide-react";
 import { useForm } from "@/contexts/FormContext";
 import { useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
+import ShareFormDialog from "./ShareFormDialog";
 
 interface FormCardProps {
   form: Form;
 }
 
 const FormCard = ({ form }: FormCardProps) => {
-  const { deleteForm } = useForm();
+  const { deleteForm, generateAccessLink } = useForm();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     await deleteForm(form.id);
     setIsDeleting(false);
   };
+
+  const shareUrl = generateAccessLink(form.id);
 
   return (
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full">
@@ -60,7 +64,7 @@ const FormCard = ({ form }: FormCardProps) => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-3 grid grid-cols-3 gap-2">
+      <CardFooter className="pt-3 grid grid-cols-4 gap-2">
         <Button 
           asChild 
           variant="ghost" 
@@ -91,8 +95,16 @@ const FormCard = ({ form }: FormCardProps) => {
             <span className="ml-1">Respuestas</span>
           </Link>
         </Button>
+        <Button 
+          variant="ghost" 
+          className="btn-minimal btn-outline w-full h-9"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="h-4 w-4" />
+          <span className="ml-1">Compartir</span>
+        </Button>
         
-        <div className="col-span-3 mt-2">
+        <div className="col-span-4 mt-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button 
@@ -124,6 +136,14 @@ const FormCard = ({ form }: FormCardProps) => {
           </AlertDialog>
         </div>
       </CardFooter>
+
+      {/* Share Dialog */}
+      <ShareFormDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        shareUrl={shareUrl}
+        formTitle={form.title}
+      />
     </Card>
   );
 };
