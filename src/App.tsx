@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import AssignedForms from "./pages/AssignedForms";
 import FormBuilder from "./pages/FormBuilder";
 import FormView from "./pages/FormView";
 import FormResponses from "./pages/FormResponses";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
               <Route path="/forms/new" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/edit" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />

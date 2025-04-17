@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, FileText, LayoutDashboard, Users, LogOut, Menu, X } from 'lucide-react';
+import { Home, FileText, LayoutDashboard, Users, LogOut, Menu, X, ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 
 interface LayoutProps {
@@ -12,7 +12,7 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
-  const { isAuthenticated, logout, isAdmin } = useAuth();
+  const { isAuthenticated, logout, isAdmin, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,9 +24,10 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
 
   const navLinks = [
     { to: '/', label: 'Home', icon: <Home className="mr-2 h-4 w-4" /> },
-    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="mr-2 h-4 w-4" />, authRequired: true },
-    { to: '/forms/new', label: 'New Form', icon: <FileText className="mr-2 h-4 w-4" />, authRequired: true },
-    { to: '/users', label: 'Users', icon: <Users className="mr-2 h-4 w-4" />, adminRequired: true },
+    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: false },
+    { to: '/assigned-forms', label: 'My Forms', icon: <ClipboardList className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: false, userOnly: true },
+    { to: '/forms/new', label: 'New Form', icon: <FileText className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: true },
+    { to: '/users', label: 'Users', icon: <Users className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: true },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -52,10 +53,10 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
               
               <div className="hidden md:flex items-center space-x-6">
                 {navLinks.map((link) => {
-                  // Skip links that require authentication if the user is not authenticated
-                  if ((link.authRequired && !isAuthenticated) || (link.adminRequired && !isAdmin)) {
-                    return null;
-                  }
+                  // Skip links based on authentication and role
+                  if (link.authRequired && !isAuthenticated) return null;
+                  if (link.adminOnly && !isAdmin) return null;
+                  if (link.userOnly && isAdmin) return null;
 
                   return (
                     <Link 
@@ -105,10 +106,10 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
             <div className="md:hidden bg-white border-b shadow-md animate-fadeIn">
               <div className="container mx-auto px-4 py-3 flex flex-col space-y-2">
                 {navLinks.map((link) => {
-                  // Skip links that require authentication if the user is not authenticated
-                  if ((link.authRequired && !isAuthenticated) || (link.adminRequired && !isAdmin)) {
-                    return null;
-                  }
+                  // Skip links based on authentication and role
+                  if (link.authRequired && !isAuthenticated) return null;
+                  if (link.adminOnly && !isAdmin) return null;
+                  if (link.userOnly && isAdmin) return null;
 
                   return (
                     <Link 
