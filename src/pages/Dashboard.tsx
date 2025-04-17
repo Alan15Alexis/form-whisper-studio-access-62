@@ -26,7 +26,7 @@ const Dashboard = () => {
     <Layout title="Your Forms">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-medium">
-          Welcome, {currentUser?.name || currentUser?.email}
+          Bienvenido, {currentUser?.name || currentUser?.email}
         </h2>
         <Button asChild>
           <Link to="/forms/new">
