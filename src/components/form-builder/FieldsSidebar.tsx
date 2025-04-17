@@ -1,35 +1,20 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { 
-  Type, 
-  AlignLeft, 
-  Radio, 
-  CheckSquare, 
-  Check, 
-  X, 
   ChevronDown,
-  Image,
-  Hash,
-  User,
-  Mail,
-  MapPin,
-  Phone,
-  Upload,
-  FileUp,
-  PenTool,
-  Grid3X3,
-  Star,
-  BarChart,
-  Timer,
-  Calendar,
-  Clock,
-  FileText,
-  Edit3
+  ChevronRight
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Droppable, Draggable } from "react-beautiful-dnd";
 import { FieldCategory } from "@/types/form";
 import { cn } from "@/lib/utils";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { renderIcon } from "@/lib/utils";
 
 const fieldCategories: FieldCategory[] = [
   {
@@ -95,38 +80,15 @@ const fieldCategories: FieldCategory[] = [
 ];
 
 const FieldsSidebar = () => {
-  // Function to render the icon based on its name
-  const renderIcon = (iconName: string) => {
-    const iconSize = 16;
-    const iconProps = { size: iconSize, className: "text-primary" };
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
+    fieldCategories.reduce((acc, category) => ({ ...acc, [category.id]: true }), {})
+  );
 
-    switch(iconName) {
-      case "Type": return <Type {...iconProps} />;
-      case "AlignLeft": return <AlignLeft {...iconProps} />;
-      case "Radio": return <Radio {...iconProps} />;
-      case "Check": return <Check {...iconProps} />;
-      case "X": return <X {...iconProps} />;
-      case "CheckSquare": return <CheckSquare {...iconProps} />;
-      case "ChevronDown": return <ChevronDown {...iconProps} />;
-      case "Image": return <Image {...iconProps} />;
-      case "Hash": return <Hash {...iconProps} />;
-      case "User": return <User {...iconProps} />;
-      case "Mail": return <Mail {...iconProps} />;
-      case "MapPin": return <MapPin {...iconProps} />;
-      case "Phone": return <Phone {...iconProps} />;
-      case "Upload": return <Upload {...iconProps} />;
-      case "FileUp": return <FileUp {...iconProps} />;
-      case "PenTool": return <PenTool {...iconProps} />;
-      case "Grid3X3": return <Grid3X3 {...iconProps} />;
-      case "Star": return <Star {...iconProps} />;
-      case "BarChart": return <BarChart {...iconProps} />;
-      case "Timer": return <Timer {...iconProps} />;
-      case "Calendar": return <Calendar {...iconProps} />;
-      case "Clock": return <Clock {...iconProps} />;
-      case "FileText": return <FileText {...iconProps} />;
-      case "Edit3": return <Edit3 {...iconProps} />;
-      default: return <Type {...iconProps} />;
-    }
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
   };
 
   return (
@@ -144,32 +106,45 @@ const FieldsSidebar = () => {
             >
               {fieldCategories.map((category) => (
                 <div key={category.id} className="mb-4">
-                  <h3 className="text-sm font-medium mb-2">{category.title}</h3>
-                  <div className="space-y-1">
-                    {category.fields.map((field, index) => (
-                      <Draggable
-                        key={`${category.id}-${field.type}`}
-                        draggableId={`field-${field.type}`}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={cn(
-                              "flex items-center gap-2 p-2 text-sm rounded-md cursor-move",
-                              "hover:bg-primary/5 transition-colors",
-                              snapshot.isDragging && "bg-primary/10 shadow-md"
-                            )}
-                          >
-                            {renderIcon(field.icon)}
-                            <span>{field.label}</span>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                  <div 
+                    className="flex items-center justify-between cursor-pointer mb-1 p-1 hover:bg-muted/50 rounded-md"
+                    onClick={() => toggleCategory(category.id)}
+                  >
+                    <h3 className="text-sm font-medium">{category.title}</h3>
+                    {expandedCategories[category.id] ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
+                  
+                  {expandedCategories[category.id] && (
+                    <div className="space-y-1 pl-2">
+                      {category.fields.map((field, index) => (
+                        <Draggable
+                          key={`${category.id}-${field.type}`}
+                          draggableId={`field-${field.type}`}
+                          index={index}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={cn(
+                                "flex items-center gap-2 p-2 text-sm rounded-md cursor-move",
+                                "hover:bg-primary/5 transition-colors",
+                                snapshot.isDragging && "bg-primary/10 shadow-md"
+                              )}
+                            >
+                              {renderIcon(field.icon)}
+                              <span>{field.label}</span>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {provided.placeholder}

@@ -168,10 +168,12 @@ const FormBuilder = () => {
 
   return (
     <Layout title={isEditMode ? "Edit Form" : "Create Form"}>
-      <div className="mb-6">
-        <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
+      <div className="mb-6 flex justify-between items-center">
+        <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
+        
+        <FormActions isSaving={isSaving} isEditMode={isEditMode} />
       </div>
       
       <form onSubmit={handleSubmit}>
@@ -226,8 +228,6 @@ const FormBuilder = () => {
             )}
           </Tabs>
         </DragDropContext>
-        
-        <FormActions isSaving={isSaving} isEditMode={isEditMode} />
       </form>
     </Layout>
   );

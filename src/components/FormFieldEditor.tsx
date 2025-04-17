@@ -1,12 +1,13 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, FormFieldType, FormFieldOption } from "@/types/form";
 import { Trash, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
-import FieldBasicProperties from "./form-builder/FieldBasicProperties";
 import FieldOptionsEditor from "./form-builder/FieldOptionsEditor";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface FormFieldEditorProps {
   field: FormField;
@@ -27,29 +28,18 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
     field.type === 'ranking'
   );
 
-  const handleTypeChange = (type: FormFieldType) => {
-    const needsOptions = 
-      type === 'select' || 
-      type === 'radio' || 
-      type === 'checkbox' || 
-      type === 'image-select' || 
-      type === 'matrix' || 
-      type === 'opinion-scale' || 
-      type === 'star-rating' || 
-      type === 'ranking';
-    
-    setShowOptions(needsOptions);
-    
-    // Initialize options array if needed
-    let updatedField = { ...field, type };
-    if (needsOptions && (!field.options || field.options.length === 0)) {
-      updatedField.options = [
-        { id: '1', label: 'Opción 1', value: 'option_1' },
-        { id: '2', label: 'Opción 2', value: 'option_2' }
-      ];
-    }
-    
-    onChange(updatedField);
+  const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({
+      ...field,
+      label: e.target.value
+    });
+  };
+
+  const handleRequiredChange = (checked: boolean) => {
+    onChange({
+      ...field,
+      required: checked
+    });
   };
 
   const handleOptionsChange = (options: FormFieldOption[]) => {
@@ -59,49 +49,35 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
     });
   };
 
-  const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({
-      ...field,
-      label: e.target.value
-    });
-  };
-
   return (
     <Card className={cn(
       "mb-4 border transition-all duration-300", 
       isDragging ? "shadow-md border-primary" : "shadow-sm hover:shadow",
     )}>
-      <CardHeader className="p-4 pb-0 flex flex-row items-start">
-        <div className="cursor-grab mr-2">
+      <div className="p-4 flex items-center gap-3">
+        <div className="cursor-grab">
           <GripVertical className="h-5 w-5 text-muted-foreground" />
         </div>
         
-        <div className="flex-1">
-          <input
-            type="text"
-            value={field.label}
-            onChange={handleLabelChange}
-            className="w-full text-lg font-medium bg-transparent border-none p-0 focus:outline-none focus:ring-0 mb-2"
-            placeholder="Campo sin título"
+        <input
+          type="text"
+          value={field.label}
+          onChange={handleLabelChange}
+          className="flex-1 text-lg font-medium bg-transparent border-none p-0 focus:outline-none focus:ring-0"
+          placeholder="Campo sin título"
+        />
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id={`field-${field.id}-required`}
+            checked={field.required}
+            onCheckedChange={handleRequiredChange}
           />
-          
-          <FieldBasicProperties
-            id={field.id}
-            label={field.label}
-            type={field.type}
-            placeholder={field.placeholder || ''}
-            description={field.description || ''}
-            required={field.required}
-            onLabelChange={(label) => onChange({ ...field, label })}
-            onTypeChange={handleTypeChange}
-            onPlaceholderChange={(placeholder) => onChange({ ...field, placeholder })}
-            onDescriptionChange={(description) => onChange({ ...field, description })}
-            onRequiredChange={(required) => onChange({ ...field, required })}
-          />
+          <Label htmlFor={`field-${field.id}-required`}>Obligatorio</Label>
         </div>
-      </CardHeader>
+      </div>
       
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-4 pt-0 space-y-4">
         {showOptions && (
           <FieldOptionsEditor
             options={field.options || []}
