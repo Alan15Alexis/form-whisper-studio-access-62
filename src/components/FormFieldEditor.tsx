@@ -16,10 +16,28 @@ interface FormFieldEditorProps {
 }
 
 const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEditorProps) => {
-  const [showOptions, setShowOptions] = useState(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox');
+  const [showOptions, setShowOptions] = useState(
+    field.type === 'select' || 
+    field.type === 'radio' || 
+    field.type === 'checkbox' || 
+    field.type === 'image-select' || 
+    field.type === 'matrix' || 
+    field.type === 'opinion-scale' || 
+    field.type === 'star-rating' || 
+    field.type === 'ranking'
+  );
 
   const handleTypeChange = (type: FormFieldType) => {
-    const needsOptions = type === 'select' || type === 'radio' || type === 'checkbox';
+    const needsOptions = 
+      type === 'select' || 
+      type === 'radio' || 
+      type === 'checkbox' || 
+      type === 'image-select' || 
+      type === 'matrix' || 
+      type === 'opinion-scale' || 
+      type === 'star-rating' || 
+      type === 'ranking';
+    
     setShowOptions(needsOptions);
     
     // Initialize options array if needed
@@ -41,6 +59,13 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
     });
   };
 
+  const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({
+      ...field,
+      label: e.target.value
+    });
+  };
+
   return (
     <Card className={cn(
       "mb-4 border transition-all duration-300", 
@@ -51,19 +76,29 @@ const FormFieldEditor = ({ field, onChange, onDelete, isDragging }: FormFieldEdi
           <GripVertical className="h-5 w-5 text-muted-foreground" />
         </div>
         
-        <FieldBasicProperties
-          id={field.id}
-          label={field.label}
-          type={field.type}
-          placeholder={field.placeholder || ''}
-          description={field.description || ''}
-          required={field.required}
-          onLabelChange={(label) => onChange({ ...field, label })}
-          onTypeChange={handleTypeChange}
-          onPlaceholderChange={(placeholder) => onChange({ ...field, placeholder })}
-          onDescriptionChange={(description) => onChange({ ...field, description })}
-          onRequiredChange={(required) => onChange({ ...field, required })}
-        />
+        <div className="flex-1">
+          <input
+            type="text"
+            value={field.label}
+            onChange={handleLabelChange}
+            className="w-full text-lg font-medium bg-transparent border-none p-0 focus:outline-none focus:ring-0 mb-2"
+            placeholder="Campo sin título"
+          />
+          
+          <FieldBasicProperties
+            id={field.id}
+            label={field.label}
+            type={field.type}
+            placeholder={field.placeholder || ''}
+            description={field.description || ''}
+            required={field.required}
+            onLabelChange={(label) => onChange({ ...field, label })}
+            onTypeChange={handleTypeChange}
+            onPlaceholderChange={(placeholder) => onChange({ ...field, placeholder })}
+            onDescriptionChange={(description) => onChange({ ...field, description })}
+            onRequiredChange={(required) => onChange({ ...field, required })}
+          />
+        </div>
       </CardHeader>
       
       <CardContent className="p-4 space-y-4">

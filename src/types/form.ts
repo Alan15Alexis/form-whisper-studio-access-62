@@ -1,5 +1,40 @@
 
-export type FormFieldType = 'text' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'email' | 'number' | 'date';
+export type FormFieldType = 
+  // Essential fields
+  | 'text' 
+  | 'textarea' 
+  | 'select' 
+  | 'checkbox' 
+  | 'radio' 
+  | 'email' 
+  | 'number' 
+  | 'date'
+  | 'yesno'
+  | 'image-select'
+  
+  // Contact details
+  | 'fullname'
+  | 'address'
+  | 'phone'
+  
+  // Upload fields
+  | 'image-upload'
+  | 'file-upload'
+  | 'drawing'
+  
+  // Rating scales
+  | 'matrix'
+  | 'opinion-scale'
+  | 'star-rating'
+  | 'ranking'
+  
+  // Date and time
+  | 'timer'
+  | 'time'
+  
+  // Legal
+  | 'terms'
+  | 'signature';
 
 export interface FormFieldOption {
   id: string;
@@ -48,4 +83,14 @@ export interface User {
 export interface AuthCredentials {
   email: string;
   password: string;
+}
+
+export interface FieldCategory {
+  id: string;
+  title: string;
+  fields: {
+    type: FormFieldType;
+    icon: string;
+    label: string;
+  }[];
 }
