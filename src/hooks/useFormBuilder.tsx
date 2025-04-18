@@ -9,7 +9,7 @@ import { useFormScoring } from "./form-builder/useFormScoring";
 
 export function useFormBuilder(formId?: string) {
   const navigate = useNavigate();
-  const { getForm, createForm, updateForm } = useForm();
+  const { getForm, createForm, updateForm, addAllowedUser: addAllowedUserToForm, removeAllowedUser: removeAllowedUserFromForm } = useForm();
   const isEditMode = !!formId;
   
   const [formData, setFormData] = useState<Partial<Form>>({
@@ -73,6 +73,31 @@ export function useFormBuilder(formId?: string) {
     }));
   };
 
+  const addAllowedUser = async () => {
+    if (!formId || !allowedUserEmail.trim()) return;
+    
+    const success = await addAllowedUserToForm(formId, allowedUserEmail);
+    if (success) {
+      setFormData(prev => ({
+        ...prev,
+        allowedUsers: [...(prev.allowedUsers || []), allowedUserEmail]
+      }));
+      setAllowedUserEmail("");
+    }
+  };
+
+  const removeAllowedUser = async (email: string) => {
+    if (!formId) return;
+    
+    const success = await removeAllowedUserFromForm(formId, email);
+    if (success) {
+      setFormData(prev => ({
+        ...prev,
+        allowedUsers: (prev.allowedUsers || []).filter(e => e !== email)
+      }));
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
@@ -104,6 +129,8 @@ export function useFormBuilder(formId?: string) {
     handleDragEnd: handleDragEndUtil,
     setAllowedUserEmail,
     calculateTotalScore,
-    getScoreFeedback
+    getScoreFeedback,
+    addAllowedUser,
+    removeAllowedUser
   };
 }
