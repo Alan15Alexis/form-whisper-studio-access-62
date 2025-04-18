@@ -1,12 +1,26 @@
+
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link } from "react-router-dom";
-import { Eye, Lock, Unlock, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, Lock, Unlock, CheckCircle2, XCircle, Edit, BarChart, Share2, Trash } from "lucide-react";
 import { useForm } from "@/contexts/FormContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
+import ShareFormDialog from "@/components/ShareFormDialog";
 
 interface FormCardProps {
   form: Form;
@@ -39,7 +53,7 @@ const FormCard = ({ form, hasResponded = false }: FormCardProps) => {
                 Created {format(new Date(form.createdAt), 'MMM d, yyyy')}
               </CardDescription>
             </div>
-            <Badge variant={hasResponded ? "success" : "secondary"}>
+            <Badge variant={hasResponded ? "secondary" : "outline"}>
               {hasResponded ? 'Responded' : 'Pending'}
             </Badge>
           </div>
