@@ -1,7 +1,6 @@
 
 import React from "react";
 import { useParams } from "react-router-dom";
-import { DragDropContext } from "react-beautiful-dnd";
 import Layout from "@/components/Layout";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
 import FormBuilderHeader from "@/components/form-builder/FormBuilderHeader";
@@ -18,36 +17,39 @@ const FormBuilder = () => {
     handleTitleChange,
     handleDescriptionChange,
     handlePrivateChange,
-    addField,
     updateField,
     removeField,
     addAllowedUser,
     removeAllowedUser,
     handleSubmit,
-    handleDragEnd,
     setAllowedUserEmail
   } = useFormBuilder(id);
 
+  const handleSave = () => {
+    handleSubmit(new Event('submit'));
+  };
+
   return (
     <Layout title={isEditMode ? "Edit Form" : "Create Form"}>
-      <FormBuilderHeader isSaving={isSaving} isEditMode={isEditMode} />
+      <FormBuilderHeader 
+        isSaving={isSaving} 
+        isEditMode={isEditMode} 
+        onSave={handleSave}
+      />
       
-      <form onSubmit={handleSubmit}>
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <FormBuilderTabs 
-            formData={formData}
-            onTitleChange={handleTitleChange}
-            onDescriptionChange={handleDescriptionChange}
-            onPrivateChange={handlePrivateChange}
-            addField={addField}
-            updateField={updateField}
-            removeField={removeField}
-            allowedUserEmail={allowedUserEmail}
-            setAllowedUserEmail={setAllowedUserEmail}
-            addAllowedUser={addAllowedUser}
-            removeAllowedUser={removeAllowedUser}
-          />
-        </DragDropContext>
+      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+        <FormBuilderTabs 
+          formData={formData}
+          onTitleChange={handleTitleChange}
+          onDescriptionChange={handleDescriptionChange}
+          onPrivateChange={handlePrivateChange}
+          updateField={updateField}
+          removeField={removeField}
+          allowedUserEmail={allowedUserEmail}
+          setAllowedUserEmail={setAllowedUserEmail}
+          addAllowedUser={addAllowedUser}
+          removeAllowedUser={removeAllowedUser}
+        />
       </form>
     </Layout>
   );

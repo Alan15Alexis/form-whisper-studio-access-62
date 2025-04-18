@@ -4,21 +4,19 @@ import { Save } from "lucide-react";
 
 interface FormActionsProps {
   isSaving: boolean;
-  isEditMode: boolean;
+  onSave: () => void;
 }
 
-const FormActions = ({ isSaving, isEditMode }: FormActionsProps) => {
+const FormActions = ({ isSaving, onSave }: FormActionsProps) => {
   return (
-    <div className="mb-6">
-      <Button 
-        type="submit" 
-        disabled={isSaving} 
-        className="btn-primary px-6 py-2 rounded-md shadow-sm hover:shadow transition-all"
-      >
-        <Save className="mr-2 h-4 w-4" />
-        {isSaving ? "Guardando..." : "Guardar"}
-      </Button>
-    </div>
+    <Button 
+      onClick={onSave}
+      disabled={isSaving} 
+      className="btn-primary px-6 py-2 rounded-md shadow-sm hover:shadow transition-all"
+    >
+      <Save className="mr-2 h-4 w-4" />
+      {isSaving ? "Guardando..." : "Guardar"}
+    </Button>
   );
 };
 

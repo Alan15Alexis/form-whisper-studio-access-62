@@ -8,9 +8,10 @@ import FormActions from "@/components/form-builder/FormActions";
 interface FormBuilderHeaderProps {
   isSaving: boolean;
   isEditMode: boolean;
+  onSave: () => void;
 }
 
-const FormBuilderHeader = ({ isSaving, isEditMode }: FormBuilderHeaderProps) => {
+const FormBuilderHeader = ({ isSaving, isEditMode, onSave }: FormBuilderHeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -19,7 +20,7 @@ const FormBuilderHeader = ({ isSaving, isEditMode }: FormBuilderHeaderProps) => 
         <ArrowLeft className="mr-2 h-4 w-4" /> Back
       </Button>
       
-      <FormActions isSaving={isSaving} isEditMode={isEditMode} />
+      <FormActions isSaving={isSaving} onSave={onSave} />
     </div>
   );
 };
