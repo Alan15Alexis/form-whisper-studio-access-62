@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
 import FormBuilderHeader from "@/components/form-builder/FormBuilderHeader";
 import FormBuilderTabs from "@/components/form-builder/FormBuilderTabs";
+import { DragDropContext } from "react-beautiful-dnd";
 
 const FormBuilder = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,8 @@ const FormBuilder = () => {
     addAllowedUser,
     removeAllowedUser,
     handleSubmit,
-    setAllowedUserEmail
+    setAllowedUserEmail,
+    handleDragEnd
   } = useFormBuilder(id);
 
   const handleSave = () => {
@@ -37,20 +39,22 @@ const FormBuilder = () => {
         onSave={handleSave}
       />
       
-      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-        <FormBuilderTabs 
-          formData={formData}
-          onTitleChange={handleTitleChange}
-          onDescriptionChange={handleDescriptionChange}
-          onPrivateChange={handlePrivateChange}
-          updateField={updateField}
-          removeField={removeField}
-          allowedUserEmail={allowedUserEmail}
-          setAllowedUserEmail={setAllowedUserEmail}
-          addAllowedUser={addAllowedUser}
-          removeAllowedUser={removeAllowedUser}
-        />
-      </form>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+          <FormBuilderTabs 
+            formData={formData}
+            onTitleChange={handleTitleChange}
+            onDescriptionChange={handleDescriptionChange}
+            onPrivateChange={handlePrivateChange}
+            updateField={updateField}
+            removeField={removeField}
+            allowedUserEmail={allowedUserEmail}
+            setAllowedUserEmail={setAllowedUserEmail}
+            addAllowedUser={addAllowedUser}
+            removeAllowedUser={removeAllowedUser}
+          />
+        </form>
+      </DragDropContext>
     </Layout>
   );
 };
