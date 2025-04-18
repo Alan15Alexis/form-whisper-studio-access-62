@@ -8,9 +8,15 @@ interface FormFieldsListProps {
   formData: Partial<Form>;
   updateField: (id: string, updatedField: FormField) => void;
   removeField: (id: string) => void;
+  onToggleFormScoring?: (enabled: boolean) => void;
 }
 
-const FormFieldsList = ({ formData, updateField, removeField }: FormFieldsListProps) => {
+const FormFieldsList = ({ 
+  formData, 
+  updateField, 
+  removeField,
+  onToggleFormScoring 
+}: FormFieldsListProps) => {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Campos del Formulario</h3>
@@ -39,6 +45,8 @@ const FormFieldsList = ({ formData, updateField, removeField }: FormFieldsListPr
                         onChange={(updatedField) => updateField(field.id, updatedField)}
                         onDelete={() => removeField(field.id)}
                         isDragging={snapshot.isDragging}
+                        formShowTotalScore={formData.showTotalScore}
+                        onToggleFormScoring={onToggleFormScoring}
                       />
                     </div>
                   )}
@@ -53,6 +61,16 @@ const FormFieldsList = ({ formData, updateField, removeField }: FormFieldsListPr
           </div>
         )}
       </Droppable>
+      
+      {formData.showTotalScore && formData.fields && formData.fields.some(f => f.hasNumericValues) && (
+        <div className="mt-4 p-4 border rounded-lg bg-secondary/10">
+          <h3 className="font-medium">Puntuación Total</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Este formulario mostrará la puntuación total y los mensajes personalizados 
+            según las respuestas seleccionadas.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

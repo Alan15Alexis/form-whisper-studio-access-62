@@ -40,6 +40,13 @@ export interface FormFieldOption {
   id: string;
   label: string;
   value: string;
+  numericValue?: number;
+}
+
+export interface ScoreRange {
+  min: number;
+  max: number;
+  message: string;
 }
 
 export interface FormField {
@@ -50,6 +57,8 @@ export interface FormField {
   required: boolean;
   options?: FormFieldOption[];
   description?: string;
+  hasNumericValues?: boolean;
+  scoreRanges?: ScoreRange[];
 }
 
 export interface Form {
@@ -63,6 +72,7 @@ export interface Form {
   updatedAt: string;
   accessLink: string;
   ownerId: string;
+  showTotalScore?: boolean;
 }
 
 export interface FormResponse {

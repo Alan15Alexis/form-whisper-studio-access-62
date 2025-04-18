@@ -18,6 +18,7 @@ const FormBuilder = () => {
     handleTitleChange,
     handleDescriptionChange,
     handlePrivateChange,
+    handleToggleFormScoring,
     updateField,
     removeField,
     addAllowedUser,
@@ -46,6 +47,7 @@ const FormBuilder = () => {
             onTitleChange={handleTitleChange}
             onDescriptionChange={handleDescriptionChange}
             onPrivateChange={handlePrivateChange}
+            onToggleFormScoring={handleToggleFormScoring}
             updateField={updateField}
             removeField={removeField}
             allowedUserEmail={allowedUserEmail}
