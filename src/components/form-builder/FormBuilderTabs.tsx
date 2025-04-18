@@ -13,6 +13,7 @@ interface FormBuilderTabsProps {
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
+  onToggleFormScoring: (enabled: boolean) => void;  // Added this missing property
   updateField: (id: string, field: any) => void;
   removeField: (id: string) => void;
   allowedUserEmail: string;
@@ -26,6 +27,7 @@ const FormBuilderTabs = ({
   onTitleChange,
   onDescriptionChange,
   onPrivateChange,
+  onToggleFormScoring,  // Added this missing property
   updateField,
   removeField,
   allowedUserEmail,
@@ -58,6 +60,7 @@ const FormBuilderTabs = ({
               formData={formData}
               updateField={updateField}
               removeField={removeField}
+              onToggleFormScoring={onToggleFormScoring}
             />
           </div>
         </div>
