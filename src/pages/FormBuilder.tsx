@@ -26,7 +26,7 @@ const FormBuilder = () => {
   } = useFormBuilder(id);
 
   const handleSave = () => {
-    handleSubmit(new Event('submit'));
+    handleSubmit();
   };
 
   return (

@@ -13,7 +13,6 @@ interface FormBuilderTabsProps {
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
-  addField: (type: string) => void;
   updateField: (id: string, field: any) => void;
   removeField: (id: string) => void;
   allowedUserEmail: string;
@@ -27,7 +26,6 @@ const FormBuilderTabs = ({
   onTitleChange,
   onDescriptionChange,
   onPrivateChange,
-  addField,
   updateField,
   removeField,
   allowedUserEmail,
@@ -58,7 +56,6 @@ const FormBuilderTabs = ({
           <div className="md:col-span-3">
             <FormFieldsList 
               formData={formData}
-              addField={addField}
               updateField={updateField}
               removeField={removeField}
             />

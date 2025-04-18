@@ -102,8 +102,7 @@ export function useFormBuilder(formId?: string) {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setIsSaving(true);
     
     try {
