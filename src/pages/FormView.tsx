@@ -16,6 +16,8 @@ import { ArrowLeft, ShieldAlert, Mail, LockKeyhole, Share2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import ShareFormDialog from "@/components/ShareFormDialog";
+import { Progress } from "@/components/ui/progress";
+import { ChevronLeft, ChevronRight, Send } from "lucide-react";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -33,6 +35,22 @@ const FormView = () => {
   const [validatingAccess, setValidatingAccess] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  
+  const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
+  const totalFields = form?.fields?.length || 0;
+  const progress = ((currentFieldIndex + 1) / totalFields) * 100;
+  
+  const goToNextField = () => {
+    if (currentFieldIndex < totalFields - 1) {
+      setCurrentFieldIndex(prev => prev + 1);
+    }
+  };
+  
+  const goToPreviousField = () => {
+    if (currentFieldIndex > 0) {
+      setCurrentFieldIndex(prev => prev - 1);
+    }
+  };
   
   useEffect(() => {
     if (!id) {
@@ -281,108 +299,117 @@ const FormView = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          
-          {form && (
-            <Button 
-              variant="outline" 
-              className="text-[#686df3] border-[#686df3] hover:bg-[#686df3]/10"
-              onClick={() => setShareDialogOpen(true)}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartir
-            </Button>
-          )}
         </div>
         
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl">{form?.title}</CardTitle>
-            {form?.description && (
-              <CardDescription className="text-base mt-2">{form.description}</CardDescription>
-            )}
-          </CardHeader>
+          {form?.welcomeMessage && (
+            <CardHeader className="text-center">
+              {form.welcomeMessage.imageUrl && (
+                <div className="mb-4">
+                  <img 
+                    src={form.welcomeMessage.imageUrl} 
+                    alt="Welcome" 
+                    className="mx-auto max-h-48 rounded-lg"
+                  />
+                </div>
+              )}
+              <CardTitle className="text-2xl">{form?.title}</CardTitle>
+              <CardDescription className="text-base mt-2">
+                {form.welcomeMessage.text}
+              </CardDescription>
+            </CardHeader>
+          )}
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
-              {form?.fields.map((field: FormField) => (
-                <div key={field.id} className="space-y-2 form-field">
-                  <Label htmlFor={field.id} className="font-medium">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
+              {/* Progress bar */}
+              <div className="w-full">
+                <Progress value={progress} className="h-2" />
+                <p className="text-sm text-gray-500 mt-2 text-center">
+                  Pregunta {currentFieldIndex + 1} de {totalFields}
+                </p>
+              </div>
+
+              {form?.fields && form.fields[currentFieldIndex] && (
+                <div className="space-y-2 form-field animate-fadeIn">
+                  {/* Current field */}
+                  <Label htmlFor={form.fields[currentFieldIndex].id} className="font-medium">
+                    {form.fields[currentFieldIndex].label}
+                    {form.fields[currentFieldIndex].required && <span className="text-red-500 ml-1">*</span>}
                   </Label>
                   
-                  {field.description && (
-                    <p className="text-sm text-gray-500 mb-1">{field.description}</p>
+                  {form.fields[currentFieldIndex].description && (
+                    <p className="text-sm text-gray-500 mb-1">{form.fields[currentFieldIndex].description}</p>
                   )}
                   
-                  {field.type === 'text' && (
+                  {form.fields[currentFieldIndex].type === 'text' && (
                     <Input
-                      id={field.id}
-                      value={formValues[field.id] || ''}
-                      onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      placeholder={field.placeholder}
-                      required={field.required}
+                      id={form.fields[currentFieldIndex].id}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
+                      placeholder={form.fields[currentFieldIndex].placeholder}
+                      required={form.fields[currentFieldIndex].required}
                       className="form-input"
                     />
                   )}
                   
-                  {field.type === 'textarea' && (
+                  {form.fields[currentFieldIndex].type === 'textarea' && (
                     <Textarea
-                      id={field.id}
-                      value={formValues[field.id] || ''}
-                      onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      placeholder={field.placeholder}
-                      required={field.required}
+                      id={form.fields[currentFieldIndex].id}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
+                      placeholder={form.fields[currentFieldIndex].placeholder}
+                      required={form.fields[currentFieldIndex].required}
                       className="form-input resize-none"
                       rows={4}
                     />
                   )}
                   
-                  {field.type === 'email' && (
+                  {form.fields[currentFieldIndex].type === 'email' && (
                     <Input
-                      id={field.id}
+                      id={form.fields[currentFieldIndex].id}
                       type="email"
-                      value={formValues[field.id] || ''}
-                      onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      placeholder={field.placeholder || 'name@example.com'}
-                      required={field.required}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
+                      placeholder={form.fields[currentFieldIndex].placeholder || 'name@example.com'}
+                      required={form.fields[currentFieldIndex].required}
                       className="form-input"
                     />
                   )}
                   
-                  {field.type === 'number' && (
+                  {form.fields[currentFieldIndex].type === 'number' && (
                     <Input
-                      id={field.id}
+                      id={form.fields[currentFieldIndex].id}
                       type="number"
-                      value={formValues[field.id] || ''}
-                      onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      placeholder={field.placeholder}
-                      required={field.required}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
+                      placeholder={form.fields[currentFieldIndex].placeholder}
+                      required={form.fields[currentFieldIndex].required}
                       className="form-input"
                     />
                   )}
                   
-                  {field.type === 'date' && (
+                  {form.fields[currentFieldIndex].type === 'date' && (
                     <Input
-                      id={field.id}
+                      id={form.fields[currentFieldIndex].id}
                       type="date"
-                      value={formValues[field.id] || ''}
-                      onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      required={field.required}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
+                      required={form.fields[currentFieldIndex].required}
                       className="form-input"
                     />
                   )}
                   
-                  {field.type === 'select' && field.options && (
+                  {form.fields[currentFieldIndex].type === 'select' && form.fields[currentFieldIndex].options && (
                     <Select
-                      value={formValues[field.id] || ''}
-                      onValueChange={(value) => handleInputChange(field.id, value)}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
                     >
                       <SelectTrigger className="form-input">
-                        <SelectValue placeholder={field.placeholder || 'Select an option'} />
+                        <SelectValue placeholder={form.fields[currentFieldIndex].placeholder || 'Select an option'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {field.options.map((option) => (
+                        {form.fields[currentFieldIndex].options.map((option) => (
                           <SelectItem key={option.id} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -391,31 +418,31 @@ const FormView = () => {
                     </Select>
                   )}
                   
-                  {field.type === 'checkbox' && field.options && (
+                  {form.fields[currentFieldIndex].type === 'checkbox' && form.fields[currentFieldIndex].options && (
                     <div className="space-y-2">
-                      {field.options.map((option) => {
-                        const isChecked = Array.isArray(formValues[field.id])
-                          ? formValues[field.id]?.includes(option.value)
+                      {form.fields[currentFieldIndex].options.map((option) => {
+                        const isChecked = Array.isArray(formValues[form.fields[currentFieldIndex].id])
+                          ? formValues[form.fields[currentFieldIndex].id]?.includes(option.value)
                           : false;
                           
                         return (
                           <div key={option.id} className="flex items-center space-x-2">
                             <Checkbox
-                              id={`${field.id}-${option.id}`}
+                              id={`${form.fields[currentFieldIndex].id}-${option.id}`}
                               checked={isChecked}
                               onCheckedChange={(checked) => {
-                                const currentValues = Array.isArray(formValues[field.id])
-                                  ? [...formValues[field.id]]
+                                const currentValues = Array.isArray(formValues[form.fields[currentFieldIndex].id])
+                                  ? [...formValues[form.fields[currentFieldIndex].id]]
                                   : [];
                                   
                                 const newValues = checked
                                   ? [...currentValues, option.value]
                                   : currentValues.filter((v) => v !== option.value);
                                   
-                                handleInputChange(field.id, newValues);
+                                handleInputChange(form.fields[currentFieldIndex].id, newValues);
                               }}
                             />
-                            <Label htmlFor={`${field.id}-${option.id}`} className="font-normal">
+                            <Label htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} className="font-normal">
                               {option.label}
                             </Label>
                           </div>
@@ -424,16 +451,16 @@ const FormView = () => {
                     </div>
                   )}
                   
-                  {field.type === 'radio' && field.options && (
+                  {form.fields[currentFieldIndex].type === 'radio' && form.fields[currentFieldIndex].options && (
                     <RadioGroup
-                      value={formValues[field.id] || ''}
-                      onValueChange={(value) => handleInputChange(field.id, value)}
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
                     >
                       <div className="space-y-2">
-                        {field.options.map((option) => (
+                        {form.fields[currentFieldIndex].options.map((option) => (
                           <div key={option.id} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option.value} id={`${field.id}-${option.id}`} />
-                            <Label htmlFor={`${field.id}-${option.id}`} className="font-normal">
+                            <RadioGroupItem value={option.value} id={`${form.fields[currentFieldIndex].id}-${option.id}`} />
+                            <Label htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} className="font-normal">
                               {option.label}
                             </Label>
                           </div>
@@ -442,19 +469,41 @@ const FormView = () => {
                     </RadioGroup>
                   )}
                 </div>
-              ))}
+              )}
             </CardContent>
             
-            <CardFooter>
-              <Button type="submit" disabled={submitting} className="w-full">
-                {submitting ? "Submitting..." : "Submit"}
+            <CardFooter className="flex justify-between">
+              <Button 
+                type="button"
+                onClick={goToPreviousField}
+                disabled={currentFieldIndex === 0}
+                variant="outline"
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Anterior
               </Button>
+              
+              {currentFieldIndex === totalFields - 1 ? (
+                <Button type="submit" disabled={submitting}>
+                  <Send className="mr-2 h-4 w-4" />
+                  {submitting ? "Enviando..." : "Enviar"}
+                </Button>
+              ) : (
+                <Button 
+                  type="button"
+                  onClick={goToNextField}
+                  variant="outline"
+                >
+                  Siguiente
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
             </CardFooter>
           </form>
         </Card>
       </div>
       
-      {form && (
+      {form && shareDialogOpen && (
         <ShareFormDialog 
           open={shareDialogOpen} 
           onOpenChange={setShareDialogOpen} 

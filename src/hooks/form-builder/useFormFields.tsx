@@ -7,6 +7,19 @@ export function useFormFields() {
   const addField = (type: string, fields: FormField[] = []) => {
     let options;
     
+    if (type === 'welcome') {
+      return [...fields, {
+        id: uuidv4(),
+        type: 'welcome',
+        label: 'Mensaje de Bienvenida',
+        required: true,
+        welcomeMessage: {
+          text: 'Bienvenido a nuestro formulario',
+          imageUrl: ''
+        }
+      }];
+    }
+    
     if (type === 'select' || type === 'radio' || type === 'checkbox') {
       options = [
         { id: '1', label: 'Opción 1', value: 'option_1' },

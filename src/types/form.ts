@@ -1,4 +1,3 @@
-
 export type FormFieldType = 
   // Essential fields
   | 'text' 
@@ -73,6 +72,10 @@ export interface Form {
   accessLink: string;
   ownerId: string;
   showTotalScore?: boolean;
+  welcomeMessage?: {
+    text: string;
+    imageUrl?: string;
+  };
 }
 
 export interface FormResponse {
