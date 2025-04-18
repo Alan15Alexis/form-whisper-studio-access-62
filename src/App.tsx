@@ -35,8 +35,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/dashboard" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
-              <Route path="/assigned-forms" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
               <Route path="/forms/new" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/edit" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />
