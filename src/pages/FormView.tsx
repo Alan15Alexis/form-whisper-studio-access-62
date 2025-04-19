@@ -1,24 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { FormField } from "@/types/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, ShieldAlert, Mail, LockKeyhole, Share2 } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import ShareFormDialog from "@/components/ShareFormDialog";
+import { ArrowLeft, ChevronLeft, ChevronRight, Send } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Send } from "lucide-react";
-import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
+import ShareFormDialog from "@/components/ShareFormDialog";
+import FormField from "@/components/form-view/FormField";
+import FormSuccess from "@/components/form-view/FormSuccess";
+import FormAccess from "@/components/form-view/FormAccess";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -32,27 +26,13 @@ const FormView = () => {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [accessGranted, setAccessGranted] = useState(false);
-  const [accessEmail, setAccessEmail] = useState("");
-  const [validatingAccess, setValidatingAccess] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
-  
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  
   const totalFields = form?.fields?.length || 0;
   const progress = ((currentFieldIndex + 1) / totalFields) * 100;
-  
-  const goToNextField = () => {
-    if (currentFieldIndex < totalFields - 1) {
-      setCurrentFieldIndex(prev => prev + 1);
-    }
-  };
-  
-  const goToPreviousField = () => {
-    if (currentFieldIndex > 0) {
-      setCurrentFieldIndex(prev => prev - 1);
-    }
-  };
   
   useEffect(() => {
     if (!id) {
@@ -77,13 +57,9 @@ const FormView = () => {
     
     if (!formData.isPrivate) {
       hasAccess = true;
-    }
-    else {
+    } else {
       if (isAuthenticated && currentUser?.email) {
         hasAccess = isUserAllowed(id, currentUser.email);
-        if (hasAccess) {
-          setAccessEmail(currentUser.email);
-        }
       }
       
       if (token && validateAccessToken(id, token)) {
@@ -101,14 +77,12 @@ const FormView = () => {
       [fieldId]: value,
     });
   };
-
-  const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const requiredFields = form.fields.filter((field: FormField) => field.required);
-    const missingFields = requiredFields.filter((field: FormField) => {
+    const requiredFields = form.fields.filter((field: any) => field.required);
+    const missingFields = requiredFields.filter((field: any) => {
       const value = formValues[field.id];
       return value === undefined || value === "" || value === null;
     });
@@ -116,7 +90,7 @@ const FormView = () => {
     if (missingFields.length > 0) {
       toast({
         title: "Error",
-        description: `Por favor, complete todos los campos obligatorios: ${missingFields.map((f: FormField) => f.label).join(", ")}`,
+        description: `Por favor, complete todos los campos obligatorios: ${missingFields.map((f: any) => f.label).join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -141,51 +115,6 @@ const FormView = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleAccessRequest = async () => {
-    if (!accessEmail.trim()) {
-      toast({
-        title: "Error",
-        description: "Por favor, introduce tu correo electrónico",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setValidatingAccess(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const hasAccess = isUserAllowed(id!, accessEmail);
-      setAccessGranted(hasAccess);
-      
-      if (hasAccess) {
-        toast({
-          title: "Acceso Concedido",
-          description: "Tu correo electrónico ha sido verificado. Tienes acceso a este formulario.",
-        });
-      } else {
-        toast({
-          title: "Acceso Denegado",
-          description: "Tu correo electrónico no está en la lista de usuarios permitidos para este formulario.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Ha ocurrido un error al verificar tu acceso.",
-        variant: "destructive", 
-      });
-    } finally {
-      setValidatingAccess(false);
-    }
-  };
-
-  const handleReturnToDashboard = () => {
-    navigate("/");
   };
 
   if (loading) {
@@ -223,110 +152,22 @@ const FormView = () => {
   if (!accessGranted && form?.isPrivate) {
     return (
       <Layout hideNav>
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <Card className="w-full max-w-md shadow-md border border-gray-100">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-xl">
-                <LockKeyhole className="mr-2 h-5 w-5 text-amber-500" />
-                Formulario Privado
-              </CardTitle>
-              <CardDescription className="text-base">
-                Este formulario requiere verificación de acceso
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-5">
-                <Alert className="bg-amber-50 border-amber-200">
-                  <ShieldAlert className="h-4 w-4 text-amber-500" />
-                  <AlertTitle className="text-amber-700 font-medium">Verificación requerida</AlertTitle>
-                  <AlertDescription className="text-amber-700">
-                    Este formulario está restringido a usuarios autorizados. Por favor, introduce tu correo electrónico para verificar si tienes acceso.
-                  </AlertDescription>
-                </Alert>
-                
-                <div className="space-y-3">
-                  <Label htmlFor="access-email" className="text-gray-700">Tu Correo Electrónico</Label>
-                  <div className="flex items-center space-x-2">
-                    <div className="relative flex-1">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="access-email"
-                        type="email"
-                        placeholder="usuario@ejemplo.com"
-                        value={accessEmail}
-                        onChange={(e) => setAccessEmail(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <Button 
-                      onClick={handleAccessRequest} 
-                      disabled={validatingAccess || !accessEmail.trim()}
-                      className="btn-primary"
-                    >
-                      {validatingAccess ? "Verificando..." : "Verificar Acceso"}
-                    </Button>
-                  </div>
-                  {!isAuthenticated && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      ¿Ya tienes una cuenta? <a href="/login" className="text-[#686df3] hover:underline">Iniciar sesión</a>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between pt-2 border-t border-gray-100">
-              <Button variant="outline" onClick={() => navigate('/')} className="btn-minimal btn-outline">
-                Volver al inicio
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+        <FormAccess
+          onAccessGranted={() => setAccessGranted(true)}
+          isUserAllowed={(email) => isUserAllowed(id!, email)}
+        />
       </Layout>
     );
   }
 
-  const currentScore = form?.showTotalScore ? calculateTotalScore(formValues, form.fields || []) : 0;
-  const scoreFeedback = form?.showTotalScore ? getScoreFeedback(currentScore, form.fields || []) : null;
-  const showScore = shouldShowScoreCard(form?.fields || [], form?.showTotalScore);
-
   if (formSubmitted) {
     return (
       <Layout hideNav>
-        <div className="container max-w-3xl mx-auto py-8">
-          <Card className="shadow-md">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">¡Gracias por responder!</CardTitle>
-              <CardDescription className="text-base mt-2">
-                Tu respuesta ha sido registrada con éxito
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-6 py-6">
-              {showScore && (
-                <div className="p-6 bg-primary/5 rounded-lg space-y-3 border">
-                  <h3 className="text-xl font-medium text-center mb-4">Resultado</h3>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg">Puntuación Total:</span>
-                    <span className="text-3xl font-bold text-primary">{currentScore}</span>
-                  </div>
-                  
-                  {scoreFeedback && (
-                    <div className="mt-4 p-4 bg-background rounded border text-center">
-                      <p className="text-lg">{scoreFeedback}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-            
-            <CardFooter className="flex justify-center pb-6">
-              <Button onClick={handleReturnToDashboard}>
-                Volver al inicio
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+        <FormSuccess
+          formValues={formValues}
+          fields={form.fields}
+          showTotalScore={form.showTotalScore}
+        />
       </Layout>
     );
   }
@@ -370,181 +211,18 @@ const FormView = () => {
               </div>
 
               {form?.fields && form.fields[currentFieldIndex] && (
-                <div className="space-y-4 form-field animate-fadeIn">
-                  <Label htmlFor={form.fields[currentFieldIndex].id} className="font-medium text-lg">
-                    {form.fields[currentFieldIndex].label}
-                    {form.fields[currentFieldIndex].required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  
-                  {form.fields[currentFieldIndex].description && (
-                    <p className="text-sm text-gray-500 mb-2">{form.fields[currentFieldIndex].description}</p>
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'text' && (
-                    <Input
-                      id={form.fields[currentFieldIndex].id}
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder || 'Escriba su respuesta aquí'}
-                      required={form.fields[currentFieldIndex].required}
-                      className="w-full"
-                    />
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'textarea' && (
-                    <Textarea
-                      id={form.fields[currentFieldIndex].id}
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder || 'Escriba su respuesta aquí'}
-                      required={form.fields[currentFieldIndex].required}
-                      className="w-full min-h-[120px]"
-                      rows={5}
-                    />
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'email' && (
-                    <Input
-                      id={form.fields[currentFieldIndex].id}
-                      type="email"
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder || 'correo@ejemplo.com'}
-                      required={form.fields[currentFieldIndex].required}
-                      className="w-full"
-                    />
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'number' && (
-                    <Input
-                      id={form.fields[currentFieldIndex].id}
-                      type="number"
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder || '0'}
-                      required={form.fields[currentFieldIndex].required}
-                      className="w-full"
-                    />
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'date' && (
-                    <Input
-                      id={form.fields[currentFieldIndex].id}
-                      type="date"
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      required={form.fields[currentFieldIndex].required}
-                      className="w-full"
-                    />
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'select' && form.fields[currentFieldIndex].options && (
-                    <Select
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={form.fields[currentFieldIndex].placeholder || 'Seleccione una opción'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {form.fields[currentFieldIndex].options.map((option: any) => (
-                          <SelectItem key={option.id} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'checkbox' && form.fields[currentFieldIndex].options && (
-                    <div className="space-y-3">
-                      {form.fields[currentFieldIndex].options.map((option: any) => {
-                        const isChecked = Array.isArray(formValues[form.fields[currentFieldIndex].id])
-                          ? formValues[form.fields[currentFieldIndex].id]?.includes(option.value)
-                          : false;
-                          
-                        return (
-                          <div key={option.id} className="flex items-start space-x-2">
-                            <Checkbox
-                              id={`${form.fields[currentFieldIndex].id}-${option.id}`}
-                              checked={isChecked}
-                              onCheckedChange={(checked) => {
-                                const currentValues = Array.isArray(formValues[form.fields[currentFieldIndex].id])
-                                  ? [...formValues[form.fields[currentFieldIndex].id]]
-                                  : [];
-                                  
-                                const newValues = checked
-                                  ? [...currentValues, option.value]
-                                  : currentValues.filter((v) => v !== option.value);
-                                  
-                                handleInputChange(form.fields[currentFieldIndex].id, newValues);
-                              }}
-                              className="mt-1"
-                            />
-                            <Label 
-                              htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} 
-                              className="font-normal cursor-pointer"
-                            >
-                              {option.label}
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'radio' && form.fields[currentFieldIndex].options && (
-                    <RadioGroup
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
-                      className="space-y-3"
-                    >
-                      {form.fields[currentFieldIndex].options.map((option: any) => (
-                        <div key={option.id} className="flex items-start space-x-2">
-                          <RadioGroupItem 
-                            value={option.value} 
-                            id={`${form.fields[currentFieldIndex].id}-${option.id}`}
-                            className="mt-1"
-                          />
-                          <Label 
-                            htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} 
-                            className="font-normal cursor-pointer"
-                          >
-                            {option.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  )}
-                  
-                  {form.fields[currentFieldIndex].type === 'yesno' && (
-                    <RadioGroup
-                      value={formValues[form.fields[currentFieldIndex].id] || ''}
-                      onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
-                      className="space-y-3"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="yes" id={`${form.fields[currentFieldIndex].id}-yes`} />
-                        <Label htmlFor={`${form.fields[currentFieldIndex].id}-yes`} className="font-normal cursor-pointer">
-                          Sí
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="no" id={`${form.fields[currentFieldIndex].id}-no`} />
-                        <Label htmlFor={`${form.fields[currentFieldIndex].id}-no`} className="font-normal cursor-pointer">
-                          No
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  )}
-                </div>
+                <FormField
+                  field={form.fields[currentFieldIndex]}
+                  value={formValues[form.fields[currentFieldIndex].id]}
+                  onChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
+                />
               )}
             </CardContent>
             
             <CardFooter className="flex justify-between p-6">
               <Button 
                 type="button"
-                onClick={goToPreviousField}
+                onClick={() => setCurrentFieldIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentFieldIndex === 0}
                 variant="outline"
               >
@@ -560,7 +238,7 @@ const FormView = () => {
               ) : (
                 <Button 
                   type="button"
-                  onClick={goToNextField}
+                  onClick={() => setCurrentFieldIndex(prev => Math.min(totalFields - 1, prev + 1))}
                 >
                   Siguiente
                   <ChevronRight className="ml-2 h-4 w-4" />
