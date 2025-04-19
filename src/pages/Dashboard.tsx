@@ -6,15 +6,24 @@ import { useForm } from "@/contexts/FormContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FormCard from "@/components/FormCard";
+import AssignedFormCard from "@/components/AssignedFormCard";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 
 const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
-  const { forms } = useForm();
+  const { forms, isUserAllowed } = useForm();
   
   // Get only forms owned by the current user
   const userForms = forms.filter(form => form.ownerId === currentUser?.id);
+  
+  // Get assigned forms (forms not owned by user but allowed to access)
+  const assignedForms = forms.filter(form => 
+    form.isPrivate && 
+    currentUser?.email && 
+    isUserAllowed(form.id, currentUser.email) &&
+    form.ownerId !== currentUser.id
+  );
   
   // Sort forms by creation date (newest first)
   const sortedForms = [...userForms].sort((a, b) => 
@@ -41,14 +50,21 @@ const Dashboard = () => {
       </div>
 
       {!isAdmin ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium mb-2">Welcome to your Dashboard</h3>
-          <p className="text-gray-500 mb-6">
-            As a user, you don't create forms but respond to forms assigned to you.
-          </p>
-          <Button asChild>
-            <Link to="/assigned-forms">Go to My Assigned Forms</Link>
-          </Button>
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-lg font-medium mb-4">Forms Assigned to You</h3>
+            {assignedForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {assignedForms.map(form => (
+                  <AssignedFormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No forms have been assigned to you yet.
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         <Tabs defaultValue="all" className="w-full">
