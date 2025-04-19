@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -39,7 +38,7 @@ const FormView = () => {
   const [shareUrl, setShareUrl] = useState("");
   
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
-  const [formSubmitted, setFormSubmitted] = useState(false); // New state to track submission
+  const [formSubmitted, setFormSubmitted] = useState(false);
   const totalFields = form?.fields?.length || 0;
   const progress = ((currentFieldIndex + 1) / totalFields) * 100;
   
@@ -71,20 +70,15 @@ const FormView = () => {
 
     setForm(formData);
     
-    // Generate share URL with access token
     const formShareUrl = generateAccessLink(id);
     setShareUrl(formShareUrl);
     
-    // Check if user has access to the form
     let hasAccess = false;
     
-    // If form is public, grant access
     if (!formData.isPrivate) {
       hasAccess = true;
     }
-    // If form is private, check if user is allowed or has valid token
     else {
-      // Check if user is authenticated and allowed
       if (isAuthenticated && currentUser?.email) {
         hasAccess = isUserAllowed(id, currentUser.email);
         if (hasAccess) {
@@ -92,7 +86,6 @@ const FormView = () => {
         }
       }
       
-      // Check if token is valid
       if (token && validateAccessToken(id, token)) {
         hasAccess = true;
       }
@@ -109,14 +102,11 @@ const FormView = () => {
     });
   };
 
-  // Get the scoring utilities
   const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
   
-  // Calculate the score and feedback when submitting
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
     const requiredFields = form.fields.filter((field: FormField) => field.required);
     const missingFields = requiredFields.filter((field: FormField) => {
       const value = formValues[field.id];
@@ -136,21 +126,20 @@ const FormView = () => {
     
     try {
       await submitFormResponse(id!, formValues);
-      setFormSubmitted(true); // Mark form as submitted to show score card
+      setFormSubmitted(true);
       
       toast({
         title: "Éxito",
         description: "Tu respuesta ha sido enviada",
       });
-      
-      // No redirection now - let user see the result
     } catch (error) {
       toast({
         title: "Error",
         description: "Ha ocurrido un error al enviar la respuesta del formulario",
         variant: "destructive",
       });
-      setSubmitting(false); // Reset submitting state on error
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -167,7 +156,6 @@ const FormView = () => {
     setValidatingAccess(true);
     
     try {
-      // Simulate a server delay for validation
       await new Promise(resolve => setTimeout(resolve, 800));
       
       const hasAccess = isUserAllowed(id!, accessEmail);
@@ -196,7 +184,6 @@ const FormView = () => {
     }
   };
 
-  // Function to handle returning to dashboard after viewing results
   const handleReturnToDashboard = () => {
     navigate("/");
   };
@@ -298,12 +285,10 @@ const FormView = () => {
     );
   }
 
-  // Calculate score for display
   const currentScore = form?.showTotalScore ? calculateTotalScore(formValues, form.fields || []) : 0;
   const scoreFeedback = form?.showTotalScore ? getScoreFeedback(currentScore, form.fields || []) : null;
   const showScore = shouldShowScoreCard(form?.fields || [], form?.showTotalScore);
 
-  // Show results page after form submission
   if (formSubmitted) {
     return (
       <Layout hideNav>
@@ -377,7 +362,6 @@ const FormView = () => {
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
-              {/* Progress bar */}
               <div className="w-full">
                 <Progress value={progress} className="h-2" />
                 <p className="text-sm text-gray-500 mt-2 text-center">
@@ -387,7 +371,6 @@ const FormView = () => {
 
               {form?.fields && form.fields[currentFieldIndex] && (
                 <div className="space-y-4 form-field animate-fadeIn">
-                  {/* Current field */}
                   <Label htmlFor={form.fields[currentFieldIndex].id} className="font-medium text-lg">
                     {form.fields[currentFieldIndex].label}
                     {form.fields[currentFieldIndex].required && <span className="text-red-500 ml-1">*</span>}
@@ -397,7 +380,6 @@ const FormView = () => {
                     <p className="text-sm text-gray-500 mb-2">{form.fields[currentFieldIndex].description}</p>
                   )}
                   
-                  {/* Render appropriate input based on field type */}
                   {form.fields[currentFieldIndex].type === 'text' && (
                     <Input
                       id={form.fields[currentFieldIndex].id}
