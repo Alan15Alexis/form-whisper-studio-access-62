@@ -10,6 +10,7 @@ export type FormFieldType =
   | 'date'
   | 'yesno'
   | 'image-select'
+  | 'welcome'
   
   // Contact details
   | 'fullname'
@@ -58,6 +59,10 @@ export interface FormField {
   description?: string;
   hasNumericValues?: boolean;
   scoreRanges?: ScoreRange[];
+  welcomeMessage?: {
+    text: string;
+    imageUrl?: string;
+  };
 }
 
 export interface Form {

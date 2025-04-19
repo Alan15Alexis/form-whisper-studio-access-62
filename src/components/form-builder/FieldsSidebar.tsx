@@ -21,6 +21,7 @@ const fieldCategories: FieldCategory[] = [
     id: "essential",
     title: "🔹 Esenciales",
     fields: [
+      { type: "welcome", icon: "MessageSquare", label: "Mensaje de bienvenida" },
       { type: "text", icon: "Type", label: "Texto corto" },
       { type: "textarea", icon: "AlignLeft", label: "Texto largo" },
       { type: "radio", icon: "Radio", label: "Selección individual" },

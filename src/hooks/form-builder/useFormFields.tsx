@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { FormField, FormFieldOption } from "@/types/form";
+import { FormField, FormFieldOption, FormFieldType } from "@/types/form";
 
 export function useFormFields() {
   const addField = (type: string, fields: FormField[] = []) => {
@@ -10,7 +10,7 @@ export function useFormFields() {
     if (type === 'welcome') {
       return [...fields, {
         id: uuidv4(),
-        type: 'welcome',
+        type: 'welcome' as FormFieldType,
         label: 'Mensaje de Bienvenida',
         required: true,
         welcomeMessage: {
@@ -34,7 +34,7 @@ export function useFormFields() {
     
     const newField: FormField = {
       id: uuidv4(),
-      type: type as any,
+      type: type as FormFieldType,
       label: `New ${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
       placeholder: "",
       required: false,
