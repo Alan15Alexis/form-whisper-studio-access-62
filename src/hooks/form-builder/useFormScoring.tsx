@@ -48,8 +48,14 @@ export function useFormScoring() {
     return matchingRange?.message || null;
   };
 
+  const shouldShowScoreCard = (fields: FormField[], showTotalScore?: boolean): boolean => {
+    if (!showTotalScore) return false;
+    return fields.some(f => f.hasNumericValues);
+  };
+
   return {
     calculateTotalScore,
-    getScoreFeedback
+    getScoreFeedback,
+    shouldShowScoreCard
   };
 }

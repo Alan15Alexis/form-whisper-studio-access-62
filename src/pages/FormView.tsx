@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import ShareFormDialog from "@/components/ShareFormDialog";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Send } from "lucide-react";
+import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -106,6 +107,10 @@ const FormView = () => {
     });
   };
 
+  // Get the scoring utilities
+  const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
+  
+  // Calculate the score and feedback when submitting
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -291,6 +296,11 @@ const FormView = () => {
     );
   }
 
+  // Calculate score for display
+  const currentScore = form?.showTotalScore ? calculateTotalScore(formValues, form.fields || []) : 0;
+  const scoreFeedback = form?.showTotalScore ? getScoreFeedback(currentScore, form.fields || []) : null;
+  const showScore = shouldShowScoreCard(form?.fields || [], form?.showTotalScore);
+
   return (
     <Layout hideNav>
       <div className="container max-w-3xl mx-auto">
@@ -470,7 +480,23 @@ const FormView = () => {
                   )}
                 </div>
               )}
-            </CardContent>
+
+            {/* Score Card - Show at the end */}
+            {currentFieldIndex === totalFields - 1 && showScore && (
+              <div className="mt-6 p-4 bg-primary/5 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Puntuación Total</h3>
+                  <span className="text-2xl font-bold text-primary">{currentScore}</span>
+                </div>
+                
+                {scoreFeedback && (
+                  <div className="text-sm text-muted-foreground p-3 bg-background rounded border">
+                    {scoreFeedback}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
             
             <CardFooter className="flex justify-between">
               <Button 
