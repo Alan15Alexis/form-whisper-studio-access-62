@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -38,6 +39,7 @@ const FormView = () => {
   const [shareUrl, setShareUrl] = useState("");
   
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
+  const [formSubmitted, setFormSubmitted] = useState(false); // New state to track submission
   const totalFields = form?.fields?.length || 0;
   const progress = ((currentFieldIndex + 1) / totalFields) * 100;
   
@@ -134,26 +136,21 @@ const FormView = () => {
     
     try {
       await submitFormResponse(id!, formValues);
+      setFormSubmitted(true); // Mark form as submitted to show score card
+      
       toast({
         title: "Éxito",
         description: "Tu respuesta ha sido enviada",
       });
       
-      // Reset form
-      setFormValues({});
-      
-      // Redirect after a short delay
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
+      // No redirection now - let user see the result
     } catch (error) {
       toast({
         title: "Error",
         description: "Ha ocurrido un error al enviar la respuesta del formulario",
         variant: "destructive",
       });
-    } finally {
-      setSubmitting(false);
+      setSubmitting(false); // Reset submitting state on error
     }
   };
 
@@ -197,6 +194,11 @@ const FormView = () => {
     } finally {
       setValidatingAccess(false);
     }
+  };
+
+  // Function to handle returning to dashboard after viewing results
+  const handleReturnToDashboard = () => {
+    navigate("/");
   };
 
   if (loading) {
@@ -301,6 +303,49 @@ const FormView = () => {
   const scoreFeedback = form?.showTotalScore ? getScoreFeedback(currentScore, form.fields || []) : null;
   const showScore = shouldShowScoreCard(form?.fields || [], form?.showTotalScore);
 
+  // Show results page after form submission
+  if (formSubmitted) {
+    return (
+      <Layout hideNav>
+        <div className="container max-w-3xl mx-auto py-8">
+          <Card className="shadow-md">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">¡Gracias por responder!</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Tu respuesta ha sido registrada con éxito
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6 py-6">
+              {showScore && (
+                <div className="p-6 bg-primary/5 rounded-lg space-y-3 border">
+                  <h3 className="text-xl font-medium text-center mb-4">Resultado</h3>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">Puntuación Total:</span>
+                    <span className="text-3xl font-bold text-primary">{currentScore}</span>
+                  </div>
+                  
+                  {scoreFeedback && (
+                    <div className="mt-4 p-4 bg-background rounded border text-center">
+                      <p className="text-lg">{scoreFeedback}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+            
+            <CardFooter className="flex justify-center pb-6">
+              <Button onClick={handleReturnToDashboard}>
+                Volver al inicio
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout hideNav>
       <div className="container max-w-3xl mx-auto">
@@ -341,25 +386,26 @@ const FormView = () => {
               </div>
 
               {form?.fields && form.fields[currentFieldIndex] && (
-                <div className="space-y-2 form-field animate-fadeIn">
+                <div className="space-y-4 form-field animate-fadeIn">
                   {/* Current field */}
-                  <Label htmlFor={form.fields[currentFieldIndex].id} className="font-medium">
+                  <Label htmlFor={form.fields[currentFieldIndex].id} className="font-medium text-lg">
                     {form.fields[currentFieldIndex].label}
                     {form.fields[currentFieldIndex].required && <span className="text-red-500 ml-1">*</span>}
                   </Label>
                   
                   {form.fields[currentFieldIndex].description && (
-                    <p className="text-sm text-gray-500 mb-1">{form.fields[currentFieldIndex].description}</p>
+                    <p className="text-sm text-gray-500 mb-2">{form.fields[currentFieldIndex].description}</p>
                   )}
                   
+                  {/* Render appropriate input based on field type */}
                   {form.fields[currentFieldIndex].type === 'text' && (
                     <Input
                       id={form.fields[currentFieldIndex].id}
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder}
+                      placeholder={form.fields[currentFieldIndex].placeholder || 'Escriba su respuesta aquí'}
                       required={form.fields[currentFieldIndex].required}
-                      className="form-input"
+                      className="w-full"
                     />
                   )}
                   
@@ -368,10 +414,10 @@ const FormView = () => {
                       id={form.fields[currentFieldIndex].id}
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder}
+                      placeholder={form.fields[currentFieldIndex].placeholder || 'Escriba su respuesta aquí'}
                       required={form.fields[currentFieldIndex].required}
-                      className="form-input resize-none"
-                      rows={4}
+                      className="w-full min-h-[120px]"
+                      rows={5}
                     />
                   )}
                   
@@ -381,9 +427,9 @@ const FormView = () => {
                       type="email"
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder || 'name@example.com'}
+                      placeholder={form.fields[currentFieldIndex].placeholder || 'correo@ejemplo.com'}
                       required={form.fields[currentFieldIndex].required}
-                      className="form-input"
+                      className="w-full"
                     />
                   )}
                   
@@ -393,9 +439,9 @@ const FormView = () => {
                       type="number"
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
-                      placeholder={form.fields[currentFieldIndex].placeholder}
+                      placeholder={form.fields[currentFieldIndex].placeholder || '0'}
                       required={form.fields[currentFieldIndex].required}
-                      className="form-input"
+                      className="w-full"
                     />
                   )}
                   
@@ -406,7 +452,7 @@ const FormView = () => {
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onChange={(e) => handleInputChange(form.fields[currentFieldIndex].id, e.target.value)}
                       required={form.fields[currentFieldIndex].required}
-                      className="form-input"
+                      className="w-full"
                     />
                   )}
                   
@@ -415,11 +461,11 @@ const FormView = () => {
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
                     >
-                      <SelectTrigger className="form-input">
-                        <SelectValue placeholder={form.fields[currentFieldIndex].placeholder || 'Select an option'} />
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={form.fields[currentFieldIndex].placeholder || 'Seleccione una opción'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {form.fields[currentFieldIndex].options.map((option) => (
+                        {form.fields[currentFieldIndex].options.map((option: any) => (
                           <SelectItem key={option.id} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -429,14 +475,14 @@ const FormView = () => {
                   )}
                   
                   {form.fields[currentFieldIndex].type === 'checkbox' && form.fields[currentFieldIndex].options && (
-                    <div className="space-y-2">
-                      {form.fields[currentFieldIndex].options.map((option) => {
+                    <div className="space-y-3">
+                      {form.fields[currentFieldIndex].options.map((option: any) => {
                         const isChecked = Array.isArray(formValues[form.fields[currentFieldIndex].id])
                           ? formValues[form.fields[currentFieldIndex].id]?.includes(option.value)
                           : false;
                           
                         return (
-                          <div key={option.id} className="flex items-center space-x-2">
+                          <div key={option.id} className="flex items-start space-x-2">
                             <Checkbox
                               id={`${form.fields[currentFieldIndex].id}-${option.id}`}
                               checked={isChecked}
@@ -451,8 +497,12 @@ const FormView = () => {
                                   
                                 handleInputChange(form.fields[currentFieldIndex].id, newValues);
                               }}
+                              className="mt-1"
                             />
-                            <Label htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} className="font-normal">
+                            <Label 
+                              htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} 
+                              className="font-normal cursor-pointer"
+                            >
                               {option.label}
                             </Label>
                           </div>
@@ -465,40 +515,51 @@ const FormView = () => {
                     <RadioGroup
                       value={formValues[form.fields[currentFieldIndex].id] || ''}
                       onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
+                      className="space-y-3"
                     >
-                      <div className="space-y-2">
-                        {form.fields[currentFieldIndex].options.map((option) => (
-                          <div key={option.id} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option.value} id={`${form.fields[currentFieldIndex].id}-${option.id}`} />
-                            <Label htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} className="font-normal">
-                              {option.label}
-                            </Label>
-                          </div>
-                        ))}
+                      {form.fields[currentFieldIndex].options.map((option: any) => (
+                        <div key={option.id} className="flex items-start space-x-2">
+                          <RadioGroupItem 
+                            value={option.value} 
+                            id={`${form.fields[currentFieldIndex].id}-${option.id}`}
+                            className="mt-1"
+                          />
+                          <Label 
+                            htmlFor={`${form.fields[currentFieldIndex].id}-${option.id}`} 
+                            className="font-normal cursor-pointer"
+                          >
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+                  
+                  {form.fields[currentFieldIndex].type === 'yesno' && (
+                    <RadioGroup
+                      value={formValues[form.fields[currentFieldIndex].id] || ''}
+                      onValueChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="yes" id={`${form.fields[currentFieldIndex].id}-yes`} />
+                        <Label htmlFor={`${form.fields[currentFieldIndex].id}-yes`} className="font-normal cursor-pointer">
+                          Sí
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="no" id={`${form.fields[currentFieldIndex].id}-no`} />
+                        <Label htmlFor={`${form.fields[currentFieldIndex].id}-no`} className="font-normal cursor-pointer">
+                          No
+                        </Label>
                       </div>
                     </RadioGroup>
                   )}
                 </div>
               )}
-
-            {/* Score Card - Show at the end */}
-            {currentFieldIndex === totalFields - 1 && showScore && (
-              <div className="mt-6 p-4 bg-primary/5 rounded-lg space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Puntuación Total</h3>
-                  <span className="text-2xl font-bold text-primary">{currentScore}</span>
-                </div>
-                
-                {scoreFeedback && (
-                  <div className="text-sm text-muted-foreground p-3 bg-background rounded border">
-                    {scoreFeedback}
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
+            </CardContent>
             
-            <CardFooter className="flex justify-between">
+            <CardFooter className="flex justify-between p-6">
               <Button 
                 type="button"
                 onClick={goToPreviousField}
@@ -518,7 +579,6 @@ const FormView = () => {
                 <Button 
                   type="button"
                   onClick={goToNextField}
-                  variant="outline"
                 >
                   Siguiente
                   <ChevronRight className="ml-2 h-4 w-4" />
