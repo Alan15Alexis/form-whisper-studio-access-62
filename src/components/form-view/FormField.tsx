@@ -1,5 +1,5 @@
 
-import { FormField } from "@/types/form";
+import { type FormField as FormFieldType } from "@/types/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 
 interface FormFieldProps {
-  field: FormField;
+  field: FormFieldType;
   value: any;
   onChange: (value: any) => void;
 }
