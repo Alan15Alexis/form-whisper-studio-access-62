@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form } from "@/types/form";
@@ -19,6 +18,8 @@ export function useFormBuilder(formId?: string) {
     isPrivate: false,
     allowedUsers: [],
     showTotalScore: false,
+    allowViewOwnResponses: false,
+    allowEditOwnResponses: false,
   });
   
   const [allowedUserEmail, setAllowedUserEmail] = useState("");
@@ -98,6 +99,14 @@ export function useFormBuilder(formId?: string) {
     }
   };
 
+  const handleAllowViewOwnResponsesChange = (allow: boolean) => {
+    setFormData({ ...formData, allowViewOwnResponses: allow });
+  };
+
+  const handleAllowEditOwnResponsesChange = (allow: boolean) => {
+    setFormData({ ...formData, allowEditOwnResponses: allow });
+  };
+
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
@@ -131,6 +140,8 @@ export function useFormBuilder(formId?: string) {
     calculateTotalScore,
     getScoreFeedback,
     addAllowedUser,
-    removeAllowedUser
+    removeAllowedUser,
+    handleAllowViewOwnResponsesChange,
+    handleAllowEditOwnResponsesChange,
   };
 }

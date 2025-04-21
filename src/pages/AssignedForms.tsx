@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/contexts/FormContext";
@@ -10,16 +9,32 @@ import { ClipboardList, FileText } from "lucide-react";
 const AssignedForms = () => {
   const { currentUser } = useAuth();
   const { forms, isUserAllowed, getFormResponses } = useForm();
-  
-  // Filter forms that are assigned to the current user
+
+  const [hiddenForms, setHiddenForms] = useState<string[]>([]);
+
+  useEffect(() => {
+    if(currentUser?.id) {
+      const stored = localStorage.getItem(`hiddenForms:${currentUser.id}`);
+      setHiddenForms(stored ? JSON.parse(stored) : []);
+    }
+  }, [currentUser?.id]);
+
+  const hideForm = (formId: string) => {
+    const updated = [...hiddenForms, formId];
+    setHiddenForms(updated);
+    if(currentUser?.id) {
+      localStorage.setItem(`hiddenForms:${currentUser.id}`, JSON.stringify(updated));
+    }
+  };
+
   const assignedForms = forms.filter(form => 
     form.isPrivate && 
-    currentUser?.email && 
+    currentUser?.email &&
     isUserAllowed(form.id, currentUser.email) &&
-    form.ownerId !== currentUser.id
+    form.ownerId !== currentUser.id &&
+    !hiddenForms.includes(form.id)
   );
-  
-  // Filter forms by completion status
+
   const pendingForms = assignedForms.filter(form => getFormResponses(form.id).length === 0);
   const completedForms = assignedForms.filter(form => getFormResponses(form.id).length > 0);
 
@@ -47,7 +62,7 @@ const AssignedForms = () => {
           {pendingForms.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {pendingForms.map(form => (
-                <AssignedFormCard key={form.id} form={form} />
+                <AssignedFormCard key={form.id} form={form} onRemove={hideForm} />
               ))}
             </div>
           ) : (
@@ -64,7 +79,7 @@ const AssignedForms = () => {
           {completedForms.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {completedForms.map(form => (
-                <AssignedFormCard key={form.id} form={form} />
+                <AssignedFormCard key={form.id} form={form} onRemove={hideForm} />
               ))}
             </div>
           ) : (

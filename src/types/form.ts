@@ -81,6 +81,8 @@ export interface Form {
     text: string;
     imageUrl?: string;
   };
+  allowViewOwnResponses?: boolean; // Permitir ver solo sus respuestas
+  allowEditOwnResponses?: boolean; // Permitir editar sus respuestas
 }
 
 export interface FormResponse {

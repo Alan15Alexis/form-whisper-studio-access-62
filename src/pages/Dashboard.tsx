@@ -1,5 +1,4 @@
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/contexts/FormContext";
@@ -14,23 +13,37 @@ const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
   const { forms, isUserAllowed } = useForm();
   
-  // Get only forms owned by the current user
+  const [hiddenForms, setHiddenForms] = useState<string[]>([]);
+
+  useEffect(() => {
+    if(currentUser?.id) {
+      const stored = localStorage.getItem(`hiddenForms:${currentUser.id}`);
+      setHiddenForms(stored ? JSON.parse(stored) : []);
+    }
+  }, [currentUser?.id]);
+
+  const hideForm = (formId: string) => {
+    const updated = [...hiddenForms, formId];
+    setHiddenForms(updated);
+    if(currentUser?.id) {
+      localStorage.setItem(`hiddenForms:${currentUser.id}`, JSON.stringify(updated));
+    }
+  };
+
   const userForms = forms.filter(form => form.ownerId === currentUser?.id);
   
-  // Get assigned forms (forms not owned by user but allowed to access)
   const assignedForms = forms.filter(form => 
     form.isPrivate && 
     currentUser?.email && 
     isUserAllowed(form.id, currentUser.email) &&
-    form.ownerId !== currentUser.id
+    form.ownerId !== currentUser.id &&
+    !hiddenForms.includes(form.id)
   );
   
-  // Sort forms by creation date (newest first)
   const sortedForms = [...userForms].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   
-  // Filter forms by privacy setting
   const publicForms = sortedForms.filter(form => !form.isPrivate);
   const privateForms = sortedForms.filter(form => form.isPrivate);
 
@@ -56,7 +69,7 @@ const Dashboard = () => {
             {assignedForms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {assignedForms.map(form => (
-                  <AssignedFormCard key={form.id} form={form} />
+                  <AssignedFormCard key={form.id} form={form} onRemove={hideForm} />
                 ))}
               </div>
             ) : (

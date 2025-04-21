@@ -25,7 +25,9 @@ const FormBuilder = () => {
     removeAllowedUser,
     handleSubmit,
     setAllowedUserEmail,
-    handleDragEnd
+    handleDragEnd,
+    handleAllowViewOwnResponsesChange,
+    handleAllowEditOwnResponsesChange
   } = useFormBuilder(id);
 
   const handleSave = () => {
@@ -39,7 +41,6 @@ const FormBuilder = () => {
         isEditMode={isEditMode} 
         onSave={handleSave}
       />
-      
       <DragDropContext onDragEnd={handleDragEnd}>
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
           <FormBuilderTabs 
@@ -54,11 +55,12 @@ const FormBuilder = () => {
             setAllowedUserEmail={setAllowedUserEmail}
             addAllowedUser={addAllowedUser}
             removeAllowedUser={removeAllowedUser}
+            onAllowViewOwnResponsesChange={handleAllowViewOwnResponsesChange}
+            onAllowEditOwnResponsesChange={handleAllowEditOwnResponsesChange}
           />
         </form>
       </DragDropContext>
     </Layout>
   );
 };
-
 export default FormBuilder;

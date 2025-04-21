@@ -1,22 +1,27 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormResponse } from "@/types/form";
 import { Link } from "react-router-dom";
-import { CheckCircle2, CircleDot, FileText, SendHorizontal } from "lucide-react";
+import { CheckCircle2, CircleDot, FileText, SendHorizontal, Trash2 } from "lucide-react";
 import { useForm } from "@/contexts/FormContext";
 import { format } from "date-fns";
 
 interface AssignedFormCardProps {
   form: Form;
+  onRemove?: (formId: string) => void;
 }
 
-const AssignedFormCard = ({ form }: AssignedFormCardProps) => {
+const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
   const { getFormResponses } = useForm();
   const responses = getFormResponses(form.id);
   const hasResponded = responses.length > 0;
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if(onRemove) onRemove(form.id);
+  };
 
   return (
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full">
@@ -65,6 +70,16 @@ const AssignedFormCard = ({ form }: AssignedFormCardProps) => {
             View Responses
           </Link>
         </Button>
+        {onRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="col-span-2 text-red-500 hover:text-red-700 mt-1"
+            onClick={handleRemove}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Quitar de mi vista
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

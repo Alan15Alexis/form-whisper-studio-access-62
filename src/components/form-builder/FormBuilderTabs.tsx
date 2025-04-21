@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form } from "@/types/form";
@@ -13,13 +12,15 @@ interface FormBuilderTabsProps {
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
-  onToggleFormScoring: (enabled: boolean) => void;  // Added this missing property
+  onToggleFormScoring: (enabled: boolean) => void;
   updateField: (id: string, field: any) => void;
   removeField: (id: string) => void;
   allowedUserEmail: string;
   setAllowedUserEmail: (email: string) => void;
   addAllowedUser: () => void;
   removeAllowedUser: (email: string) => void;
+  onAllowViewOwnResponsesChange?: (allow: boolean) => void;
+  onAllowEditOwnResponsesChange?: (allow: boolean) => void;
 }
 
 const FormBuilderTabs = ({
@@ -27,13 +28,15 @@ const FormBuilderTabs = ({
   onTitleChange,
   onDescriptionChange,
   onPrivateChange,
-  onToggleFormScoring,  // Added this missing property
+  onToggleFormScoring,
   updateField,
   removeField,
   allowedUserEmail,
   setAllowedUserEmail,
   addAllowedUser,
-  removeAllowedUser
+  removeAllowedUser,
+  onAllowViewOwnResponsesChange,
+  onAllowEditOwnResponsesChange
 }: FormBuilderTabsProps) => {
   return (
     <Tabs defaultValue="fields" className="w-full">
@@ -70,6 +73,10 @@ const FormBuilderTabs = ({
         <FormSettings 
           isPrivate={formData.isPrivate || false}
           onPrivateChange={onPrivateChange}
+          allowViewOwnResponses={!!formData.allowViewOwnResponses}
+          onAllowViewOwnResponsesChange={onAllowViewOwnResponsesChange}
+          allowEditOwnResponses={!!formData.allowEditOwnResponses}
+          onAllowEditOwnResponsesChange={onAllowEditOwnResponsesChange}
         />
       </TabsContent>
       
