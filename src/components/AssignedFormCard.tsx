@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Form, FormResponse } from "@/types/form";
+import { Form } from "@/types/form";
 import { Link } from "react-router-dom";
 import { CheckCircle2, CircleDot, FileText, SendHorizontal, Trash2 } from "lucide-react";
 import { useForm } from "@/contexts/FormContext";
@@ -20,8 +21,11 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
 
   const handleRemove = (e: React.MouseEvent) => {
     e.preventDefault();
-    if(onRemove) onRemove(form.id);
+    if (onRemove) onRemove(form.id);
   };
+
+  const canEdit = !!form.allowEditOwnResponses;
+  const canView = !!form.allowViewOwnResponses;
 
   return (
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full">
@@ -51,25 +55,28 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
         </div>
       </CardContent>
       <CardFooter className="pt-3 grid grid-cols-2 gap-2">
-        <Button 
-          asChild 
-          variant={hasResponded ? "secondary" : "default"}
-        >
-          <Link to={`/forms/${form.id}`}>
-            <SendHorizontal className="mr-2 h-4 w-4" />
-            {hasResponded ? "Edit Response" : "Respond"}
-          </Link>
-        </Button>
-        <Button 
-          asChild 
-          variant="outline"
-          disabled={!hasResponded}
-        >
-          <Link to={`/forms/${form.id}/responses`}>
-            <FileText className="mr-2 h-4 w-4" />
-            View Responses
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button 
+            asChild 
+            variant={hasResponded ? "secondary" : "default"}
+          >
+            <Link to={`/forms/${form.id}`}>
+              <SendHorizontal className="mr-2 h-4 w-4" />
+              {hasResponded ? "Edit Response" : "Respond"}
+            </Link>
+          </Button>
+        )}
+        {canView && hasResponded && (
+          <Button 
+            asChild 
+            variant="outline"
+          >
+            <Link to={`/forms/${form.id}/responses`}>
+              <FileText className="mr-2 h-4 w-4" />
+              View Responses
+            </Link>
+          </Button>
+        )}
         {onRemove && (
           <Button
             type="button"
