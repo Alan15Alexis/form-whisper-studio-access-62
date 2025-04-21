@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -77,15 +76,45 @@ const FormView = () => {
       [fieldId]: value,
     });
   };
+
+  const checkRequiredFields = (fields: any[]) => {
+    const missingFields = fields.filter((field) => {
+      if (!field.required) return false;
+      
+      const value = formValues[field.id];
+      
+      if (field.type === 'checkbox' && Array.isArray(value)) {
+        return value.length === 0;
+      }
+      
+      if (field.type === 'matrix' && Array.isArray(value)) {
+        return value.some(v => v === null || v === undefined);
+      }
+      
+      if (field.type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return !emailRegex.test(value);
+      }
+      
+      if (field.type === 'phone' && value) {
+        const phoneRegex = /^\+?[0-9\s\-()]{7,15}$/;
+        return !phoneRegex.test(value);
+      }
+      
+      if (field.type === 'terms') {
+        return value !== true;
+      }
+      
+      return value === undefined || value === "" || value === null;
+    });
+    
+    return missingFields;
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const requiredFields = form.fields.filter((field: any) => field.required);
-    const missingFields = requiredFields.filter((field: any) => {
-      const value = formValues[field.id];
-      return value === undefined || value === "" || value === null;
-    });
+    const missingFields = checkRequiredFields(form.fields);
     
     if (missingFields.length > 0) {
       toast({
@@ -98,8 +127,10 @@ const FormView = () => {
     
     setSubmitting(true);
     
+    const submittedBy = currentUser?.email || "";
+    
     try {
-      await submitFormResponse(id!, formValues);
+      await submitFormResponse(id!, formValues, submittedBy);
       setFormSubmitted(true);
       
       toast({
