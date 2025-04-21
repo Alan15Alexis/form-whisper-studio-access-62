@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -13,34 +12,46 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 const FormResponses = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getForm, getFormResponses, generateAccessLink } = useForm();
-  
+  const { currentUser, isAdmin } = useAuth();
+
   const [form, setForm] = useState<FormType | null>(null);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [accessLink, setAccessLink] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     if (!id) {
       navigate("/dashboard");
       return;
     }
-    
     const formData = getForm(id);
     if (!formData) {
       navigate("/dashboard");
       return;
     }
-    
     setForm(formData);
-    setResponses(getFormResponses(id));
     setAccessLink(generateAccessLink(id));
     setLoading(false);
-  }, [id, getForm, getFormResponses, generateAccessLink, navigate]);
+
+    const allResponses = getFormResponses(id);
+
+    if (!isAdmin && currentUser && formData.allowViewOwnResponses) {
+      const filtered = allResponses.filter(
+        (resp) => resp.submittedBy && resp.submittedBy.toLowerCase() === currentUser.email.toLowerCase()
+      );
+      setResponses(filtered);
+    } else if (isAdmin) {
+      setResponses(allResponses);
+    } else if (!isAdmin && !formData.allowViewOwnResponses) {
+      setResponses([]);
+    }
+  }, [id, getForm, getFormResponses, generateAccessLink, navigate, isAdmin, currentUser]);
 
   const copyAccessLink = () => {
     navigator.clipboard.writeText(accessLink);
@@ -53,7 +64,6 @@ const FormResponses = () => {
   const downloadCSV = () => {
     if (!form || responses.length === 0) return;
     
-    // Get all unique keys from all responses
     const allKeys = new Set<string>();
     responses.forEach(response => {
       Object.keys(response.responses).forEach(key => {
@@ -61,16 +71,13 @@ const FormResponses = () => {
       });
     });
     
-    // Get field labels instead of IDs
     const fieldMap: Record<string, string> = {};
     form.fields.forEach(field => {
       fieldMap[field.id] = field.label;
     });
     
-    // Create CSV header
     const headers = ["Submission Date", "Submitted By", ...Array.from(allKeys).map(key => fieldMap[key] || key)];
     
-    // Create CSV rows
     const rows = responses.map(response => {
       const row: string[] = [
         format(new Date(response.submittedAt), 'yyyy-MM-dd HH:mm:ss'),
@@ -89,13 +96,11 @@ const FormResponses = () => {
       return row;
     });
     
-    // Convert to CSV
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
     
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -292,20 +297,16 @@ const FormResponses = () => {
   );
 };
 
-// Helper function to format response values based on field type
 const formatResponseValue = (value: any, field: FormField) => {
   if (value === undefined || value === null || value === '') {
     return <span className="text-gray-400">No response</span>;
   }
-  
   if (Array.isArray(value)) {
     return value.join(", ");
   }
-  
   if (field.type === 'checkbox' && typeof value === 'boolean') {
     return value ? "Yes" : "No";
   }
-  
   return String(value);
 };
 
