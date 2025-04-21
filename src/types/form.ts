@@ -41,6 +41,7 @@ export interface FormFieldOption {
   label: string;
   value: string;
   numericValue?: number;
+  columns?: string[]; // Added the columns property for matrix options
 }
 
 export interface ScoreRange {

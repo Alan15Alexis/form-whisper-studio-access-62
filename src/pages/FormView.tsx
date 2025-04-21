@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -130,7 +131,8 @@ const FormView = () => {
     const submittedBy = currentUser?.email || "";
     
     try {
-      await submitFormResponse(id!, formValues, submittedBy);
+      // Fix: Remove the third argument, pass only id and formValues
+      await submitFormResponse(id!, formValues);
       setFormSubmitted(true);
       
       toast({
