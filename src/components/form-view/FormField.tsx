@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { type FormField as FormFieldType } from "@/types/form";
 import { Input } from "@/components/ui/input";
@@ -573,7 +572,7 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
             <thead>
               <tr className="bg-gray-50">
                 <th className="border text-left py-3 px-4"></th>
-                {field.options[0].columns?.map((col, idx) => (
+                {field.options[0]?.columns?.map((col, idx) => (
                   <th key={idx} className="border text-center py-3 px-4">{col}</th>
                 ))}
               </tr>
@@ -584,20 +583,19 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
                   <td className="border py-3 px-4 font-medium">{row.label}</td>
                   {row.columns?.map((_, colIdx) => (
                     <td key={colIdx} className="border text-center py-3 px-4">
-                      <RadioGroupItem
-                        value={`${rowIdx}-${colIdx}`}
-                        id={`matrix-${field.id}-${rowIdx}-${colIdx}`}
-                        checked={
-                          value && 
-                          Array.isArray(value) && 
-                          value[rowIdx] === colIdx
-                        }
-                        onClick={() => {
+                      <RadioGroup
+                        value={value && Array.isArray(value) && value[rowIdx] === colIdx ? `${rowIdx}-${colIdx}` : ""}
+                        onValueChange={() => {
                           const newValue = Array.isArray(value) ? [...value] : Array(field.options!.length).fill(null);
                           newValue[rowIdx] = colIdx;
                           onChange(newValue);
                         }}
-                      />
+                      >
+                        <RadioGroupItem
+                          value={`${rowIdx}-${colIdx}`}
+                          id={`matrix-${field.id}-${rowIdx}-${colIdx}`}
+                        />
+                      </RadioGroup>
                     </td>
                   ))}
                 </tr>
