@@ -84,6 +84,7 @@ export interface Form {
   };
   allowViewOwnResponses?: boolean; // Permitir ver solo sus respuestas
   allowEditOwnResponses?: boolean; // Permitir editar sus respuestas
+  formColor?: string; // <--- NUEVO CAMPO para el color personalizado
 }
 
 export interface FormResponse {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -13,6 +12,7 @@ import ShareFormDialog from "@/components/ShareFormDialog";
 import FormField from "@/components/form-view/FormField";
 import FormSuccess from "@/components/form-view/FormSuccess";
 import FormAccess from "@/components/form-view/FormAccess";
+import { cn } from "@/lib/utils";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -131,7 +131,6 @@ const FormView = () => {
     const submittedBy = currentUser?.email || "";
     
     try {
-      // Fix: Remove the third argument, pass only id and formValues
       await submitFormResponse(id!, formValues);
       setFormSubmitted(true);
       
@@ -215,9 +214,16 @@ const FormView = () => {
           </Button>
         </div>
         
-        <Card className="shadow-md">
+        <Card
+          className={cn("shadow-md transition-colors")}
+          style={form?.formColor ? {
+            background: form.formColor,
+            borderColor: form.formColor,
+            boxShadow: `0 4px 20px 0 ${form.formColor}50`
+          } : undefined}
+        >
           {form?.welcomeMessage && (
-            <CardHeader className="text-center">
+            <CardHeader className="text-center bg-transparent">
               {form.welcomeMessage.imageUrl && (
                 <div className="mb-4">
                   <img 
@@ -248,6 +254,7 @@ const FormView = () => {
                   field={form.fields[currentFieldIndex]}
                   value={formValues[form.fields[currentFieldIndex].id]}
                   onChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
+                  formColor={form?.formColor}
                 />
               )}
             </CardContent>

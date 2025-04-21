@@ -20,25 +20,23 @@ interface FormFieldProps {
   field: FormFieldType;
   value: any;
   onChange: (value: any) => void;
+  formColor?: string;
 }
 
-const FormField = ({ field, value, onChange }: FormFieldProps) => {
+const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
   const [signaturePoints, setSignaturePoints] = useState<{ x: number, y: number }[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Función para validar email
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  // Función para validar teléfono (formato simple)
   const validatePhone = (phone: string) => {
     return /^\+?[0-9\s\-()]{7,15}$/.test(phone);
   };
 
-  // Funciones para dibujo y firma
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     const canvas = canvasRef.current;
@@ -156,7 +154,16 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
   };
 
   return (
-    <div className="space-y-4 form-field animate-fadeIn">
+    <div
+      className={cn(
+        "space-y-4 form-field animate-fadeIn rounded-xl p-6 shadow-sm border transition-colors",
+        formColor ? {
+          background: `${formColor}12`,
+          borderColor: formColor,
+          boxShadow: `0 2px 8px 0 ${formColor}22`
+        } : undefined
+      )}
+    >
       <Label htmlFor={field.id} className="font-medium text-lg">
         {field.label}
         {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -166,7 +173,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         <p className="text-sm text-gray-500 mb-2">{field.description}</p>
       )}
       
-      {/* Texto corto */}
       {field.type === 'text' && (
         <Input
           id={field.id}
@@ -178,7 +184,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         />
       )}
       
-      {/* Texto largo */}
       {field.type === 'textarea' && (
         <Textarea
           id={field.id}
@@ -191,7 +196,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         />
       )}
       
-      {/* Email */}
       {field.type === 'email' && (
         <Input
           id={field.id}
@@ -207,7 +211,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         />
       )}
       
-      {/* Número */}
       {field.type === 'number' && (
         <Input
           id={field.id}
@@ -220,7 +223,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         />
       )}
       
-      {/* Fecha */}
       {field.type === 'date' && (
         <Popover>
           <PopoverTrigger asChild>
@@ -246,7 +248,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </Popover>
       )}
       
-      {/* Hora */}
       {field.type === 'time' && (
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -261,7 +262,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
       
-      {/* Selección desplegable */}
       {field.type === 'select' && field.options && (
         <Select
           value={value || ''}
@@ -280,7 +280,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </Select>
       )}
       
-      {/* Selección múltiple */}
       {field.type === 'checkbox' && field.options && (
         <div className="space-y-3">
           {field.options.map((option) => {
@@ -312,7 +311,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
       
-      {/* Selección individual */}
       {field.type === 'radio' && field.options && (
         <RadioGroup
           value={value || ''}
@@ -337,7 +335,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </RadioGroup>
       )}
       
-      {/* Sí / No */}
       {field.type === 'yesno' && (
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
@@ -353,7 +350,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Selección de imagen */}
       {field.type === 'image-select' && field.options && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {field.options.map((option) => (
@@ -386,7 +382,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Nombre Completo */}
       {field.type === 'fullname' && (
         <Input
           id={field.id}
@@ -398,7 +393,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         />
       )}
 
-      {/* Teléfono */}
       {field.type === 'phone' && (
         <Input
           id={field.id}
@@ -414,7 +408,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         />
       )}
 
-      {/* Dirección */}
       {field.type === 'address' && (
         <div className="space-y-2">
           <Input
@@ -443,7 +436,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Subir imagen */}
       {field.type === 'image-upload' && (
         <div className="space-y-2">
           <div className="flex items-center justify-center w-full">
@@ -481,7 +473,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Subir archivo */}
       {field.type === 'file-upload' && (
         <div className="space-y-2">
           <div className="flex items-center justify-center w-full">
@@ -514,7 +505,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Dibujo y firma */}
       {(field.type === 'drawing' || field.type === 'signature') && (
         <div className="space-y-2">
           <div className="border rounded-md p-1 bg-white">
@@ -538,7 +528,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Escala de opinión */}
       {field.type === 'opinion-scale' && (
         <div className="space-y-4">
           <div className="flex justify-between">
@@ -562,10 +551,8 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Calificación de estrellas */}
       {field.type === 'star-rating' && renderRatingStars(5)}
 
-      {/* Matriz de selección */}
       {field.type === 'matrix' && field.options && field.options.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -584,9 +571,15 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
                   {row.columns?.map((_, colIdx) => (
                     <td key={colIdx} className="border text-center py-3 px-4">
                       <RadioGroup
-                        value={value && Array.isArray(value) && value[rowIdx] === colIdx ? `${rowIdx}-${colIdx}` : ""}
+                        value={
+                          value && Array.isArray(value) && value[rowIdx] === colIdx
+                            ? `${rowIdx}-${colIdx}`
+                            : ""
+                        }
                         onValueChange={() => {
-                          const newValue = Array.isArray(value) ? [...value] : Array(field.options!.length).fill(null);
+                          const newValue = Array.isArray(value)
+                            ? [...value]
+                            : Array(field.options!.length).fill(null);
                           newValue[rowIdx] = colIdx;
                           onChange(newValue);
                         }}
@@ -605,7 +598,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Clasificación (ranking) */}
       {field.type === 'ranking' && field.options && (
         <div className="space-y-2">
           {field.options.map((option, index) => {
@@ -634,12 +626,10 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
                         const newRank = parseInt(val);
                         let newValue = Array.isArray(value) ? [...value] : [];
                         
-                        // Remove this option from current position if ranked
                         if (rank) {
                           newValue = newValue.filter(v => v !== option.value);
                         }
                         
-                        // Insert at new position
                         if (newRank > 0) {
                           newValue = [
                             ...newValue.slice(0, newRank - 1),
@@ -670,7 +660,6 @@ const FormField = ({ field, value, onChange }: FormFieldProps) => {
         </div>
       )}
 
-      {/* Términos y condiciones */}
       {field.type === 'terms' && (
         <div className="space-y-4">
           <div className="border rounded-md p-4 bg-gray-50 text-sm max-h-40 overflow-y-auto">

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form } from "@/types/form";
@@ -21,6 +22,7 @@ interface FormBuilderTabsProps {
   removeAllowedUser: (email: string) => void;
   onAllowViewOwnResponsesChange?: (allow: boolean) => void;
   onAllowEditOwnResponsesChange?: (allow: boolean) => void;
+  onFormColorChange?: (color: string) => void; // NUEVO
 }
 
 const FormBuilderTabs = ({
@@ -36,7 +38,8 @@ const FormBuilderTabs = ({
   addAllowedUser,
   removeAllowedUser,
   onAllowViewOwnResponsesChange,
-  onAllowEditOwnResponsesChange
+  onAllowEditOwnResponsesChange,
+  onFormColorChange,
 }: FormBuilderTabsProps) => {
   return (
     <Tabs defaultValue="fields" className="w-full">
@@ -77,6 +80,8 @@ const FormBuilderTabs = ({
           onAllowViewOwnResponsesChange={onAllowViewOwnResponsesChange}
           allowEditOwnResponses={!!formData.allowEditOwnResponses}
           onAllowEditOwnResponsesChange={onAllowEditOwnResponsesChange}
+          formColor={formData.formColor}
+          onFormColorChange={onFormColorChange}
         />
       </TabsContent>
       

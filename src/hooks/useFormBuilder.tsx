@@ -20,6 +20,7 @@ export function useFormBuilder(formId?: string) {
     showTotalScore: false,
     allowViewOwnResponses: false,
     allowEditOwnResponses: false,
+    formColor: "#3b82f6",
   });
   
   const [allowedUserEmail, setAllowedUserEmail] = useState("");
@@ -107,6 +108,10 @@ export function useFormBuilder(formId?: string) {
     setFormData({ ...formData, allowEditOwnResponses: allow });
   };
 
+  const handleFormColorChange = (color: string) => {
+    setFormData(prev => ({ ...prev, formColor: color }));
+  };
+
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
@@ -143,5 +148,6 @@ export function useFormBuilder(formId?: string) {
     removeAllowedUser,
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
+    handleFormColorChange,
   };
 }
