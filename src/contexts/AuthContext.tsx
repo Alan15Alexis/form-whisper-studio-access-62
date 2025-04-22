@@ -121,11 +121,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const { email, name, role = "user" } = credentials;
       
+      // Type casting the role to ensure it matches expected values
+      const userRole: "admin" | "user" = role === "admin" ? "admin" : "user";
+      
       const user: User = {
         id: Math.random().toString(36).substring(2, 11), // Generate a random ID
         email,
         name,
-        role
+        role: userRole
       };
       
       localStorage.setItem('user', JSON.stringify(user));
@@ -133,7 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAuthenticated(true);
       toast({
         title: 'Registration successful',
-        description: `Tu cuenta ${role === "admin" ? "de administrador" : "de usuario"} ha sido creada`,
+        description: `Tu cuenta ${userRole === "admin" ? "de administrador" : "de usuario"} ha sido creada`,
         variant: 'default',
       });
       return user;
