@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,7 +54,7 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
         </div>
       </CardContent>
       <CardFooter className="pt-3 grid grid-cols-2 gap-2">
-        {canEdit && (
+        {(!hasResponded || canEdit) && (
           <Button 
             asChild 
             variant={hasResponded ? "secondary" : "default"}
