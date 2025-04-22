@@ -217,9 +217,9 @@ const FormView = () => {
         <Card
           className={cn("shadow-md transition-colors")}
           style={form?.formColor ? {
-            background: form.formColor,
+            background: `${form.formColor}10`,
             borderColor: form.formColor,
-            boxShadow: `0 4px 20px 0 ${form.formColor}50`
+            boxShadow: `0 4px 20px 0 ${form.formColor}40`
           } : undefined}
         >
           {form?.welcomeMessage && (

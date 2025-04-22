@@ -22,7 +22,7 @@ interface FormBuilderTabsProps {
   removeAllowedUser: (email: string) => void;
   onAllowViewOwnResponsesChange?: (allow: boolean) => void;
   onAllowEditOwnResponsesChange?: (allow: boolean) => void;
-  onFormColorChange?: (color: string) => void; // NUEVO
+  onFormColorChange?: (color: string) => void;
 }
 
 const FormBuilderTabs = ({

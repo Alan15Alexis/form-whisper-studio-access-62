@@ -27,7 +27,8 @@ const FormBuilder = () => {
     setAllowedUserEmail,
     handleDragEnd,
     handleAllowViewOwnResponsesChange,
-    handleAllowEditOwnResponsesChange
+    handleAllowEditOwnResponsesChange,
+    handleFormColorChange
   } = useFormBuilder(id);
 
   const handleSave = () => {
@@ -57,6 +58,7 @@ const FormBuilder = () => {
             removeAllowedUser={removeAllowedUser}
             onAllowViewOwnResponsesChange={handleAllowViewOwnResponsesChange}
             onAllowEditOwnResponsesChange={handleAllowEditOwnResponsesChange}
+            onFormColorChange={handleFormColorChange}
           />
         </form>
       </DragDropContext>

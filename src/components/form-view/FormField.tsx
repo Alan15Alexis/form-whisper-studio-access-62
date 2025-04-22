@@ -153,16 +153,22 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
     );
   };
 
+  const applyFormColorStyles = () => {
+    if (!formColor) return {};
+    
+    return {
+      background: `${formColor}12`,
+      borderColor: formColor,
+      boxShadow: `0 2px 8px 0 ${formColor}22`
+    };
+  };
+
   return (
     <div
       className={cn(
         "space-y-4 form-field animate-fadeIn rounded-xl p-6 shadow-sm border transition-colors",
-        formColor ? {
-          background: `${formColor}12`,
-          borderColor: formColor,
-          boxShadow: `0 2px 8px 0 ${formColor}22`
-        } : undefined
       )}
+      style={formColor ? applyFormColorStyles() : undefined}
     >
       <Label htmlFor={field.id} className="font-medium text-lg">
         {field.label}
