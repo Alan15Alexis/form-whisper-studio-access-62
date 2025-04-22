@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Mail, KeyRound, User, UserPlus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -15,8 +16,19 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [activeRole, setActiveRole] = useState<"user" | "admin">("user");
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get role from URL query parameter if available
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const roleParam = params.get("role");
+    if (roleParam === "admin" || roleParam === "user") {
+      setActiveRole(roleParam);
+    }
+  }, [location]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +36,10 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      const user = await register({ email, password, name });
+      const user = await register({ email, password, name, role: activeRole });
       if (user) {
-        navigate("/dashboard");
+        // Redirect to different paths based on user role
+        navigate(user.role === "admin" ? "/dashboard" : "/assigned-forms");
       } else {
         setError("No se pudo crear la cuenta. Por favor, inténtalo de nuevo.");
       }
@@ -64,86 +77,100 @@ const Register = () => {
               Ingresa tus datos para registrarte
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleRegister} className="space-y-4">
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Tu nombre"
-                    className="pl-10"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="ejemplo@correo.com"
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">La contraseña debe tener al menos 6 caracteres</p>
-              </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-[#686df3] hover:bg-[#575ce2]" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Registrando...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center">
-                    <UserPlus className="mr-2 h-4 w-4" /> Crear cuenta
-                  </span>
+          <Tabs 
+            defaultValue={activeRole} 
+            value={activeRole} 
+            className="w-full" 
+            onValueChange={(value) => setActiveRole(value as "user" | "admin")}
+          >
+            <TabsList className="grid grid-cols-2 mb-4 mx-6">
+              <TabsTrigger value="user">Usuario</TabsTrigger>
+              <TabsTrigger value="admin">Administrador</TabsTrigger>
+            </TabsList>
+
+            <CardContent>
+              <form onSubmit={handleRegister} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-              </Button>
-            </form>
-          </CardContent>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre completo</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Tu nombre"
+                      className="pl-10"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Correo electrónico</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="ejemplo@correo.com"
+                      className="pl-10"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      className="pl-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">La contraseña debe tener al menos 6 caracteres</p>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-[#686df3] hover:bg-[#575ce2]" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Registrando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center">
+                      <UserPlus className="mr-2 h-4 w-4" /> Crear cuenta como {activeRole === "admin" ? "Administrador" : "Usuario"}
+                    </span>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Tabs>
+
           <CardFooter className="flex flex-col space-y-4">
             <div className="relative w-full">
               <div className="absolute inset-0 flex items-center">
@@ -156,7 +183,7 @@ const Register = () => {
             
             <div className="text-center text-sm">
               ¿Ya tienes una cuenta?{" "}
-              <Link to="/login" className="text-blue-600 hover:underline">
+              <Link to={`/login?role=${activeRole}`} className="text-blue-600 hover:underline">
                 Iniciar sesión
               </Link>
             </div>

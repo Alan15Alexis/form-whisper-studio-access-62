@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { LockKeyhole, Mail, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FormAccessProps {
   onAccessGranted: () => void;
@@ -16,11 +17,15 @@ interface FormAccessProps {
 
 const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
   const navigate = useNavigate();
+  const { currentUser, isAuthenticated } = useAuth();
   const [accessEmail, setAccessEmail] = useState("");
   const [validatingAccess, setValidatingAccess] = useState(false);
 
   const handleAccessRequest = async () => {
-    if (!accessEmail.trim()) {
+    // Si el usuario está autenticado, usar su email
+    const emailToCheck = isAuthenticated && currentUser?.email ? currentUser.email : accessEmail.trim();
+    
+    if (!emailToCheck) {
       toast({
         title: "Error",
         description: "Por favor, introduce tu correo electrónico",
@@ -34,7 +39,7 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      const hasAccess = isUserAllowed(accessEmail);
+      const hasAccess = isUserAllowed(emailToCheck);
       
       if (hasAccess) {
         toast({
@@ -59,6 +64,11 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
       setValidatingAccess(false);
     }
   };
+
+  // Si el usuario está autenticado, mostrar su email automáticamente
+  if (isAuthenticated && currentUser?.email && !accessEmail) {
+    setAccessEmail(currentUser.email);
+  }
 
   return (
     <div className="flex justify-center items-center min-h-[60vh]">
@@ -94,6 +104,7 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
                     value={accessEmail}
                     onChange={(e) => setAccessEmail(e.target.value)}
                     className="pl-10"
+                    disabled={isAuthenticated && currentUser?.email ? true : false}
                   />
                 </div>
                 <Button 
