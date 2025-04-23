@@ -1,7 +1,11 @@
+
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { HttpConfig } from "@/types/form";
+import HttpConfigSettings from "./HttpConfigSettings";
+import { useAuth } from "@/contexts/AuthContext";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -22,6 +26,8 @@ interface FormSettingsProps {
   onAllowEditOwnResponsesChange?: (allow: boolean) => void;
   formColor?: string;
   onFormColorChange?: (color: string) => void;
+  httpConfig?: HttpConfig;
+  onHttpConfigChange?: (config: HttpConfig) => void;
 }
 
 const FormSettings = ({
@@ -32,86 +38,110 @@ const FormSettings = ({
   allowEditOwnResponses,
   onAllowEditOwnResponsesChange,
   formColor,
-  onFormColorChange
+  onFormColorChange,
+  httpConfig,
+  onHttpConfigChange
 }: FormSettingsProps) => {
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
+  
+  const defaultHttpConfig: HttpConfig = {
+    enabled: false,
+    url: "",
+    method: "POST",
+    headers: [],
+    body: `{
+  "id_del_elemento": "respuesta"
+}`,
+  };
+
   return (
-    <Card className="p-6 shadow-sm border border-gray-100">
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Switch
-            id="private-form"
-            checked={isPrivate}
-            onCheckedChange={onPrivateChange}
-            className="data-[state=checked]:bg-[#686df3]"
-          />
-          <div>
-            <Label htmlFor="private-form" className="text-lg font-medium">Formulario Privado</Label>
-            <p className="text-sm text-gray-500">
-              Cuando está habilitado, solo usuarios especificados pueden acceder a este formulario
-            </p>
+    <div className="space-y-8">
+      <Card className="p-6 shadow-sm border border-gray-100">
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Switch
+              id="private-form"
+              checked={isPrivate}
+              onCheckedChange={onPrivateChange}
+              className="data-[state=checked]:bg-[#686df3]"
+            />
+            <div>
+              <Label htmlFor="private-form" className="text-lg font-medium">Formulario Privado</Label>
+              <p className="text-sm text-gray-500">
+                Cuando está habilitado, solo usuarios especificados pueden acceder a este formulario
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center space-x-4">
-          <Label className="text-lg font-medium">Color del formulario</Label>
-          <Select value={formColor || FORM_COLORS[0].value} onValueChange={onFormColorChange}>
-            <SelectTrigger className="w-44">
-              <SelectValue>
-                <span className="inline-flex items-center">
-                  <span className="w-5 h-5 rounded-full mr-2" style={{ background: formColor || FORM_COLORS[0].value }} />
-                  {
-                    FORM_COLORS.find(c => c.value === formColor)?.name ||
-                    FORM_COLORS[0].name
-                  }
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {FORM_COLORS.map(color => (
-                <SelectItem key={color.value} value={color.value}>
+          <div className="flex items-center space-x-4">
+            <Label className="text-lg font-medium">Color del formulario</Label>
+            <Select value={formColor || FORM_COLORS[0].value} onValueChange={onFormColorChange}>
+              <SelectTrigger className="w-44">
+                <SelectValue>
                   <span className="inline-flex items-center">
-                    <span className="w-5 h-5 rounded-full mr-2" style={{ background: color.value }} />
-                    {color.name}
+                    <span className="w-5 h-5 rounded-full mr-2" style={{ background: formColor || FORM_COLORS[0].value }} />
+                    {
+                      FORM_COLORS.find(c => c.value === formColor)?.name ||
+                      FORM_COLORS[0].name
+                    }
                   </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {FORM_COLORS.map(color => (
+                  <SelectItem key={color.value} value={color.value}>
+                    <span className="inline-flex items-center">
+                      <span className="w-5 h-5 rounded-full mr-2" style={{ background: color.value }} />
+                      {color.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex items-center space-x-4">
-          <Switch
-            id="allow-view-own-responses"
-            checked={!!allowViewOwnResponses}
-            onCheckedChange={onAllowViewOwnResponsesChange}
-          />
-          <div>
-            <Label htmlFor="allow-view-own-responses" className="text-lg font-medium">
-              Permitir ver respuestas propias
-            </Label>
-            <p className="text-sm text-gray-500">
-              Si está activo, los usuarios podrán ver solo sus propias respuestas.
-            </p>
+          <div className="flex items-center space-x-4">
+            <Switch
+              id="allow-view-own-responses"
+              checked={!!allowViewOwnResponses}
+              onCheckedChange={onAllowViewOwnResponsesChange}
+            />
+            <div>
+              <Label htmlFor="allow-view-own-responses" className="text-lg font-medium">
+                Permitir ver respuestas propias
+              </Label>
+              <p className="text-sm text-gray-500">
+                Si está activo, los usuarios podrán ver solo sus propias respuestas.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <Switch
+              id="allow-edit-own-responses"
+              checked={!!allowEditOwnResponses}
+              onCheckedChange={onAllowEditOwnResponsesChange}
+            />
+            <div>
+              <Label htmlFor="allow-edit-own-responses" className="text-lg font-medium">
+                Permitir editar respuestas propias
+              </Label>
+              <p className="text-sm text-gray-500">
+                Si está activo, podrán modificar sus respuestas después de enviarlas.
+              </p>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center space-x-4">
-          <Switch
-            id="allow-edit-own-responses"
-            checked={!!allowEditOwnResponses}
-            onCheckedChange={onAllowEditOwnResponsesChange}
-          />
-          <div>
-            <Label htmlFor="allow-edit-own-responses" className="text-lg font-medium">
-              Permitir editar respuestas propias
-            </Label>
-            <p className="text-sm text-gray-500">
-              Si está activo, podrán modificar sus respuestas después de enviarlas.
-            </p>
-          </div>
-        </div>
-      </div>
-    </Card>
+      </Card>
+      
+      {/* Configuración HTTP - Solo visible para administradores */}
+      <HttpConfigSettings 
+        config={httpConfig || defaultHttpConfig}
+        onConfigChange={config => onHttpConfigChange && onHttpConfigChange(config)}
+        isAdmin={isAdmin}
+      />
+    </div>
   );
 };
 

@@ -1,128 +1,213 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Form } from "@/types/form";
-import { useForm } from "@/contexts/FormContext";
-import { useFormFields } from "./form-builder/useFormFields";
-import { useDragAndDrop } from "./form-builder/useDragAndDrop";
-import { useFormScoring } from "./form-builder/useFormScoring";
 
-export function useFormBuilder(formId?: string) {
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/components/ui/use-toast';
+import { useForm } from '@/contexts/FormContext';
+import { Form, FormField, HttpConfig } from '@/types/form';
+import { v4 as uuidv4 } from 'uuid';
+import { useDragAndDrop } from './form-builder/useDragAndDrop';
+
+export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
-  const { getForm, createForm, updateForm, addAllowedUser: addAllowedUserToForm, removeAllowedUser: removeAllowedUserFromForm } = useForm();
+  const { getForm, createForm, updateForm } = useForm();
   const isEditMode = !!formId;
-  
+
   const [formData, setFormData] = useState<Partial<Form>>({
-    title: "",
-    description: "",
+    title: '',
+    description: '',
     fields: [],
     isPrivate: false,
-    allowedUsers: [],
-    showTotalScore: false,
-    allowViewOwnResponses: false,
-    allowEditOwnResponses: false,
-    formColor: "#3b82f6",
+    allowedUsers: []
   });
-  
-  const [allowedUserEmail, setAllowedUserEmail] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const { addField, updateField: updateFieldUtil, removeField: removeFieldUtil } = useFormFields();
-  const { handleDragEnd: handleDragEndUtil } = useDragAndDrop(
-    (type) => setFormData(prev => ({ ...prev, fields: addField(type, prev.fields) })),
+
+  const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  const { handleDragEnd } = useDragAndDrop({
     formData,
     setFormData
-  );
-  const { calculateTotalScore, getScoreFeedback } = useFormScoring();
-  
+  });
+
+  // Load existing form if in edit mode
   useEffect(() => {
     if (isEditMode && formId) {
-      const existingForm = getForm(formId);
-      if (existingForm) {
-        setFormData(existingForm);
+      const form = getForm(formId);
+      if (form) {
+        setFormData(form);
       } else {
-        navigate("/dashboard");
+        toast({
+          title: 'Form not found',
+          description: 'The requested form could not be found',
+          variant: 'destructive'
+        });
+        navigate('/dashboard');
       }
     }
-  }, [formId, getForm, isEditMode, navigate]);
+  }, [formId, isEditMode, getForm, navigate]);
 
   const handleTitleChange = (title: string) => {
-    setFormData({ ...formData, title });
+    setFormData(prev => ({ ...prev, title }));
   };
 
   const handleDescriptionChange = (description: string) => {
-    setFormData({ ...formData, description });
+    setFormData(prev => ({ ...prev, description }));
   };
 
   const handlePrivateChange = (isPrivate: boolean) => {
-    setFormData({ ...formData, isPrivate });
+    setFormData(prev => ({ ...prev, isPrivate }));
   };
 
-  const handleToggleFormScoring = (showTotalScore: boolean) => {
-    setFormData({ ...formData, showTotalScore });
-  };
-
-  const updateField = (id: string, field: any) => {
-    setFormData(prev => ({
-      ...prev,
-      fields: updateFieldUtil(id, field, prev.fields || [])
-    }));
-  };
-
-  const removeField = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      fields: removeFieldUtil(id, prev.fields || [])
-    }));
-  };
-
-  const addAllowedUser = async () => {
-    if (!formId || !allowedUserEmail.trim()) return;
-    
-    const success = await addAllowedUserToForm(formId, allowedUserEmail);
-    if (success) {
-      setFormData(prev => ({
-        ...prev,
-        allowedUsers: [...(prev.allowedUsers || []), allowedUserEmail]
-      }));
-      setAllowedUserEmail("");
-    }
-  };
-
-  const removeAllowedUser = async (email: string) => {
-    if (!formId) return;
-    
-    const success = await removeAllowedUserFromForm(formId, email);
-    if (success) {
-      setFormData(prev => ({
-        ...prev,
-        allowedUsers: (prev.allowedUsers || []).filter(e => e !== email)
-      }));
-    }
+  const handleToggleFormScoring = (enabled: boolean) => {
+    setFormData(prev => ({ ...prev, showTotalScore: enabled }));
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
-    setFormData({ ...formData, allowViewOwnResponses: allow });
+    setFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
   };
 
   const handleAllowEditOwnResponsesChange = (allow: boolean) => {
-    setFormData({ ...formData, allowEditOwnResponses: allow });
+    setFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
   };
 
   const handleFormColorChange = (color: string) => {
     setFormData(prev => ({ ...prev, formColor: color }));
   };
 
+  const handleHttpConfigChange = (config: HttpConfig) => {
+    setFormData(prev => ({ ...prev, httpConfig: config }));
+  };
+
+  const updateField = (id: string, updatedField: FormField) => {
+    const updatedFields = formData.fields?.map(field => 
+      field.id === id ? { ...updatedField } : field
+    ) || [];
+    
+    setFormData(prev => ({
+      ...prev,
+      fields: updatedFields
+    }));
+  };
+
+  const removeField = (id: string) => {
+    const updatedFields = formData.fields?.filter(field => field.id !== id) || [];
+    setFormData(prev => ({
+      ...prev,
+      fields: updatedFields
+    }));
+  };
+
+  const addAllowedUser = () => {
+    if (!allowedUserEmail || allowedUserEmail.trim() === '') {
+      toast({
+        title: 'Email required',
+        description: 'Please enter an email address',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(allowedUserEmail)) {
+      toast({
+        title: 'Invalid email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Check if already in the list
+    if (formData.allowedUsers?.includes(allowedUserEmail)) {
+      toast({
+        title: 'Already added',
+        description: 'This email is already in the allowed users list',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Add to the list
+    const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail];
+    setFormData(prev => ({ 
+      ...prev, 
+      allowedUsers: updatedAllowedUsers 
+    }));
+    
+    // Clear input
+    setAllowedUserEmail('');
+    
+    toast({
+      title: 'User added',
+      description: `${allowedUserEmail} has been added to allowed users`,
+    });
+  };
+
+  const removeAllowedUser = (email: string) => {
+    const updatedAllowedUsers = formData.allowedUsers?.filter(user => user !== email) || [];
+    setFormData(prev => ({ 
+      ...prev, 
+      allowedUsers: updatedAllowedUsers 
+    }));
+    
+    toast({
+      title: 'User removed',
+      description: `${email} has been removed from allowed users`,
+    });
+  };
+
   const handleSubmit = async () => {
+    if (!formData.title || formData.title.trim() === '') {
+      toast({
+        title: 'Title required',
+        description: 'Please provide a title for your form',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.fields || formData.fields.length === 0) {
+      toast({
+        title: 'Fields required',
+        description: 'Please add at least one field to your form',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // If private, ensure there's at least one allowed user
+    if (formData.isPrivate && (!formData.allowedUsers || formData.allowedUsers.length === 0)) {
+      toast({
+        title: 'Allowed users required',
+        description: 'Please add at least one allowed user for a private form',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsSaving(true);
+
     try {
       if (isEditMode && formId) {
         await updateForm(formId, formData);
+        toast({
+          title: 'Form updated',
+          description: 'Your form has been updated successfully',
+        });
       } else {
         const newForm = await createForm(formData);
+        toast({
+          title: 'Form created',
+          description: 'Your form has been created successfully',
+        });
         navigate(`/forms/${newForm.id}/edit`);
       }
     } catch (error) {
-      console.error("Error saving form:", error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -139,15 +224,14 @@ export function useFormBuilder(formId?: string) {
     handleToggleFormScoring,
     updateField,
     removeField,
-    handleSubmit,
-    handleDragEnd: handleDragEndUtil,
-    setAllowedUserEmail,
-    calculateTotalScore,
-    getScoreFeedback,
     addAllowedUser,
     removeAllowedUser,
+    handleSubmit,
+    setAllowedUserEmail,
+    handleDragEnd,
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
+    handleHttpConfigChange
   };
-}
+};

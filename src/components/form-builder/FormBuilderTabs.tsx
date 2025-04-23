@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form } from "@/types/form";
+import { Form, HttpConfig } from "@/types/form";
 import FormBasicInfo from "@/components/form-builder/FormBasicInfo";
 import FormFieldsList from "@/components/form-builder/FormFieldsList";
 import FormSettings from "@/components/form-builder/FormSettings";
@@ -23,6 +23,7 @@ interface FormBuilderTabsProps {
   onAllowViewOwnResponsesChange?: (allow: boolean) => void;
   onAllowEditOwnResponsesChange?: (allow: boolean) => void;
   onFormColorChange?: (color: string) => void;
+  onHttpConfigChange?: (config: HttpConfig) => void;
 }
 
 const FormBuilderTabs = ({
@@ -40,6 +41,7 @@ const FormBuilderTabs = ({
   onAllowViewOwnResponsesChange,
   onAllowEditOwnResponsesChange,
   onFormColorChange,
+  onHttpConfigChange,
 }: FormBuilderTabsProps) => {
   return (
     <Tabs defaultValue="fields" className="w-full">
@@ -82,6 +84,8 @@ const FormBuilderTabs = ({
           onAllowEditOwnResponsesChange={onAllowEditOwnResponsesChange}
           formColor={formData.formColor}
           onFormColorChange={onFormColorChange}
+          httpConfig={formData.httpConfig}
+          onHttpConfigChange={onHttpConfigChange}
         />
       </TabsContent>
       

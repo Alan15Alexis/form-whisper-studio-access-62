@@ -1,3 +1,4 @@
+
 export type FormFieldType = 
   // Essential fields
   | 'text' 
@@ -64,6 +65,25 @@ export interface FormField {
     text: string;
     imageUrl?: string;
   };
+  customId?: string;
+}
+
+export interface HttpHeader {
+  key: string;
+  value: string;
+}
+
+export interface HttpConfig {
+  enabled: boolean;
+  url: string;
+  method: 'POST'; // For future: 'GET' | 'PUT' | 'DELETE'
+  headers: HttpHeader[];
+  body: string;
+  lastResponse?: {
+    status: number;
+    data: string;
+    timestamp: string;
+  };
 }
 
 export interface Form {
@@ -84,7 +104,8 @@ export interface Form {
   };
   allowViewOwnResponses?: boolean; // Permitir ver solo sus respuestas
   allowEditOwnResponses?: boolean; // Permitir editar sus respuestas
-  formColor?: string; // <--- NUEVO CAMPO para el color personalizado
+  formColor?: string;
+  httpConfig?: HttpConfig; // Nueva propiedad para la configuración HTTP
 }
 
 export interface FormResponse {
