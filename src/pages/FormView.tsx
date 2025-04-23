@@ -1,3 +1,4 @@
+//paguina para visualizar y responder formularios
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";

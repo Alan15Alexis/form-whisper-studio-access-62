@@ -7,11 +7,12 @@ import FormSettings from "@/components/form-builder/FormSettings";
 import AccessControl from "@/components/form-builder/AccessControl";
 import FieldsSidebar from "@/components/form-builder/FieldsSidebar";
 
-interface FormBuilderTabsProps {
+export interface FormBuilderTabsProps {
   formData: Partial<Form>;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
+  addField: (fieldType: string) => void; // Added property
   onToggleFormScoring: (enabled: boolean) => void;
   updateField: (id: string, field: any) => void;
   removeField: (id: string) => void;

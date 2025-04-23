@@ -192,7 +192,7 @@ const HttpConfigSettings = ({
     return obj;
   }
 
-  const handleTestRequest = async () => {
+    const handleTestRequest = async () => {
     if (!validateUrl(config.url)) {
       toast({
         title: "URL inválida",
@@ -201,7 +201,7 @@ const HttpConfigSettings = ({
       });
       return;
     }
-
+  
     setIsLoading(true);
     try {
       const headers = new Headers();
@@ -211,17 +211,17 @@ const HttpConfigSettings = ({
         }
       });
       headers.append("Content-Type", "application/json");
-
+  
       // Construimos el body con los campos y respuestas dummy
       const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
       const requestBodyJSON = JSON.stringify(requestBodyObj);
-
+  
       const response = await fetch(config.url, {
         method: config.method,
         headers,
         body: requestBodyJSON,
       });
-
+  
       const data = await response.text();
       const responseObj = { 
         status: response.status, 
@@ -235,19 +235,32 @@ const HttpConfigSettings = ({
         ...config,
         lastResponse: responseObj
       });
-
-      toast({
-        title: `Respuesta: ${response.status}`,
-        description: response.ok 
-          ? "Solicitud enviada con éxito" 
-          : "Error al enviar la solicitud",
-        variant: response.ok ? "default" : "destructive",
-      });
+  
+      if (response.ok) {
+        toast({
+          title: `Respuesta: ${response.status}`,
+          description: "Solicitud enviada con éxito",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: `Error: ${response.status}`,
+          description: `Hubo un problema con la solicitud. Detalles: ${data}`,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      setTestResponse({ status: 0, data: error instanceof Error ? error.message : "Error desconocido" });
+      let errorMessage = "Error desconocido";
+      if (error instanceof TypeError) {
+        errorMessage = "Error de red o problema de conexión.";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+  
+      setTestResponse({ status: 0, data: errorMessage });
       toast({
         title: "Error de conexión",
-        description: error instanceof Error ? error.message : "Error desconocido",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
