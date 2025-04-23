@@ -1,22 +1,19 @@
 
 import { FormField } from "@/types/form";
 
-export function useDragAndDrop(
-  addField: (type: string) => void,
-  formData: { fields?: FormField[] },
-  setFormData: (data: any) => void
-) {
+interface DragDropContextProps {
+  formData: { fields?: FormField[] };
+  setFormData: (data: any) => void;
+}
+
+export function useDragAndDrop({ formData, setFormData }: DragDropContextProps) {
   const handleDragEnd = (result: import("react-beautiful-dnd").DropResult) => {
     const { source, destination } = result;
     
     if (!destination) return;
     
     if (source.droppableId === "FIELDS_SIDEBAR" && destination.droppableId === "FORM_FIELDS") {
-      const fieldType = source.droppableId === "FIELDS_SIDEBAR" 
-        ? result.draggableId.split("-")[1] 
-        : "text";
-      
-      addField(fieldType);
+      // This case should be handled outside the hook since we don't have addField function
       return;
     }
     
