@@ -9,6 +9,7 @@ interface FormFieldsListProps {
   updateField: (id: string, updatedField: FormField) => void;
   removeField: (id: string) => void;
   onToggleFormScoring?: (enabled: boolean) => void;
+  addField?: (type: string) => void;
 }
 
 const FormFieldsList = ({ 

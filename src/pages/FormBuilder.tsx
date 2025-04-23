@@ -22,6 +22,7 @@ const FormBuilder = () => {
     handleToggleFormScoring,
     updateField,
     removeField,
+    addField,
     addAllowedUser,
     removeAllowedUser,
     handleSubmit,
@@ -62,6 +63,7 @@ const FormBuilder = () => {
             onAllowEditOwnResponsesChange={handleAllowEditOwnResponsesChange}
             onFormColorChange={handleFormColorChange}
             onHttpConfigChange={handleHttpConfigChange}
+            addField={addField}
           />
         </form>
       </DragDropContext>

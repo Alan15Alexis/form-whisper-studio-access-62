@@ -23,10 +23,31 @@ export const useFormBuilder = (formId?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  const { handleDragEnd } = useDragAndDrop({
+  // Add new field function
+  const addField = (fieldType: string) => {
+    const newField: FormField = {
+      id: uuidv4(),
+      type: fieldType as any,
+      label: 'Nueva pregunta',
+      required: false
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      fields: [...(prev.fields || []), newField]
+    }));
+  };
+
+  const { handleDragEnd: handleDragDropEnd } = useDragAndDrop({
     formData,
-    setFormData
+    setFormData,
+    addField
   });
+
+  // Handle drag and drop end
+  const handleDragEnd = (result: any) => {
+    handleDragDropEnd(result);
+  };
 
   // Load existing form if in edit mode
   useEffect(() => {
@@ -224,6 +245,7 @@ export const useFormBuilder = (formId?: string) => {
     handleToggleFormScoring,
     updateField,
     removeField,
+    addField,
     addAllowedUser,
     removeAllowedUser,
     handleSubmit,

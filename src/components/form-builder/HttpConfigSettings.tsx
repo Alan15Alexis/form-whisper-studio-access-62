@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -258,6 +257,27 @@ const HttpConfigSettings = ({
 
   // Preview JSON actualizado
   const previewJsonObj = getPreviewJson(bodyFields, formFields);
+  const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
+    JSON.stringify(previewJsonObj, null, 2)
+  );
+
+  // Update the editable preview when the bodyFields change
+  useEffect(() => {
+    setEditableJsonPreview(JSON.stringify(previewJsonObj, null, 2));
+  }, [bodyFields, formFields]);
+
+  // Handle editable preview changes
+  const handleJsonPreviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditableJsonPreview(e.target.value);
+    
+    // Try to parse the edited JSON and update the body fields if valid
+    try {
+      const parsedJson = JSON.parse(e.target.value);
+      // You can add logic here to update bodyFields based on the edited JSON if needed
+    } catch (error) {
+      // Don't update if JSON is invalid
+    }
+  };
 
   if (!isAdmin) return null;
 
@@ -335,16 +355,14 @@ const HttpConfigSettings = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[5%]">ID</TableHead>
                   <TableHead className="w-[40%]">Clave</TableHead>
-                  <TableHead className="w-[50%]">Valor</TableHead>
+                  <TableHead className="w-[55%]">Valor</TableHead>
                   <TableHead className="w-[5%]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {config.headers.map((header) => (
                   <TableRow key={header.id}>
-                    <TableCell className="font-mono text-xs text-center">{header.id}</TableCell>
                     <TableCell>
                       <Input
                         value={header.key}
@@ -383,7 +401,7 @@ const HttpConfigSettings = ({
           )}
         </div>
 
-        {/* BODY DYNAMIC FIELDS */}
+        {/* BODY DYNAMIC FIELDS - Modified to remove ID column */}
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-1">
             <Label htmlFor="body-fields" className="text-md font-medium">Body</Label>
@@ -401,16 +419,14 @@ const HttpConfigSettings = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[7%]">ID</TableHead>
-                <TableHead className="w-[42%]">Clave personalizada</TableHead>
-                <TableHead className="w-[40%]">Valor (Pregunta)</TableHead>
-                <TableHead className="w-[8%]"></TableHead>
+                <TableHead className="w-[48%]">Clave personalizada</TableHead>
+                <TableHead className="w-[47%]">Valor (Pregunta)</TableHead>
+                <TableHead className="w-[5%]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bodyFields.map((bodyField) => (
                 <TableRow key={bodyField.id}>
-                  <TableCell className="font-mono text-xs text-center">{bodyField.id}</TableCell>
                   <TableCell>
                     <Input
                       value={bodyField.key}
@@ -449,14 +465,15 @@ const HttpConfigSettings = ({
           </Table>
         </div>
 
-        {/* JSON Preview */}
+        {/* JSON Preview - Modified to be editable */}
         <div className="space-y-2">
           <Label className="text-md font-medium">Vista previa del JSON enviado</Label>
-          <div className="border rounded-md p-4 bg-gray-50 max-h-64 overflow-auto font-mono text-sm">
-            <pre className="whitespace-pre-wrap break-all text-xs">
-              {JSON.stringify(previewJsonObj, null, 2)}
-            </pre>
-          </div>
+          <textarea
+            className="border rounded-md p-4 bg-gray-50 max-h-64 font-mono text-sm w-full"
+            value={editableJsonPreview}
+            onChange={handleJsonPreviewChange}
+            style={{ minHeight: "120px" }}
+          />
         </div>
 
         <div className="pt-4">
@@ -496,4 +513,3 @@ const HttpConfigSettings = ({
 };
 
 export default HttpConfigSettings;
-

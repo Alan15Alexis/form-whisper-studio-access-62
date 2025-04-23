@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   ChevronDown,
@@ -8,12 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Droppable, Draggable } from "react-beautiful-dnd";
 import { FieldCategory } from "@/types/form";
 import { cn } from "@/lib/utils";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { renderIcon } from "@/lib/utils";
 
 const fieldCategories: FieldCategory[] = [
