@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -12,8 +13,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { HttpConfig, HttpHeader, FormField } from "@/types/form";
+import { HttpConfig, FormField } from "@/types/form";
 import { Plus, Trash, Send, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -24,27 +24,56 @@ interface HttpConfigSettingsProps {
   formFields?: FormField[];
 }
 
-const DEFAULT_JSON_BODY = `{
-  "id_del_elemento": "{{respuesta}}"
-}`;
+type BodyField = {
+  id: number;
+  key: string;
+  fieldId: string;
+};
+
+const DEFAULT_BODY_FIELDS: BodyField[] = [
+  { id: 1, key: "id_del_elemento", fieldId: "" }
+];
 
 const DEFAULT_CONFIG: HttpConfig = {
   enabled: false,
   url: "",
   method: "POST",
   headers: [],
-  body: DEFAULT_JSON_BODY,
+  // Usaremos nuestra estructura custom, luego serializamos para enviar
+  body: "",
 };
 
-function insertAtCursor(node: HTMLTextAreaElement | HTMLInputElement | null, text: string) {
-  if (!node) return;
-  const start = node.selectionStart || 0;
-  const end = node.selectionEnd || 0;
-  const value = node.value || "";
-  node.value = value.slice(0, start) + text + value.slice(end);
-  node.selectionStart = node.selectionEnd = start + text.length;
-  // Dispatch input to trigger React onChange
-  node.dispatchEvent(new Event("input", { bubbles: true }));
+function getBodyFieldsFromConfigBody(body: string): BodyField[] {
+  // Intentar parsear body como array de campos, de lo contrario usar por defecto
+  try {
+    const arr = JSON.parse(body);
+    if (Array.isArray(arr) && arr.every(f => typeof f.id === "number" && typeof f.key === "string" && typeof f.fieldId === "string"))
+      return arr;
+    // Intentar parsear como objeto clásico {key: value}
+    if (typeof arr === "object" && arr !== null && !Array.isArray(arr)) {
+      const entries = Object.entries(arr);
+      let idCounter = 1;
+      return entries.map(([key, value]) => ({
+        id: idCounter++,
+        key,
+        fieldId: typeof value === "string" ? value : "",
+      }));
+    }
+    return DEFAULT_BODY_FIELDS;
+  } catch {
+    return DEFAULT_BODY_FIELDS;
+  }
+}
+
+// Convierte array [{key,fieldId}] en objeto { key1: valorEjemplo1, ... }
+function getPreviewJson(fields: BodyField[], formFields: FormField[]) {
+  const example: Record<string, string> = {};
+  for (const f of fields) {
+    if (!f.key) continue;
+    const campo = formFields.find(ff => ff.id === f.fieldId);
+    example[f.key] = campo ? `[${campo.label || campo.id}]` : "";
+  }
+  return example;
 }
 
 const HttpConfigSettings = ({ 
@@ -60,23 +89,16 @@ const HttpConfigSettings = ({
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  const [headerIdCounter, setHeaderIdCounter] = useState(
-    config.headers.length
-      ? Math.max(...config.headers.map(h => h.id ?? 0)) + 1
-      : 1
+  // States para body-fields:
+  const bodyFields: BodyField[] = config.enabled
+    ? getBodyFieldsFromConfigBody(config.body || "[]")
+    : [];
+
+  const [bodyIdCounter, setBodyIdCounter] = useState(
+    bodyFields.length ? Math.max(...bodyFields.map(b => b.id))+1 : 2
   );
 
-  const [selectedHeaderField, setSelectedHeaderField] = useState<string>("");
-  const [selectedBodyField, setSelectedBodyField] = useState<string>("");
-
-  const [headerFocusIndex, setHeaderFocusIndex] = useState<number | null>(null);
-  const headerRefs = React.useRef<Array<HTMLInputElement | null>>([]);
-  const bodyTextareaRef = React.useRef<HTMLTextAreaElement | null>(null);
-
-  if (!isAdmin) {
-    return null;
-  }
-
+  // STATIC HEADERS
   const handleToggleEnabled = (enabled: boolean) => {
     onConfigChange({ ...config, enabled });
   };
@@ -86,13 +108,14 @@ const HttpConfigSettings = ({
   };
 
   const handleAddHeader = () => {
-    const newId = headerIdCounter;
+    const newId = config.headers.length
+      ? Math.max(...config.headers.map(h => h.id ?? 0)) + 1
+      : 1;
     const newHeaders = [
       ...config.headers, 
       { id: newId, key: "", value: "" }
     ];
     onConfigChange({ ...config, headers: newHeaders });
-    setHeaderIdCounter(c => c + 1);
   };
 
   const handleRemoveHeader = (id: number) => {
@@ -107,19 +130,39 @@ const HttpConfigSettings = ({
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  const handleInsertHeaderVariable = (index: number, field: "key" | "value", variable: string) => {
-    const ref = headerRefs.current[index];
-    insertAtCursor(ref, `{{${variable}}}`);
-    setSelectedHeaderField("");
+  // BODY dynamic fields
+  const handleAddBodyField = () => {
+    const updated = [
+      ...bodyFields,
+      {
+        id: bodyIdCounter,
+        key: "",
+        fieldId: formFields.length > 0 ? formFields[0].id : ""
+      }
+    ];
+    onConfigChange({
+      ...config,
+      body: JSON.stringify(updated)
+    });
+    setBodyIdCounter(c => c + 1);
   };
 
-  const handleInsertBodyVariable = (variable: string) => {
-    insertAtCursor(bodyTextareaRef.current, `{{${variable}}}`);
-    setSelectedBodyField("");
+  const handleRemoveBodyField = (id: number) => {
+    const updated = bodyFields.filter(b => b.id !== id);
+    onConfigChange({
+      ...config,
+      body: JSON.stringify(updated)
+    });
   };
 
-  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onConfigChange({ ...config, body: e.target.value });
+  const handleBodyFieldChange = (id: number, field: "key" | "fieldId", value: string) => {
+    const updated = bodyFields.map(b =>
+      b.id === id ? { ...b, [field]: value } : b
+    );
+    onConfigChange({
+      ...config,
+      body: JSON.stringify(updated)
+    });
   };
 
   const validateUrl = (url: string) => {
@@ -131,27 +174,23 @@ const HttpConfigSettings = ({
     }
   };
 
-  const validateJson = (json: string) => {
-    try {
-      JSON.parse(json);
-      return true;
-    } catch {
-      return false;
+  // Simula respuestas dummy para previsualización del JSON request
+  function getDummyResponses() {
+    const r: Record<string, string> = {};
+    for (const campo of formFields) {
+      r[campo.id] = `[${campo.label || campo.id}]`;
     }
-  };
+    return r;
+  }
 
-  const getDummyResponses = () => {
-    const responses: Record<string, string> = {};
-    for (const field of formFields) {
-      responses[field.id] = `[${field.label || field.id}]`;
+  // Convierte fields a objeto y los sustituye por respuestas reales al enviar
+  function buildRequestBody(fields: BodyField[], responses: Record<string, string>) {
+    const obj: Record<string, any> = {};
+    for (const f of fields) {
+      if (!f.key) continue;
+      obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
     }
-    return responses;
-  };
-
-  function interpolateVariables(input: string, responses: Record<string, string>) {
-    return input.replace(/{{(.*?)}}/g, (_, varName: string) => {
-      return responses[varName] !== undefined ? responses[varName] : `{{${varName}}}`;
-    });
+    return obj;
   }
 
   const handleTestRequest = async () => {
@@ -164,33 +203,24 @@ const HttpConfigSettings = ({
       return;
     }
 
-    if (!validateJson(config.body)) {
-      toast({
-        title: "JSON inválido",
-        description: "El cuerpo de la solicitud debe ser un JSON válido",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
     try {
       const headers = new Headers();
       config.headers.forEach((header) => {
-        let value = header.value || "";
-        value = interpolateVariables(value, getDummyResponses());
-        if (header.key && value) {
-          headers.append(header.key, value);
+        if (header.key && header.value) {
+          headers.append(header.key, header.value);
         }
       });
       headers.append("Content-Type", "application/json");
 
-      const interpolatedBody = interpolateVariables(config.body, getDummyResponses());
+      // Construimos el body con los campos y respuestas dummy
+      const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
+      const requestBodyJSON = JSON.stringify(requestBodyObj);
 
       const response = await fetch(config.url, {
         method: config.method,
         headers,
-        body: interpolatedBody,
+        body: requestBodyJSON,
       });
 
       const data = await response.text();
@@ -225,6 +255,11 @@ const HttpConfigSettings = ({
       setIsLoading(false);
     }
   };
+
+  // Preview JSON actualizado
+  const previewJsonObj = getPreviewJson(bodyFields, formFields);
+
+  if (!isAdmin) return null;
 
   return (
     <Card className="shadow-sm border border-gray-100">
@@ -284,57 +319,37 @@ const HttpConfigSettings = ({
         
         <div className="space-y-4">
           <div className="flex justify-between items-center mb-1">
-            <Label className="text-md font-medium">Headers</Label>
+            <Label className="text-md font-medium">Headers (Estáticos)</Label>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleAddHeader}
               className="flex items-center gap-1"
+              disabled={!config.enabled}
             >
               <Plus className="h-4 w-4" /> Agregar Header
             </Button>
           </div>
-          {config.enabled && formFields.length > 0 && (
-            <div className="flex flex-col md:flex-row gap-2 pb-2">
-              <Label className="text-xs">Insertar variable:</Label>
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={selectedHeaderField}
-                onChange={e => setSelectedHeaderField(e.target.value)}
-              >
-                <option value="">Selecciona pregunta...</option>
-                {formFields.map(f => (
-                  <option value={f.id} key={f.id}>{f.label} (ID: {f.id})</option>
-                ))}
-              </select>
-              <span className="text-xs text-gray-400 hidden md:inline">Haz clic en un campo header para insertar</span>
-            </div>
-          )}
           
           {config.headers.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[5%]">ID</TableHead>
                   <TableHead className="w-[40%]">Clave</TableHead>
                   <TableHead className="w-[50%]">Valor</TableHead>
-                  <TableHead className="w-[10%]"></TableHead>
+                  <TableHead className="w-[5%]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {config.headers.map((header, index) => (
+                {config.headers.map((header) => (
                   <TableRow key={header.id}>
+                    <TableCell className="font-mono text-xs text-center">{header.id}</TableCell>
                     <TableCell>
                       <Input
                         value={header.key}
                         onChange={(e) => handleHeaderChange(header.id, "key", e.target.value)}
                         placeholder="Authorization"
-                        ref={el => headerRefs.current[index] = el}
-                        onFocus={() => setHeaderFocusIndex(index)}
-                        onClick={() => {
-                          if (selectedHeaderField) {
-                            handleInsertHeaderVariable(index, "key", selectedHeaderField);
-                          }
-                        }}
                         disabled={!config.enabled}
                       />
                     </TableCell>
@@ -343,13 +358,6 @@ const HttpConfigSettings = ({
                         value={header.value}
                         onChange={(e) => handleHeaderChange(header.id, "value", e.target.value)}
                         placeholder="Bearer eyJ..."
-                        ref={el => headerRefs.current[index] = el}
-                        onFocus={() => setHeaderFocusIndex(index)}
-                        onClick={() => {
-                          if (selectedHeaderField) {
-                            handleInsertHeaderVariable(index, "value", selectedHeaderField);
-                          }
-                        }}
                         disabled={!config.enabled}
                       />
                     </TableCell>
@@ -374,54 +382,83 @@ const HttpConfigSettings = ({
             </div>
           )}
         </div>
-        
+
+        {/* BODY DYNAMIC FIELDS */}
         <div className="space-y-2">
-          <Label htmlFor="request-body" className="text-md font-medium">Body (JSON)</Label>
-          <div className="flex flex-col md:flex-row gap-2 pb-1">
+          <div className="flex items-center justify-between mb-1">
+            <Label htmlFor="body-fields" className="text-md font-medium">Body</Label>
             <Button
-              type="button"
               variant="outline"
               size="sm"
+              onClick={handleAddBodyField}
+              className="flex items-center gap-1"
               disabled={!config.enabled}
-              onClick={() => bodyTextareaRef.current && setSelectedBodyField("")}
-              className="hidden"
             >
-              Reset
+              <Plus className="h-4 w-4" /> Añadir campo
             </Button>
-            <select
-              className="border rounded px-2 py-1 text-sm w-full max-w-xs"
-              value={selectedBodyField}
-              disabled={!config.enabled}
-              onChange={e => {
-                setSelectedBodyField(e.target.value);
-                if (e.target.value && bodyTextareaRef.current) {
-                  handleInsertBodyVariable(e.target.value);
-                }
-              }}
-            >
-              <option value="">Añadir campo dinámico...</option>
-              {formFields.map(f => (
-                <option value={f.id} key={f.id}>{f.label} (ID: {f.id})</option>
-              ))}
-            </select>
-            <span className="text-xs text-gray-400 hidden md:inline">
-              Selecciona y se insertará donde esté el cursor
-            </span>
           </div>
-          <Textarea
-            id="request-body"
-            value={config.body}
-            onChange={handleBodyChange}
-            rows={6}
-            className="font-mono text-sm"
-            ref={bodyTextareaRef}
-            disabled={!config.enabled}
-          />
-          {!validateJson(config.body) && (
-            <p className="text-xs text-red-500">El JSON no es válido</p>
-          )}
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[7%]">ID</TableHead>
+                <TableHead className="w-[42%]">Clave personalizada</TableHead>
+                <TableHead className="w-[40%]">Valor (Pregunta)</TableHead>
+                <TableHead className="w-[8%]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {bodyFields.map((bodyField) => (
+                <TableRow key={bodyField.id}>
+                  <TableCell className="font-mono text-xs text-center">{bodyField.id}</TableCell>
+                  <TableCell>
+                    <Input
+                      value={bodyField.key}
+                      onChange={e => handleBodyFieldChange(bodyField.id, "key", e.target.value)}
+                      placeholder="Ej: user_id"
+                      disabled={!config.enabled}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <select
+                      className="border rounded px-2 py-1 text-sm w-full"
+                      value={bodyField.fieldId}
+                      disabled={!config.enabled}
+                      onChange={e => handleBodyFieldChange(bodyField.id, "fieldId", e.target.value)}
+                    >
+                      <option value="">Selecciona una pregunta…</option>
+                      {formFields.map(f => (
+                        <option value={f.id} key={f.id}>{f.label}</option>
+                      ))}
+                    </select>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveBodyField(bodyField.id)}
+                      className="h-8 w-8"
+                      disabled={!config.enabled}
+                    >
+                      <Trash className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-        
+
+        {/* JSON Preview */}
+        <div className="space-y-2">
+          <Label className="text-md font-medium">Vista previa del JSON enviado</Label>
+          <div className="border rounded-md p-4 bg-gray-50 max-h-64 overflow-auto font-mono text-sm">
+            <pre className="whitespace-pre-wrap break-all text-xs">
+              {JSON.stringify(previewJsonObj, null, 2)}
+            </pre>
+          </div>
+        </div>
+
         <div className="pt-4">
           <Button 
             onClick={handleTestRequest} 
@@ -459,3 +496,4 @@ const HttpConfigSettings = ({
 };
 
 export default HttpConfigSettings;
+
