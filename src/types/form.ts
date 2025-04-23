@@ -69,6 +69,7 @@ export interface FormField {
 }
 
 export interface HttpHeader {
+  id: number;      // Nuevo campo incremental
   key: string;
   value: string;
 }

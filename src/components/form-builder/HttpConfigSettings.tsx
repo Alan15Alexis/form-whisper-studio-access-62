@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -61,11 +60,15 @@ const HttpConfigSettings = ({
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  // For variable insertion
+  const [headerIdCounter, setHeaderIdCounter] = useState(
+    config.headers.length
+      ? Math.max(...config.headers.map(h => h.id ?? 0)) + 1
+      : 1
+  );
+
   const [selectedHeaderField, setSelectedHeaderField] = useState<string>("");
   const [selectedBodyField, setSelectedBodyField] = useState<string>("");
 
-  // Refs to manage insertion cursor location
   const [headerFocusIndex, setHeaderFocusIndex] = useState<number | null>(null);
   const headerRefs = React.useRef<Array<HTMLInputElement | null>>([]);
   const bodyTextareaRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -83,29 +86,33 @@ const HttpConfigSettings = ({
   };
 
   const handleAddHeader = () => {
-    const newHeaders = [...config.headers, { key: "", value: "" }];
+    const newId = headerIdCounter;
+    const newHeaders = [
+      ...config.headers, 
+      { id: newId, key: "", value: "" }
+    ];
+    onConfigChange({ ...config, headers: newHeaders });
+    setHeaderIdCounter(c => c + 1);
+  };
+
+  const handleRemoveHeader = (id: number) => {
+    const newHeaders = config.headers.filter(h => h.id !== id);
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  const handleRemoveHeader = (index: number) => {
-    const newHeaders = config.headers.filter((_, i) => i !== index);
+  const handleHeaderChange = (id: number, field: "key" | "value", value: string) => {
+    const newHeaders = config.headers.map(h =>
+      h.id === id ? { ...h, [field]: value } : h
+    );
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  const handleHeaderChange = (index: number, field: "key" | "value", value: string) => {
-    const newHeaders = [...config.headers];
-    newHeaders[index][field] = value;
-    onConfigChange({ ...config, headers: newHeaders });
-  };
-
-  // Insert dynamic field in header
   const handleInsertHeaderVariable = (index: number, field: "key" | "value", variable: string) => {
     const ref = headerRefs.current[index];
     insertAtCursor(ref, `{{${variable}}}`);
     setSelectedHeaderField("");
   };
 
-  // Insert dynamic field in body
   const handleInsertBodyVariable = (variable: string) => {
     insertAtCursor(bodyTextareaRef.current, `{{${variable}}}`);
     setSelectedBodyField("");
@@ -133,7 +140,6 @@ const HttpConfigSettings = ({
     }
   };
 
-  // Simulated user responses for testing (should be replaced by real data on actual submit)
   const getDummyResponses = () => {
     const responses: Record<string, string> = {};
     for (const field of formFields) {
@@ -142,7 +148,6 @@ const HttpConfigSettings = ({
     return responses;
   };
 
-  // Replace all {{campoId}} with dummy values
   function interpolateVariables(input: string, responses: Record<string, string>) {
     return input.replace(/{{(.*?)}}/g, (_, varName: string) => {
       return responses[varName] !== undefined ? responses[varName] : `{{${varName}}}`;
@@ -150,7 +155,6 @@ const HttpConfigSettings = ({
   }
 
   const handleTestRequest = async () => {
-    // Validate URL
     if (!validateUrl(config.url)) {
       toast({
         title: "URL inválida",
@@ -160,7 +164,6 @@ const HttpConfigSettings = ({
       return;
     }
 
-    // Validate JSON
     if (!validateJson(config.body)) {
       toast({
         title: "JSON inválido",
@@ -172,11 +175,9 @@ const HttpConfigSettings = ({
 
     setIsLoading(true);
     try {
-      // Create headers object
       const headers = new Headers();
       config.headers.forEach((header) => {
         let value = header.value || "";
-        // Dynamic vars for headers too!
         value = interpolateVariables(value, getDummyResponses());
         if (header.key && value) {
           headers.append(header.key, value);
@@ -184,10 +185,8 @@ const HttpConfigSettings = ({
       });
       headers.append("Content-Type", "application/json");
 
-      // Replace variables in body
       const interpolatedBody = interpolateVariables(config.body, getDummyResponses());
 
-      // Make request
       const response = await fetch(config.url, {
         method: config.method,
         headers,
@@ -201,10 +200,8 @@ const HttpConfigSettings = ({
         timestamp: new Date().toISOString() 
       };
       
-      // Update state
       setTestResponse({ status: response.status, data });
       
-      // Update config with last response
       onConfigChange({
         ...config,
         lastResponse: responseObj
@@ -242,7 +239,6 @@ const HttpConfigSettings = ({
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* Toggle para activar/desactivar */}
         <div className="flex items-center space-x-4">
           <Switch
             id="http-enabled"
@@ -259,7 +255,6 @@ const HttpConfigSettings = ({
           </div>
         </div>
         
-        {/* URL del endpoint */}
         <div className="space-y-2">
           <Label htmlFor="endpoint-url" className="text-md font-medium">
             URL del Endpoint
@@ -277,7 +272,6 @@ const HttpConfigSettings = ({
           )}
         </div>
         
-        {/* Tipo de solicitud */}
         <div className="space-y-2">
           <Label className="text-md font-medium">Tipo de solicitud</Label>
           <div className="flex h-10 items-center rounded-md border border-input bg-background px-3 text-sm text-gray-400">
@@ -288,7 +282,6 @@ const HttpConfigSettings = ({
           </p>
         </div>
         
-        {/* Headers */}
         <div className="space-y-4">
           <div className="flex justify-between items-center mb-1">
             <Label className="text-md font-medium">Headers</Label>
@@ -301,7 +294,6 @@ const HttpConfigSettings = ({
               <Plus className="h-4 w-4" /> Agregar Header
             </Button>
           </div>
-          {/* Selector de campo para variables en header */}
           {config.enabled && formFields.length > 0 && (
             <div className="flex flex-col md:flex-row gap-2 pb-2">
               <Label className="text-xs">Insertar variable:</Label>
@@ -330,16 +322,15 @@ const HttpConfigSettings = ({
               </TableHeader>
               <TableBody>
                 {config.headers.map((header, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={header.id}>
                     <TableCell>
                       <Input
                         value={header.key}
-                        onChange={(e) => handleHeaderChange(index, "key", e.target.value)}
+                        onChange={(e) => handleHeaderChange(header.id, "key", e.target.value)}
                         placeholder="Authorization"
                         ref={el => headerRefs.current[index] = el}
                         onFocus={() => setHeaderFocusIndex(index)}
                         onClick={() => {
-                          // Insert variable if header selected & focus
                           if (selectedHeaderField) {
                             handleInsertHeaderVariable(index, "key", selectedHeaderField);
                           }
@@ -350,7 +341,7 @@ const HttpConfigSettings = ({
                     <TableCell>
                       <Input
                         value={header.value}
-                        onChange={(e) => handleHeaderChange(index, "value", e.target.value)}
+                        onChange={(e) => handleHeaderChange(header.id, "value", e.target.value)}
                         placeholder="Bearer eyJ..."
                         ref={el => headerRefs.current[index] = el}
                         onFocus={() => setHeaderFocusIndex(index)}
@@ -366,7 +357,7 @@ const HttpConfigSettings = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleRemoveHeader(index)}
+                        onClick={() => handleRemoveHeader(header.id)}
                         className="h-8 w-8"
                         disabled={!config.enabled}
                       >
@@ -384,7 +375,6 @@ const HttpConfigSettings = ({
           )}
         </div>
         
-        {/* Body */}
         <div className="space-y-2">
           <Label htmlFor="request-body" className="text-md font-medium">Body (JSON)</Label>
           <div className="flex flex-col md:flex-row gap-2 pb-1">
@@ -432,7 +422,6 @@ const HttpConfigSettings = ({
           )}
         </div>
         
-        {/* Test Button */}
         <div className="pt-4">
           <Button 
             onClick={handleTestRequest} 
@@ -444,7 +433,6 @@ const HttpConfigSettings = ({
           </Button>
         </div>
         
-        {/* Response View */}
         {(testResponse || config.lastResponse) && (
           <div className="space-y-2">
             <Label className="text-md font-medium">
@@ -471,4 +459,3 @@ const HttpConfigSettings = ({
 };
 
 export default HttpConfigSettings;
-
