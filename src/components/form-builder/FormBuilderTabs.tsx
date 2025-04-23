@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, HttpConfig } from "@/types/form";
@@ -86,6 +85,7 @@ const FormBuilderTabs = ({
           onFormColorChange={onFormColorChange}
           httpConfig={formData.httpConfig}
           onHttpConfigChange={onHttpConfigChange}
+          formFields={formData.fields || []}
         />
       </TabsContent>
       

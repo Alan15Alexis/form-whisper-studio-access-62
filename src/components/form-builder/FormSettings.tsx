@@ -28,8 +28,10 @@ interface FormSettingsProps {
   onFormColorChange?: (color: string) => void;
   httpConfig?: HttpConfig;
   onHttpConfigChange?: (config: HttpConfig) => void;
+  formFields?: any[];
 }
 
+// Cambia la declaración del componente para aceptar formFields
 const FormSettings = ({
   isPrivate,
   onPrivateChange,
@@ -40,7 +42,8 @@ const FormSettings = ({
   formColor,
   onFormColorChange,
   httpConfig,
-  onHttpConfigChange
+  onHttpConfigChange,
+  formFields = []
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -140,6 +143,7 @@ const FormSettings = ({
         config={httpConfig || defaultHttpConfig}
         onConfigChange={config => onHttpConfigChange && onHttpConfigChange(config)}
         isAdmin={isAdmin}
+        formFields={formFields}
       />
     </div>
   );

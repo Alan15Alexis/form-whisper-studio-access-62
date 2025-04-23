@@ -14,18 +14,19 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { HttpConfig, HttpHeader } from "@/types/form";
-import { Plus, Trash, Send } from "lucide-react";
+import { HttpConfig, HttpHeader, FormField } from "@/types/form";
+import { Plus, Trash, Send, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 interface HttpConfigSettingsProps {
   config: HttpConfig;
   onConfigChange: (config: HttpConfig) => void;
   isAdmin: boolean;
+  formFields?: FormField[];
 }
 
 const DEFAULT_JSON_BODY = `{
-  "id_del_elemento": "respuesta"
+  "id_del_elemento": "{{respuesta}}"
 }`;
 
 const DEFAULT_CONFIG: HttpConfig = {
@@ -36,10 +37,22 @@ const DEFAULT_CONFIG: HttpConfig = {
   body: DEFAULT_JSON_BODY,
 };
 
+function insertAtCursor(node: HTMLTextAreaElement | HTMLInputElement | null, text: string) {
+  if (!node) return;
+  const start = node.selectionStart || 0;
+  const end = node.selectionEnd || 0;
+  const value = node.value || "";
+  node.value = value.slice(0, start) + text + value.slice(end);
+  node.selectionStart = node.selectionEnd = start + text.length;
+  // Dispatch input to trigger React onChange
+  node.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 const HttpConfigSettings = ({ 
   config = DEFAULT_CONFIG, 
   onConfigChange,
-  isAdmin
+  isAdmin,
+  formFields = [],
 }: HttpConfigSettingsProps) => {
   const [testResponse, setTestResponse] = useState<{ status: number; data: string } | null>(
     config.lastResponse 
@@ -47,6 +60,15 @@ const HttpConfigSettings = ({
       : null
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  // For variable insertion
+  const [selectedHeaderField, setSelectedHeaderField] = useState<string>("");
+  const [selectedBodyField, setSelectedBodyField] = useState<string>("");
+
+  // Refs to manage insertion cursor location
+  const [headerFocusIndex, setHeaderFocusIndex] = useState<number | null>(null);
+  const headerRefs = React.useRef<Array<HTMLInputElement | null>>([]);
+  const bodyTextareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   if (!isAdmin) {
     return null;
@@ -76,6 +98,19 @@ const HttpConfigSettings = ({
     onConfigChange({ ...config, headers: newHeaders });
   };
 
+  // Insert dynamic field in header
+  const handleInsertHeaderVariable = (index: number, field: "key" | "value", variable: string) => {
+    const ref = headerRefs.current[index];
+    insertAtCursor(ref, `{{${variable}}}`);
+    setSelectedHeaderField("");
+  };
+
+  // Insert dynamic field in body
+  const handleInsertBodyVariable = (variable: string) => {
+    insertAtCursor(bodyTextareaRef.current, `{{${variable}}}`);
+    setSelectedBodyField("");
+  };
+
   const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onConfigChange({ ...config, body: e.target.value });
   };
@@ -97,6 +132,22 @@ const HttpConfigSettings = ({
       return false;
     }
   };
+
+  // Simulated user responses for testing (should be replaced by real data on actual submit)
+  const getDummyResponses = () => {
+    const responses: Record<string, string> = {};
+    for (const field of formFields) {
+      responses[field.id] = `[${field.label || field.id}]`;
+    }
+    return responses;
+  };
+
+  // Replace all {{campoId}} with dummy values
+  function interpolateVariables(input: string, responses: Record<string, string>) {
+    return input.replace(/{{(.*?)}}/g, (_, varName: string) => {
+      return responses[varName] !== undefined ? responses[varName] : `{{${varName}}}`;
+    });
+  }
 
   const handleTestRequest = async () => {
     // Validate URL
@@ -124,17 +175,23 @@ const HttpConfigSettings = ({
       // Create headers object
       const headers = new Headers();
       config.headers.forEach((header) => {
-        if (header.key && header.value) {
-          headers.append(header.key, header.value);
+        let value = header.value || "";
+        // Dynamic vars for headers too!
+        value = interpolateVariables(value, getDummyResponses());
+        if (header.key && value) {
+          headers.append(header.key, value);
         }
       });
       headers.append("Content-Type", "application/json");
+
+      // Replace variables in body
+      const interpolatedBody = interpolateVariables(config.body, getDummyResponses());
 
       // Make request
       const response = await fetch(config.url, {
         method: config.method,
         headers,
-        body: config.body,
+        body: interpolatedBody,
       });
 
       const data = await response.text();
@@ -174,11 +231,14 @@ const HttpConfigSettings = ({
 
   return (
     <Card className="shadow-sm border border-gray-100">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-bold">Envío de Datos por HTTP</CardTitle>
-        <CardDescription>
-          Configura el envío automático de datos mediante solicitudes HTTP
-        </CardDescription>
+      <CardHeader className="pb-3 flex flex-row items-center gap-2">
+        <Settings className="w-5 h-5 text-gray-400 mr-1" />
+        <div>
+          <CardTitle className="text-xl font-bold">Envío de Datos por HTTP</CardTitle>
+          <CardDescription>
+            Configura el envío automático de datos mediante solicitudes HTTP
+          </CardDescription>
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-6">
@@ -230,7 +290,7 @@ const HttpConfigSettings = ({
         
         {/* Headers */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-1">
             <Label className="text-md font-medium">Headers</Label>
             <Button 
               variant="outline" 
@@ -241,6 +301,23 @@ const HttpConfigSettings = ({
               <Plus className="h-4 w-4" /> Agregar Header
             </Button>
           </div>
+          {/* Selector de campo para variables en header */}
+          {config.enabled && formFields.length > 0 && (
+            <div className="flex flex-col md:flex-row gap-2 pb-2">
+              <Label className="text-xs">Insertar variable:</Label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={selectedHeaderField}
+                onChange={e => setSelectedHeaderField(e.target.value)}
+              >
+                <option value="">Selecciona pregunta...</option>
+                {formFields.map(f => (
+                  <option value={f.id} key={f.id}>{f.label} (ID: {f.id})</option>
+                ))}
+              </select>
+              <span className="text-xs text-gray-400 hidden md:inline">Haz clic en un campo header para insertar</span>
+            </div>
+          )}
           
           {config.headers.length > 0 ? (
             <Table>
@@ -259,6 +336,15 @@ const HttpConfigSettings = ({
                         value={header.key}
                         onChange={(e) => handleHeaderChange(index, "key", e.target.value)}
                         placeholder="Authorization"
+                        ref={el => headerRefs.current[index] = el}
+                        onFocus={() => setHeaderFocusIndex(index)}
+                        onClick={() => {
+                          // Insert variable if header selected & focus
+                          if (selectedHeaderField) {
+                            handleInsertHeaderVariable(index, "key", selectedHeaderField);
+                          }
+                        }}
+                        disabled={!config.enabled}
                       />
                     </TableCell>
                     <TableCell>
@@ -266,6 +352,14 @@ const HttpConfigSettings = ({
                         value={header.value}
                         onChange={(e) => handleHeaderChange(index, "value", e.target.value)}
                         placeholder="Bearer eyJ..."
+                        ref={el => headerRefs.current[index] = el}
+                        onFocus={() => setHeaderFocusIndex(index)}
+                        onClick={() => {
+                          if (selectedHeaderField) {
+                            handleInsertHeaderVariable(index, "value", selectedHeaderField);
+                          }
+                        }}
+                        disabled={!config.enabled}
                       />
                     </TableCell>
                     <TableCell>
@@ -274,6 +368,7 @@ const HttpConfigSettings = ({
                         size="icon"
                         onClick={() => handleRemoveHeader(index)}
                         className="h-8 w-8"
+                        disabled={!config.enabled}
                       >
                         <Trash className="h-4 w-4 text-red-500" />
                       </Button>
@@ -292,12 +387,45 @@ const HttpConfigSettings = ({
         {/* Body */}
         <div className="space-y-2">
           <Label htmlFor="request-body" className="text-md font-medium">Body (JSON)</Label>
+          <div className="flex flex-col md:flex-row gap-2 pb-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!config.enabled}
+              onClick={() => bodyTextareaRef.current && setSelectedBodyField("")}
+              className="hidden"
+            >
+              Reset
+            </Button>
+            <select
+              className="border rounded px-2 py-1 text-sm w-full max-w-xs"
+              value={selectedBodyField}
+              disabled={!config.enabled}
+              onChange={e => {
+                setSelectedBodyField(e.target.value);
+                if (e.target.value && bodyTextareaRef.current) {
+                  handleInsertBodyVariable(e.target.value);
+                }
+              }}
+            >
+              <option value="">Añadir campo dinámico...</option>
+              {formFields.map(f => (
+                <option value={f.id} key={f.id}>{f.label} (ID: {f.id})</option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-400 hidden md:inline">
+              Selecciona y se insertará donde esté el cursor
+            </span>
+          </div>
           <Textarea
             id="request-body"
             value={config.body}
             onChange={handleBodyChange}
             rows={6}
             className="font-mono text-sm"
+            ref={bodyTextareaRef}
+            disabled={!config.enabled}
           />
           {!validateJson(config.body) && (
             <p className="text-xs text-red-500">El JSON no es válido</p>
@@ -308,7 +436,7 @@ const HttpConfigSettings = ({
         <div className="pt-4">
           <Button 
             onClick={handleTestRequest} 
-            disabled={isLoading || !config.url || !validateUrl(config.url)}
+            disabled={isLoading || !config.url || !validateUrl(config.url) || !config.enabled}
             className="flex items-center gap-2"
           >
             <Send className="h-4 w-4" /> 
@@ -343,3 +471,4 @@ const HttpConfigSettings = ({
 };
 
 export default HttpConfigSettings;
+
