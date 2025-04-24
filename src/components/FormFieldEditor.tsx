@@ -35,7 +35,9 @@ const getFieldTypeName = (type: FormFieldType): string => {
     "star-rating": "Calificación con estrellas",
     matrix: "Matriz",
     ranking: "Ranking",
-    terms: "Términos y condiciones"
+    terms: "Términos y condiciones",
+    welcome: "Mensaje de bienvenida",
+    timer: "Temporizador"
   };
   
   return typeNames[type] || type;

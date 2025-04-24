@@ -87,6 +87,38 @@ const getResponseMessage = (status: number) => {
   return "Estado desconocido";
 };
 
+const getFieldTypeName = (type: FormField["type"]): string => {
+  const typeNames: Record<FormField["type"], string> = {
+    text: "Texto corto",
+    textarea: "Texto largo",
+    email: "Correo electrónico",
+    number: "Número",
+    date: "Fecha",
+    time: "Hora",
+    select: "Selección única",
+    checkbox: "Casillas de verificación",
+    radio: "Opciones múltiples",
+    yesno: "Sí/No",
+    "image-select": "Selección de imagen",
+    fullname: "Nombre completo",
+    phone: "Teléfono",
+    address: "Dirección",
+    "image-upload": "Subir imagen",
+    "file-upload": "Subir archivo",
+    drawing: "Dibujo",
+    signature: "Firma",
+    "opinion-scale": "Escala de opinión",
+    "star-rating": "Calificación con estrellas",
+    matrix: "Matriz",
+    ranking: "Ranking",
+    terms: "Términos y condiciones",
+    welcome: "Mensaje de bienvenida",
+    timer: "Temporizador"
+  };
+  
+  return typeNames[type] || type;
+};
+
 const HttpConfigSettings = ({ 
   config = DEFAULT_CONFIG, 
   onConfigChange,
@@ -124,16 +156,12 @@ const HttpConfigSettings = ({
     setEditableJsonPreview(newValue);
     
     try {
-      // Try to parse the JSON to validate it
       JSON.parse(newValue);
-      
-      // If valid, update the config
       onConfigChange({
         ...config,
         body: newValue
       });
     } catch (error) {
-      // If invalid, just update the editable state without updating config
       console.log("Invalid JSON in preview editor");
     }
   };
@@ -185,7 +213,6 @@ const HttpConfigSettings = ({
     });
     setBodyIdCounter(c => c + 1);
     
-    // Update the preview
     const newPreviewObj = getPreviewJson(updated, formFields);
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
@@ -198,7 +225,6 @@ const HttpConfigSettings = ({
       body: updatedJson
     });
     
-    // Update the preview
     const newPreviewObj = getPreviewJson(updated, formFields);
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
@@ -213,7 +239,6 @@ const HttpConfigSettings = ({
       body: updatedJson
     });
     
-    // Update the preview
     const newPreviewObj = getPreviewJson(updated, formFields);
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
@@ -278,11 +303,9 @@ const HttpConfigSettings = ({
 
       if (config.method === "POST") {
         try {
-          // Try using the edited JSON directly
           const bodyData = JSON.parse(editableJsonPreview);
           requestOptions.body = JSON.stringify(bodyData);
         } catch {
-          // Fallback to generated body if JSON is invalid
           const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
           requestOptions.body = JSON.stringify(requestBodyObj);
         }
@@ -333,36 +356,6 @@ const HttpConfigSettings = ({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const getFieldTypeName = (type: FormField["type"]): string => {
-    const typeNames: Record<FormField["type"], string> = {
-      text: "Texto corto",
-      textarea: "Texto largo",
-      email: "Correo electrónico",
-      number: "Número",
-      date: "Fecha",
-      time: "Hora",
-      select: "Selección única",
-      checkbox: "Casillas de verificación",
-      radio: "Opciones múltiples",
-      yesno: "Sí/No",
-      "image-select": "Selección de imagen",
-      fullname: "Nombre completo",
-      phone: "Teléfono",
-      address: "Dirección",
-      "image-upload": "Subir imagen",
-      "file-upload": "Subir archivo",
-      drawing: "Dibujo",
-      signature: "Firma",
-      "opinion-scale": "Escala de opinión",
-      "star-rating": "Calificación con estrellas",
-      matrix: "Matriz",
-      ranking: "Ranking",
-      terms: "Términos y condiciones"
-    };
-    
-    return typeNames[type] || type;
   };
 
   if (!isAdmin) return null;
