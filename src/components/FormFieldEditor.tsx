@@ -9,7 +9,7 @@ import FieldOptionsEditor from "./form-builder/FieldOptionsEditor";
 import FieldConfigDrawer from "./form-builder/FieldConfigDrawer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import FormField as FormFieldPreview from "./form-view/FormField";
+import { default as FormFieldPreview } from "./form-view/FormField";
 
 const getFieldTypeName = (type: FormFieldType): string => {
   const typeNames: Record<FormFieldType, string> = {
