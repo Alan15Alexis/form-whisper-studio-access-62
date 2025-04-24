@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, FormFieldType } from "@/types/form";
-import { Trash, GripVertical } from "lucide-react";
+import { Trash, GripVertical, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FieldOptionsEditor from "./form-builder/FieldOptionsEditor";
 import FieldConfigDrawer from "./form-builder/FieldConfigDrawer";
@@ -85,7 +85,7 @@ const FormFieldEditor = ({
     });
   };
 
-  const handleOptionsChange = (options: FormFieldOption[]) => {
+  const handleOptionsChange = (options: any[]) => {
     onChange({
       ...field,
       options
@@ -124,6 +124,16 @@ const FormFieldEditor = ({
               />
               <Label htmlFor={`field-${field.id}-required`}>Obligatorio</Label>
             </div>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setConfigDrawerOpen(true)}
+              className="p-0 h-8 w-8"
+              title="Configuración avanzada"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
         
