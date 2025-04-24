@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -108,6 +109,36 @@ const HttpConfigSettings = ({
     bodyFields.length ? Math.max(...bodyFields.map(b => b.id))+1 : 2
   );
 
+  const previewJsonObj = getPreviewJson(bodyFields, formFields);
+  const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
+    JSON.stringify(previewJsonObj, null, 2)
+  );
+
+  useEffect(() => {
+    if (config.enabled) {
+      setEditableJsonPreview(JSON.stringify(previewJsonObj, null, 2));
+    }
+  }, [bodyFields, formFields]);
+
+  const handleJsonPreviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setEditableJsonPreview(newValue);
+    
+    try {
+      // Try to parse the JSON to validate it
+      JSON.parse(newValue);
+      
+      // If valid, update the config
+      onConfigChange({
+        ...config,
+        body: newValue
+      });
+    } catch (error) {
+      // If invalid, just update the editable state without updating config
+      console.log("Invalid JSON in preview editor");
+    }
+  };
+
   const handleToggleEnabled = (enabled: boolean) => {
     onConfigChange({ ...config, enabled });
   };
@@ -148,29 +179,44 @@ const HttpConfigSettings = ({
         fieldId: formFields.length > 0 ? formFields[0].id : ""
       }
     ];
+    const updatedJson = JSON.stringify(updated);
     onConfigChange({
       ...config,
-      body: JSON.stringify(updated)
+      body: updatedJson
     });
     setBodyIdCounter(c => c + 1);
+    
+    // Update the preview
+    const newPreviewObj = getPreviewJson(updated, formFields);
+    setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
 
   const handleRemoveBodyField = (id: number) => {
     const updated = bodyFields.filter(b => b.id !== id);
+    const updatedJson = JSON.stringify(updated);
     onConfigChange({
       ...config,
-      body: JSON.stringify(updated)
+      body: updatedJson
     });
+    
+    // Update the preview
+    const newPreviewObj = getPreviewJson(updated, formFields);
+    setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
 
   const handleBodyFieldChange = (id: number, field: "key" | "fieldId", value: string) => {
     const updated = bodyFields.map(b =>
       b.id === id ? { ...b, [field]: value } : b
     );
+    const updatedJson = JSON.stringify(updated);
     onConfigChange({
       ...config,
-      body: JSON.stringify(updated)
+      body: updatedJson
     });
+    
+    // Update the preview
+    const newPreviewObj = getPreviewJson(updated, formFields);
+    setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
 
   const validateUrl = (url: string) => {
@@ -197,6 +243,13 @@ const HttpConfigSettings = ({
       obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
     }
     return obj;
+  };
+
+  const handleMethodChange = (method: 'GET' | 'POST') => {
+    onConfigChange({
+      ...config,
+      method
+    });
   };
 
   const handleTestRequest = async () => {
@@ -226,9 +279,11 @@ const HttpConfigSettings = ({
 
       if (config.method === "POST") {
         try {
+          // Try using the edited JSON directly
           const bodyData = JSON.parse(editableJsonPreview);
           requestOptions.body = JSON.stringify(bodyData);
         } catch {
+          // Fallback to generated body if JSON is invalid
           const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
           requestOptions.body = JSON.stringify(requestBodyObj);
         }
@@ -279,35 +334,6 @@ const HttpConfigSettings = ({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const previewJsonObj = getPreviewJson(bodyFields, formFields);
-  const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
-    JSON.stringify(previewJsonObj, null, 2)
-  );
-
-  useEffect(() => {
-    setEditableJsonPreview(JSON.stringify(previewJsonObj, null, 2));
-  }, [bodyFields, formFields]);
-
-  const handleJsonPreviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditableJsonPreview(e.target.value);
-    
-    try {
-      const parsedJson = JSON.parse(e.target.value);
-      onConfigChange({
-        ...config,
-        body: JSON.stringify(parsedJson)
-      });
-    } catch (error) {
-    }
-  };
-
-  const handleMethodChange = (method: 'GET' | 'POST') => {
-    onConfigChange({
-      ...config,
-      method
-    });
   };
 
   if (!isAdmin) return null;
@@ -501,7 +527,7 @@ const HttpConfigSettings = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-md font-medium">Vista previa del JSON</Label>
+              <Label className="text-md font-medium">Vista previa del JSON (Editable)</Label>
               <textarea
                 className="w-full min-h-[120px] p-4 font-mono text-sm border rounded-md bg-gray-50"
                 value={editableJsonPreview}
@@ -509,6 +535,9 @@ const HttpConfigSettings = ({
                 placeholder="{}"
                 disabled={!config.enabled}
               />
+              <p className="text-xs text-gray-500">
+                Puedes editar directamente el JSON para personalizar el cuerpo de la solicitud
+              </p>
             </div>
           </>
         )}
