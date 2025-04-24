@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -336,6 +335,36 @@ const HttpConfigSettings = ({
     }
   };
 
+  const getFieldTypeName = (type: FormField["type"]): string => {
+    const typeNames: Record<FormField["type"], string> = {
+      text: "Texto corto",
+      textarea: "Texto largo",
+      email: "Correo electrónico",
+      number: "Número",
+      date: "Fecha",
+      time: "Hora",
+      select: "Selección única",
+      checkbox: "Casillas de verificación",
+      radio: "Opciones múltiples",
+      yesno: "Sí/No",
+      "image-select": "Selección de imagen",
+      fullname: "Nombre completo",
+      phone: "Teléfono",
+      address: "Dirección",
+      "image-upload": "Subir imagen",
+      "file-upload": "Subir archivo",
+      drawing: "Dibujo",
+      signature: "Firma",
+      "opinion-scale": "Escala de opinión",
+      "star-rating": "Calificación con estrellas",
+      matrix: "Matriz",
+      ranking: "Ranking",
+      terms: "Términos y condiciones"
+    };
+    
+    return typeNames[type] || type;
+  };
+
   if (!isAdmin) return null;
 
   return (
@@ -480,48 +509,53 @@ const HttpConfigSettings = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[48%]">Clave personalizada</TableHead>
-                    <TableHead className="w-[47%]">Valor (Pregunta)</TableHead>
+                    <TableHead className="w-[48%]">Clave</TableHead>
+                    <TableHead className="w-[47%]">Valor (Campo del formulario)</TableHead>
                     <TableHead className="w-[5%]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bodyFields.map((bodyField) => (
-                    <TableRow key={bodyField.id}>
-                      <TableCell>
-                        <Input
-                          value={bodyField.key}
-                          onChange={e => handleBodyFieldChange(bodyField.id, "key", e.target.value)}
-                          placeholder="Ej: user_id"
-                          disabled={!config.enabled}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <select
-                          className="border rounded px-2 py-1 text-sm w-full"
-                          value={bodyField.fieldId}
-                          disabled={!config.enabled}
-                          onChange={e => handleBodyFieldChange(bodyField.id, "fieldId", e.target.value)}
-                        >
-                          <option value="">Selecciona una pregunta…</option>
-                          {formFields.map(f => (
-                            <option value={f.id} key={f.id}>{f.label}</option>
-                          ))}
-                        </select>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveBodyField(bodyField.id)}
-                          className="h-8 w-8"
-                          disabled={!config.enabled}
-                        >
-                          <Trash className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {bodyFields.map((bodyField) => {
+                    const selectedField = formFields.find(f => f.id === bodyField.fieldId);
+                    return (
+                      <TableRow key={bodyField.id}>
+                        <TableCell>
+                          <Input
+                            value={bodyField.key}
+                            onChange={e => handleBodyFieldChange(bodyField.id, "key", e.target.value)}
+                            placeholder="Ej: user_id"
+                            disabled={!config.enabled}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <select
+                            className="w-full h-10 px-3 border rounded-md"
+                            value={bodyField.fieldId}
+                            disabled={!config.enabled}
+                            onChange={e => handleBodyFieldChange(bodyField.id, "fieldId", e.target.value)}
+                          >
+                            <option value="">Selecciona un campo...</option>
+                            {formFields.map(f => (
+                              <option value={f.id} key={f.id}>
+                                {`${getFieldTypeName(f.type)} - ${f.label}`}
+                              </option>
+                            ))}
+                          </select>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveBodyField(bodyField.id)}
+                            className="h-8 w-8"
+                            disabled={!config.enabled}
+                          >
+                            <Trash className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

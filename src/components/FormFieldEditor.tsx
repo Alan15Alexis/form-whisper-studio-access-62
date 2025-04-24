@@ -1,17 +1,45 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FormField, FormFieldType, FormFieldOption } from "@/types/form";
-import { Trash, GripVertical, Settings, Cog } from "lucide-react";
+import { FormField, FormFieldType } from "@/types/form";
+import { Trash, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FieldOptionsEditor from "./form-builder/FieldOptionsEditor";
 import FieldConfigDrawer from "./form-builder/FieldConfigDrawer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import CardSettingsDialog from "@/components/CardSettingsDialog";
+import FormField as FormFieldPreview from "./form-view/FormField";
 
+const getFieldTypeName = (type: FormFieldType): string => {
+  const typeNames: Record<FormFieldType, string> = {
+    text: "Texto corto",
+    textarea: "Texto largo",
+    email: "Correo electrónico",
+    number: "Número",
+    date: "Fecha",
+    time: "Hora",
+    select: "Selección única",
+    checkbox: "Casillas de verificación",
+    radio: "Opciones múltiples",
+    yesno: "Sí/No",
+    "image-select": "Selección de imagen",
+    fullname: "Nombre completo",
+    phone: "Teléfono",
+    address: "Dirección",
+    "image-upload": "Subir imagen",
+    "file-upload": "Subir archivo",
+    drawing: "Dibujo",
+    signature: "Firma",
+    "opinion-scale": "Escala de opinión",
+    "star-rating": "Calificación con estrellas",
+    matrix: "Matriz",
+    ranking: "Ranking",
+    terms: "Términos y condiciones"
+  };
+  
+  return typeNames[type] || type;
+};
 
 interface FormFieldEditorProps {
   field: FormField;
@@ -42,7 +70,6 @@ const FormFieldEditor = ({
   );
   
   const [configDrawerOpen, setConfigDrawerOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({
@@ -64,19 +91,6 @@ const FormFieldEditor = ({
       options
     });
   };
-  
-  const canHaveNumericValues = 
-    field.type === 'select' || 
-    field.type === 'radio' || 
-    field.type === 'checkbox' || 
-    field.type === 'yesno';
-
-  const handleSaveCustomId = (newId: string) => {
-    onChange({
-      ...field,
-      customId: newId
-    });
-  };
 
   return (
     <>
@@ -94,23 +108,11 @@ const FormFieldEditor = ({
             value={field.label}
             onChange={handleLabelChange}
             className="flex-1 text-lg font-medium bg-transparent border-none p-0 focus:outline-none focus:ring-0"
-            placeholder="Campo sin título"
+            placeholder={`${getFieldTypeName(field.type)} sin título`}
           />
 
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost"
-              size="icon"
-              className="ml-2"
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              title="Configurar ID del campo"
-            >
-              <Cog size={18} />
-            </Button>
-            <span className="text-xs text-gray-400 select-none">
-              {field.customId ? `ID: ${field.customId}` : "ID: (no asignado)"}
-            </span>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <span>{getFieldTypeName(field.type)}</span>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -122,25 +124,6 @@ const FormFieldEditor = ({
               />
               <Label htmlFor={`field-${field.id}-required`}>Obligatorio</Label>
             </div>
-            
-            {canHaveNumericValues && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setConfigDrawerOpen(true)}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Configuración de puntaje</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
           </div>
         </div>
         
@@ -157,6 +140,15 @@ const FormFieldEditor = ({
               Este campo tiene valores numéricos asignados
             </div>
           )}
+
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="text-sm font-medium mb-2">Vista previa del campo:</div>
+            <FormFieldPreview
+              field={field}
+              value=""
+              onChange={() => {}}
+            />
+          </div>
         </CardContent>
         
         <CardFooter className="p-4 pt-0">
@@ -165,13 +157,6 @@ const FormFieldEditor = ({
           </Button>
         </CardFooter>
       </Card>
-      
-      <CardSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        currentId={field.customId || ""}
-        onSave={handleSaveCustomId}
-      />
 
       <FieldConfigDrawer
         field={field}
