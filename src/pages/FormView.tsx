@@ -248,6 +248,28 @@ const FormView = () => {
                 <p className="text-sm text-gray-500 mt-2 text-center">
                   Pregunta {currentFieldIndex + 1} de {totalFields}
                 </p>
+                
+                <div className="flex justify-between mt-4 mb-6">
+                  <Button 
+                    type="button"
+                    onClick={() => setCurrentFieldIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentFieldIndex === 0}
+                    variant="outline"
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Anterior
+                  </Button>
+                  
+                  {currentFieldIndex < totalFields - 1 && (
+                    <Button 
+                      type="button"
+                      onClick={() => setCurrentFieldIndex(prev => Math.min(totalFields - 1, prev + 1))}
+                    >
+                      Siguiente
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {form?.fields && form.fields[currentFieldIndex] && (
@@ -260,32 +282,14 @@ const FormView = () => {
               )}
             </CardContent>
             
-            <CardFooter className="flex justify-between p-6">
-              <Button 
-                type="button"
-                onClick={() => setCurrentFieldIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentFieldIndex === 0}
-                variant="outline"
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Anterior
-              </Button>
-              
-              {currentFieldIndex === totalFields - 1 ? (
-                <Button type="submit" disabled={submitting}>
+            {currentFieldIndex === totalFields - 1 && (
+              <CardFooter className="flex justify-center p-6">
+                <Button type="submit" disabled={submitting} className="w-full max-w-xs">
                   <Send className="mr-2 h-4 w-4" />
                   {submitting ? "Enviando..." : "Enviar"}
                 </Button>
-              ) : (
-                <Button 
-                  type="button"
-                  onClick={() => setCurrentFieldIndex(prev => Math.min(totalFields - 1, prev + 1))}
-                >
-                  Siguiente
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </CardFooter>
+              </CardFooter>
+            )}
           </form>
         </Card>
       </div>
