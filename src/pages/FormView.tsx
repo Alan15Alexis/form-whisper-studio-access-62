@@ -207,16 +207,23 @@ const FormView = () => {
 
   return (
     <Layout hideNav>
-      <div className="container max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
+      <div className="container mx-auto px-4 sm:px-6 max-w-3xl">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)}
+            className="text-sm sm:text-base"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
         </div>
         
         <Card
-          className={cn("shadow-md transition-colors")}
+          className={cn(
+            "shadow-md transition-colors w-full",
+            "mx-auto rounded-lg sm:rounded-xl"
+          )}
           style={form?.formColor ? {
             background: `${form.formColor}10`,
             borderColor: form.formColor,
@@ -224,39 +231,40 @@ const FormView = () => {
           } : undefined}
         >
           {form?.welcomeMessage && (
-            <CardHeader className="text-center bg-transparent">
+            <CardHeader className="text-center bg-transparent p-4 sm:p-6">
               {form.welcomeMessage.imageUrl && (
                 <div className="mb-4">
                   <img 
                     src={form.welcomeMessage.imageUrl} 
                     alt="Welcome" 
-                    className="mx-auto max-h-48 rounded-lg"
+                    className="mx-auto max-h-48 rounded-lg object-contain"
                   />
                 </div>
               )}
-              <CardTitle className="text-2xl">{form?.title}</CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardTitle className="text-xl sm:text-2xl">{form?.title}</CardTitle>
+              <CardDescription className="text-sm sm:text-base mt-2">
                 {form.welcomeMessage.text}
               </CardDescription>
             </CardHeader>
           )}
           
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               <div className="w-full">
                 <Progress value={progress} className="h-2" />
                 <p className="text-sm text-gray-500 mt-2 text-center">
                   Pregunta {currentFieldIndex + 1} de {totalFields}
                 </p>
                 
-                <div className="flex justify-between mt-4 mb-6">
+                <div className="flex justify-between mt-4 mb-4 sm:mb-6 sticky top-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 p-2 rounded-lg shadow-sm z-10">
                   <Button 
                     type="button"
                     onClick={() => setCurrentFieldIndex(prev => Math.max(0, prev - 1))}
                     disabled={currentFieldIndex === 0}
                     variant="outline"
+                    className="text-sm sm:text-base"
                   >
-                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    <ChevronLeft className="mr-1 sm:mr-2 h-4 w-4" />
                     Anterior
                   </Button>
                   
@@ -264,27 +272,34 @@ const FormView = () => {
                     <Button 
                       type="button"
                       onClick={() => setCurrentFieldIndex(prev => Math.min(totalFields - 1, prev + 1))}
+                      className="text-sm sm:text-base"
                     >
                       Siguiente
-                      <ChevronRight className="ml-2 h-4 w-4" />
+                      <ChevronRight className="ml-1 sm:ml-2 h-4 w-4" />
                     </Button>
                   )}
                 </div>
               </div>
 
-              {form?.fields && form.fields[currentFieldIndex] && (
-                <FormField
-                  field={form.fields[currentFieldIndex]}
-                  value={formValues[form.fields[currentFieldIndex].id]}
-                  onChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
-                  formColor={form?.formColor}
-                />
-              )}
+              <div className="min-h-[200px] sm:min-h-[300px]">
+                {form?.fields && form.fields[currentFieldIndex] && (
+                  <FormField
+                    field={form.fields[currentFieldIndex]}
+                    value={formValues[form.fields[currentFieldIndex].id]}
+                    onChange={(value) => handleInputChange(form.fields[currentFieldIndex].id, value)}
+                    formColor={form?.formColor}
+                  />
+                )}
+              </div>
             </CardContent>
             
             {currentFieldIndex === totalFields - 1 && (
-              <CardFooter className="flex justify-center p-6">
-                <Button type="submit" disabled={submitting} className="w-full max-w-xs">
+              <CardFooter className="flex justify-center p-4 sm:p-6 sticky bottom-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-t">
+                <Button 
+                  type="submit" 
+                  disabled={submitting} 
+                  className="w-full max-w-xs text-sm sm:text-base py-2 sm:py-3"
+                >
                   <Send className="mr-2 h-4 w-4" />
                   {submitting ? "Enviando..." : "Enviar"}
                 </Button>
