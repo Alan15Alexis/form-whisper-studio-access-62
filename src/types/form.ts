@@ -77,7 +77,7 @@ export interface HttpHeader {
 export interface HttpConfig {
   enabled: boolean;
   url: string;
-  method: 'POST'; // For future: 'GET' | 'PUT' | 'DELETE'
+  method: 'GET' | 'POST'; // Updated to allow 'GET' as well
   headers: HttpHeader[];
   body: string;
   lastResponse?: {

@@ -303,7 +303,7 @@ const HttpConfigSettings = ({
     }
   };
 
-  const handleMethodChange = (method: string) => {
+  const handleMethodChange = (method: 'GET' | 'POST') => {
     onConfigChange({
       ...config,
       method
@@ -363,7 +363,7 @@ const HttpConfigSettings = ({
           <select
             className="w-full h-10 px-3 border rounded-md"
             value={config.method}
-            onChange={(e) => handleMethodChange(e.target.value)}
+            onChange={(e) => handleMethodChange(e.target.value as 'GET' | 'POST')}
             disabled={!config.enabled}
           >
             <option value="GET">GET</option>
