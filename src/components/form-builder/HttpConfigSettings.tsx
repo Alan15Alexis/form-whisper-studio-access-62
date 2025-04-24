@@ -75,6 +75,22 @@ function getPreviewJson(fields: BodyField[], formFields: FormField[]) {
   return example;
 }
 
+const getResponseBadgeColor = (status: number) => {
+  if (status >= 200 && status < 300) return "bg-green-100 text-green-700 border-green-200";
+  if (status >= 300 && status < 400) return "bg-yellow-100 text-yellow-700 border-yellow-200";
+  if (status >= 400 && status < 500) return "bg-red-100 text-red-700 border-red-200";
+  if (status >= 500) return "bg-purple-100 text-purple-700 border-purple-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+};
+
+const getResponseMessage = (status: number) => {
+  if (status >= 200 && status < 300) return "Éxito - La solicitud se procesó correctamente";
+  if (status >= 300 && status < 400) return "Redirección - Puede requerir ajustes adicionales";
+  if (status >= 400 && status < 500) return "Error del cliente - Verifica los datos enviados";
+  if (status >= 500) return "Error del servidor - Contacta al administrador del sistema";
+  return "Estado desconocido";
+};
+
 const HttpConfigSettings = ({ 
   config = DEFAULT_CONFIG, 
   onConfigChange,
@@ -192,7 +208,7 @@ const HttpConfigSettings = ({
     return obj;
   }
 
-    const handleTestRequest = async () => {
+  const handleTestRequest = async () => {
     if (!validateUrl(config.url)) {
       toast({
         title: "URL inválida",
@@ -501,22 +517,38 @@ const HttpConfigSettings = ({
         </div>
         
         {(testResponse || config.lastResponse) && (
-          <div className="space-y-2">
-            <Label className="text-md font-medium">
-              Vista de Respuesta
-              {config.lastResponse && (
-                <span className="text-xs text-gray-500 ml-2">
-                  (Última actualización: {new Date(config.lastResponse.timestamp).toLocaleString()})
-                </span>
-              )}
-            </Label>
-            <div className="border rounded-md p-4 bg-gray-50 max-h-48 overflow-auto font-mono text-sm">
-              <div className={`font-bold ${(testResponse?.status || config.lastResponse?.status) === 200 ? 'text-green-600' : 'text-red-600'}`}>
-                Status: {testResponse?.status || config.lastResponse?.status}
+          <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <Label className="text-md font-medium">
+                Resultado de la última prueba
+              </Label>
+              <div className="text-xs text-gray-500">
+                {config.lastResponse && (
+                  <span>
+                    Última actualización: {new Date(config.lastResponse.timestamp).toLocaleString()}
+                  </span>
+                )}
               </div>
-              <pre className="mt-2 whitespace-pre-wrap break-all">
-                {testResponse?.data || config.lastResponse?.data || ""}
-              </pre>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
+                  getResponseBadgeColor(testResponse?.status || config.lastResponse?.status || 0)
+                }`}>
+                  Código {testResponse?.status || config.lastResponse?.status}
+                </span>
+                <span className="text-sm text-gray-600">
+                  {getResponseMessage(testResponse?.status || config.lastResponse?.status || 0)}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Respuesta del servidor:</Label>
+                <pre className="bg-white p-3 rounded border text-sm overflow-x-auto">
+                  {testResponse?.data || config.lastResponse?.data || "Sin datos"}
+                </pre>
+              </div>
             </div>
           </div>
         )}
