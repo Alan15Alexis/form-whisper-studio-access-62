@@ -38,17 +38,14 @@ const DEFAULT_CONFIG: HttpConfig = {
   url: "",
   method: "POST",
   headers: [],
-  // Usaremos nuestra estructura custom, luego serializamos para enviar
   body: "",
 };
 
 function getBodyFieldsFromConfigBody(body: string): BodyField[] {
-  // Intentar parsear body como array de campos, de lo contrario usar por defecto
   try {
     const arr = JSON.parse(body);
     if (Array.isArray(arr) && arr.every(f => typeof f.id === "number" && typeof f.key === "string" && typeof f.fieldId === "string"))
       return arr;
-    // Intentar parsear como objeto clásico {key: value}
     if (typeof arr === "object" && arr !== null && !Array.isArray(arr)) {
       const entries = Object.entries(arr);
       let idCounter = 1;
@@ -64,7 +61,6 @@ function getBodyFieldsFromConfigBody(body: string): BodyField[] {
   }
 }
 
-// Convierte array [{key,fieldId}] en objeto { key1: valorEjemplo1, ... }
 function getPreviewJson(fields: BodyField[], formFields: FormField[]) {
   const example: Record<string, string> = {};
   for (const f of fields) {
@@ -104,7 +100,6 @@ const HttpConfigSettings = ({
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  // States para body-fields:
   const bodyFields: BodyField[] = config.enabled
     ? getBodyFieldsFromConfigBody(config.body || "[]")
     : [];
@@ -113,7 +108,6 @@ const HttpConfigSettings = ({
     bodyFields.length ? Math.max(...bodyFields.map(b => b.id))+1 : 2
   );
 
-  // STATIC HEADERS
   const handleToggleEnabled = (enabled: boolean) => {
     onConfigChange({ ...config, enabled });
   };
@@ -145,7 +139,6 @@ const HttpConfigSettings = ({
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  // BODY dynamic fields
   const handleAddBodyField = () => {
     const updated = [
       ...bodyFields,
@@ -189,24 +182,22 @@ const HttpConfigSettings = ({
     }
   };
 
-  // Simula respuestas dummy para previsualización del JSON request
-  function getDummyResponses() {
+  const getDummyResponses = () => {
     const r: Record<string, string> = {};
     for (const campo of formFields) {
       r[campo.id] = `[${campo.label || campo.id}]`;
     }
     return r;
-  }
+  };
 
-  // Convierte fields a objeto y los sustituye por respuestas reales al enviar
-  function buildRequestBody(fields: BodyField[], responses: Record<string, string>) {
+  const buildRequestBody = (fields: BodyField[], responses: Record<string, string>) => {
     const obj: Record<string, any> = {};
     for (const f of fields) {
       if (!f.key) continue;
       obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
     }
     return obj;
-  }
+  };
 
   const handleTestRequest = async () => {
     if (!validateUrl(config.url)) {
@@ -227,17 +218,23 @@ const HttpConfigSettings = ({
         }
       });
       headers.append("Content-Type", "application/json");
-  
-      // Construimos el body con los campos y respuestas dummy
-      const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
-      const requestBodyJSON = JSON.stringify(requestBodyObj);
-  
-      const response = await fetch(config.url, {
+
+      const requestOptions: RequestInit = {
         method: config.method,
         headers,
-        body: requestBodyJSON,
-      });
+      };
+
+      if (config.method === "POST") {
+        try {
+          const bodyData = JSON.parse(editableJsonPreview);
+          requestOptions.body = JSON.stringify(bodyData);
+        } catch {
+          const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
+          requestOptions.body = JSON.stringify(requestBodyObj);
+        }
+      }
   
+      const response = await fetch(config.url, requestOptions);
       const data = await response.text();
       const responseObj = { 
         status: response.status, 
@@ -284,28 +281,33 @@ const HttpConfigSettings = ({
     }
   };
 
-  // Preview JSON actualizado
   const previewJsonObj = getPreviewJson(bodyFields, formFields);
   const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
     JSON.stringify(previewJsonObj, null, 2)
   );
 
-  // Update the editable preview when the bodyFields change
   useEffect(() => {
     setEditableJsonPreview(JSON.stringify(previewJsonObj, null, 2));
   }, [bodyFields, formFields]);
 
-  // Handle editable preview changes
   const handleJsonPreviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setEditableJsonPreview(e.target.value);
     
-    // Try to parse the edited JSON and update the body fields if valid
     try {
       const parsedJson = JSON.parse(e.target.value);
-      // You can add logic here to update bodyFields based on the edited JSON if needed
+      onConfigChange({
+        ...config,
+        body: JSON.stringify(parsedJson)
+      });
     } catch (error) {
-      // Don't update if JSON is invalid
     }
+  };
+
+  const handleMethodChange = (method: string) => {
+    onConfigChange({
+      ...config,
+      method
+    });
   };
 
   if (!isAdmin) return null;
@@ -358,12 +360,15 @@ const HttpConfigSettings = ({
         
         <div className="space-y-2">
           <Label className="text-md font-medium">Tipo de solicitud</Label>
-          <div className="flex h-10 items-center rounded-md border border-input bg-background px-3 text-sm text-gray-400">
-            POST
-          </div>
-          <p className="text-xs text-gray-500">
-            En futuras versiones se agregarán más métodos (GET, PUT, DELETE)
-          </p>
+          <select
+            className="w-full h-10 px-3 border rounded-md"
+            value={config.method}
+            onChange={(e) => handleMethodChange(e.target.value)}
+            disabled={!config.enabled}
+          >
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+          </select>
         </div>
         
         <div className="space-y-4">
@@ -430,80 +435,83 @@ const HttpConfigSettings = ({
           )}
         </div>
 
-        {/* BODY DYNAMIC FIELDS - Modified to remove ID column */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between mb-1">
-            <Label htmlFor="body-fields" className="text-md font-medium">Body</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddBodyField}
-              className="flex items-center gap-1"
-              disabled={!config.enabled}
-            >
-              <Plus className="h-4 w-4" /> Añadir campo
-            </Button>
-          </div>
-          
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[48%]">Clave personalizada</TableHead>
-                <TableHead className="w-[47%]">Valor (Pregunta)</TableHead>
-                <TableHead className="w-[5%]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bodyFields.map((bodyField) => (
-                <TableRow key={bodyField.id}>
-                  <TableCell>
-                    <Input
-                      value={bodyField.key}
-                      onChange={e => handleBodyFieldChange(bodyField.id, "key", e.target.value)}
-                      placeholder="Ej: user_id"
-                      disabled={!config.enabled}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <select
-                      className="border rounded px-2 py-1 text-sm w-full"
-                      value={bodyField.fieldId}
-                      disabled={!config.enabled}
-                      onChange={e => handleBodyFieldChange(bodyField.id, "fieldId", e.target.value)}
-                    >
-                      <option value="">Selecciona una pregunta…</option>
-                      {formFields.map(f => (
-                        <option value={f.id} key={f.id}>{f.label}</option>
-                      ))}
-                    </select>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveBodyField(bodyField.id)}
-                      className="h-8 w-8"
-                      disabled={!config.enabled}
-                    >
-                      <Trash className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        {config.method === "POST" && (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor="body-fields" className="text-md font-medium">Body</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddBodyField}
+                  className="flex items-center gap-1"
+                  disabled={!config.enabled}
+                >
+                  <Plus className="h-4 w-4" /> Añadir campo
+                </Button>
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[48%]">Clave personalizada</TableHead>
+                    <TableHead className="w-[47%]">Valor (Pregunta)</TableHead>
+                    <TableHead className="w-[5%]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bodyFields.map((bodyField) => (
+                    <TableRow key={bodyField.id}>
+                      <TableCell>
+                        <Input
+                          value={bodyField.key}
+                          onChange={e => handleBodyFieldChange(bodyField.id, "key", e.target.value)}
+                          placeholder="Ej: user_id"
+                          disabled={!config.enabled}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <select
+                          className="border rounded px-2 py-1 text-sm w-full"
+                          value={bodyField.fieldId}
+                          disabled={!config.enabled}
+                          onChange={e => handleBodyFieldChange(bodyField.id, "fieldId", e.target.value)}
+                        >
+                          <option value="">Selecciona una pregunta…</option>
+                          {formFields.map(f => (
+                            <option value={f.id} key={f.id}>{f.label}</option>
+                          ))}
+                        </select>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveBodyField(bodyField.id)}
+                          className="h-8 w-8"
+                          disabled={!config.enabled}
+                        >
+                          <Trash className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
 
-        {/* JSON Preview - Modified to be editable */}
-        <div className="space-y-2">
-          <Label className="text-md font-medium">Vista previa del JSON enviado</Label>
-          <textarea
-            className="border rounded-md p-4 bg-gray-50 max-h-64 font-mono text-sm w-full"
-            value={editableJsonPreview}
-            onChange={handleJsonPreviewChange}
-            style={{ minHeight: "120px" }}
-          />
-        </div>
+            <div className="space-y-2">
+              <Label className="text-md font-medium">Vista previa del JSON</Label>
+              <textarea
+                className="w-full min-h-[120px] p-4 font-mono text-sm border rounded-md bg-gray-50"
+                value={editableJsonPreview}
+                onChange={handleJsonPreviewChange}
+                placeholder="{}"
+                disabled={!config.enabled}
+              />
+            </div>
+          </>
+        )}
 
         <div className="pt-4">
           <Button 
