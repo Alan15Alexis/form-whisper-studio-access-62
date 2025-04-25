@@ -1,4 +1,3 @@
-//paguina para visualizar y responder formularios
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -132,17 +131,61 @@ const FormView = () => {
     const submittedBy = currentUser?.email || "";
     
     try {
+      // Primero guardamos la respuesta normalmente
       await submitFormResponse(id!, formValues);
+
+      // Si el envío HTTP está activado, enviamos los datos
+      if (form.httpConfig?.enabled && form.httpConfig.url) {
+        const headers = new Headers();
+        form.httpConfig.headers.forEach((header) => {
+          if (header.key && header.value) {
+            headers.append(header.key, header.value);
+          }
+        });
+        headers.append("Content-Type", "application/json");
+
+        // Preparar el cuerpo de la solicitud según la configuración
+        let bodyToSend = {};
+        try {
+          const bodyConfig = JSON.parse(form.httpConfig.body || '[]');
+          if (Array.isArray(bodyConfig)) {
+            bodyConfig.forEach((mapping) => {
+              if (mapping.key && mapping.fieldId) {
+                bodyToSend[mapping.key] = formValues[mapping.fieldId] || '';
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Error parsing HTTP body configuration:', e);
+          bodyToSend = formValues;
+        }
+
+        const response = await fetch(form.httpConfig.url, {
+          method: form.httpConfig.method,
+          headers,
+          body: JSON.stringify(bodyToSend)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        toast({
+          title: "Datos enviados correctamente",
+          description: "La respuesta se ha guardado y enviado por HTTP.",
+        });
+      } else {
+        toast({
+          title: "Respuesta guardada",
+          description: "Tu respuesta se ha guardado correctamente.",
+        });
+      }
       setFormSubmitted(true);
-      
-      toast({
-        title: "Éxito",
-        description: "Tu respuesta ha sido enviada",
-      });
     } catch (error) {
+      console.error('Error submitting form:', error);
       toast({
         title: "Error",
-        description: "Ha ocurrido un error al enviar la respuesta del formulario",
+        description: "Hubo un problema al enviar tu respuesta. Por favor, intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
