@@ -190,11 +190,18 @@ const FormView = () => {
         console.log('Request body:', bodyToSend);
 
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
           const response = await fetch(form.httpConfig.url, {
             method: form.httpConfig.method,
             headers,
-            body: JSON.stringify(bodyToSend)
+            body: JSON.stringify(bodyToSend),
+            signal: controller.signal,
+            mode: 'cors' // Explicitly request CORS mode
           });
+          
+          clearTimeout(timeoutId);
 
           const responseData = await response.text();
           console.log('HTTP Response status:', response.status);
@@ -210,9 +217,21 @@ const FormView = () => {
           });
         } catch (httpError) {
           console.error('HTTP request failed:', httpError);
+          
+          // More specific error messages
+          let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
+          
+          if (httpError.name === 'AbortError') {
+            errorMessage = "La solicitud HTTP excedió el tiempo de espera. Verifique la URL del endpoint.";
+          } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
+            errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
+          } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
+            errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen.";
+          }
+          
           toast({
             title: "Error en el envío HTTP",
-            description: "Se guardó la respuesta pero falló el envío HTTP. Por favor contacte al administrador.",
+            description: errorMessage + " Por favor contacte al administrador.",
             variant: "destructive",
           });
         }
