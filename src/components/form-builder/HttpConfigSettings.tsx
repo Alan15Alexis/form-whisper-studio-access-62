@@ -62,13 +62,20 @@ function getBodyFieldsFromConfigBody(body: string): BodyField[] {
 }
 
 function getPreviewJson(fields: BodyField[], formFields: FormField[]) {
-  const example: Record<string, string> = {};
-  for (const f of fields) {
-    if (!f.key) continue;
-    const campo = formFields.find(ff => ff.id === f.fieldId);
-    example[f.key] = campo ? `[${campo.label || campo.id}]` : "";
+  try {
+    const customJson = JSON.parse(fields[0]?.key || "{}");
+    if (typeof customJson === "object") {
+      return customJson;
+    }
+  } catch {
+    const example: Record<string, string> = {};
+    for (const f of fields) {
+      if (!f.key) continue;
+      const campo = formFields.find(ff => ff.id === f.fieldId);
+      example[f.key] = campo ? `[${campo.label || campo.id}]` : "";
+    }
+    return example;
   }
-  return example;
 }
 
 const getResponseBadgeColor = (status: number) => {
@@ -305,7 +312,7 @@ const HttpConfigSettings = ({
         try {
           const bodyData = JSON.parse(editableJsonPreview);
           requestOptions.body = JSON.stringify(bodyData);
-        } catch {
+        } catch (error) {
           const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
           requestOptions.body = JSON.stringify(requestBodyObj);
         }
