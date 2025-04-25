@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -131,10 +132,10 @@ const FormView = () => {
     const submittedBy = currentUser?.email || "";
     
     try {
-      // Primero guardamos la respuesta normalmente
+      // First save the form response normally
       await submitFormResponse(id!, formValues);
 
-      // Si el envío HTTP está activado, enviamos los datos
+      // If HTTP submission is enabled, send the data
       if (form.httpConfig?.enabled && form.httpConfig.url) {
         const headers = new Headers();
         form.httpConfig.headers.forEach((header) => {
@@ -144,36 +145,77 @@ const FormView = () => {
         });
         headers.append("Content-Type", "application/json");
 
-        // Preparar el cuerpo de la solicitud según la configuración
+        // Prepare the request body according to the configuration
         let bodyToSend = {};
+        
         try {
-          const bodyConfig = JSON.parse(form.httpConfig.body || '[]');
-          if (Array.isArray(bodyConfig)) {
-            bodyConfig.forEach((mapping) => {
-              if (mapping.key && mapping.fieldId) {
-                bodyToSend[mapping.key] = formValues[mapping.fieldId] || '';
-              }
-            });
+          // Handle both custom JSON and field-mapped JSON
+          if (form.httpConfig.body) {
+            const bodyData = JSON.parse(form.httpConfig.body);
+            
+            if (Array.isArray(bodyData)) {
+              // Field mapping: [{"id":1,"key":"email","fieldId":"field_123"}]
+              bodyData.forEach((mapping) => {
+                if (mapping.key && mapping.fieldId) {
+                  // If fieldId is "custom", we use the key as raw JSON
+                  if (mapping.fieldId === "custom") {
+                    try {
+                      const customJson = JSON.parse(mapping.key);
+                      bodyToSend = { ...bodyToSend, ...customJson };
+                    } catch (e) {
+                      bodyToSend[mapping.key] = mapping.key;
+                    }
+                  } else {
+                    // Normal field mapping
+                    bodyToSend[mapping.key] = formValues[mapping.fieldId] || '';
+                  }
+                }
+              });
+            } else if (typeof bodyData === 'object') {
+              // Direct JSON object
+              bodyToSend = bodyData;
+            }
+          } else {
+            // Fallback to sending all form values
+            bodyToSend = formValues;
           }
         } catch (e) {
           console.error('Error parsing HTTP body configuration:', e);
           bodyToSend = formValues;
         }
+        
+        console.log('Sending HTTP request to:', form.httpConfig.url);
+        console.log('Request method:', form.httpConfig.method);
+        console.log('Request headers:', Object.fromEntries([...headers.entries()]));
+        console.log('Request body:', bodyToSend);
 
-        const response = await fetch(form.httpConfig.url, {
-          method: form.httpConfig.method,
-          headers,
-          body: JSON.stringify(bodyToSend)
-        });
+        try {
+          const response = await fetch(form.httpConfig.url, {
+            method: form.httpConfig.method,
+            headers,
+            body: JSON.stringify(bodyToSend)
+          });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const responseData = await response.text();
+          console.log('HTTP Response status:', response.status);
+          console.log('HTTP Response data:', responseData);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          toast({
+            title: "Datos enviados correctamente",
+            description: "La respuesta se ha guardado y enviado por HTTP.",
+          });
+        } catch (httpError) {
+          console.error('HTTP request failed:', httpError);
+          toast({
+            title: "Error en el envío HTTP",
+            description: "Se guardó la respuesta pero falló el envío HTTP. Por favor contacte al administrador.",
+            variant: "destructive",
+          });
         }
-
-        toast({
-          title: "Datos enviados correctamente",
-          description: "La respuesta se ha guardado y enviado por HTTP.",
-        });
       } else {
         toast({
           title: "Respuesta guardada",
