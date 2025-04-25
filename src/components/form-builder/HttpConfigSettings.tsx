@@ -30,7 +30,7 @@ type BodyField = {
 };
 
 const DEFAULT_BODY_FIELDS: BodyField[] = [
-  { id: 1, key: "id_del_elemento", fieldId: "" }
+  { id: 1, key: "", fieldId: "custom" }
 ];
 
 const DEFAULT_CONFIG: HttpConfig = {
@@ -237,9 +237,23 @@ const HttpConfigSettings = ({
   };
 
   const handleBodyFieldChange = (id: number, field: "key" | "fieldId", value: string) => {
-    const updated = bodyFields.map(b =>
+    let updated = bodyFields.map(b =>
       b.id === id ? { ...b, [field]: value } : b
     );
+    
+    // Si es texto personalizado, usamos el valor key como el JSON personalizado
+    if (field === "fieldId" && value === "custom") {
+      try {
+        JSON.parse(updated[0].key || "{}");
+      } catch {
+        // Si no es un JSON válido, inicializamos con un objeto vacío
+        updated = updated.map(b => ({
+          ...b,
+          key: "{}"
+        }));
+      }
+    }
+    
     const updatedJson = JSON.stringify(updated);
     onConfigChange({
       ...config,
@@ -535,6 +549,7 @@ const HttpConfigSettings = ({
                             onChange={e => handleBodyFieldChange(bodyField.id, "fieldId", e.target.value)}
                           >
                             <option value="">Selecciona un campo...</option>
+                            <option value="custom">Texto Personalizado</option>
                             {formFields.map(f => (
                               <option value={f.id} key={f.id}>
                                 {`${getFieldTypeName(f.type)} - ${f.label}`}
