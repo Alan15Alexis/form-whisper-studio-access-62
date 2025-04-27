@@ -65,19 +65,23 @@ function getBodyFieldsFromConfigBody(body: string): BodyField[] {
 
 function getPreviewJson(fields: BodyField[], formFields: FormField[]) {
   try {
-    const customJson = JSON.parse(fields[0]?.key || "{}");
-    if (typeof customJson === "object") {
-      return customJson;
+    if (fields[0]?.fieldId === "custom" && fields[0]?.key) {
+      const customJson = JSON.parse(fields[0].key || "{}");
+      if (typeof customJson === "object") {
+        return customJson;
+      }
     }
   } catch {
-    const example: Record<string, string> = {};
-    for (const f of fields) {
-      if (!f.key) continue;
-      const campo = formFields.find(ff => ff.id === f.fieldId);
-      example[f.key] = campo ? `[${campo.label || campo.id}]` : "";
-    }
-    return example;
+    // If custom JSON parsing fails, continue to build dynamic JSON
   }
+  
+  const example: Record<string, string> = {};
+  for (const f of fields) {
+    if (!f.key) continue;
+    const campo = formFields.find(ff => ff.id === f.fieldId);
+    example[f.key] = campo ? `[${campo.label || campo.id}]` : "";
+  }
+  return example;
 }
 
 const getResponseBadgeColor = (status: number) => {
@@ -143,9 +147,7 @@ const HttpConfigSettings = ({
   const [editableJsonPreview, setEditableJsonPreview] = useState<string>("");
   const [jsonError, setJsonError] = useState<string>("");
 
-  const bodyFields: BodyField[] = config.enabled
-    ? getBodyFieldsFromConfigBody(config.body || "[]")
-    : [];
+  const bodyFields: BodyField[] = config.enabled ? getBodyFieldsFromConfigBody(config.body || "[]") : [];
 
   const [bodyIdCounter, setBodyIdCounter] = useState(
     bodyFields.length ? Math.max(...bodyFields.map(b => b.id))+1 : 2
@@ -153,7 +155,16 @@ const HttpConfigSettings = ({
 
   useEffect(() => {
     if (config.enabled) {
-      setEditableJsonPreview(JSON.stringify(getPreviewJson(bodyFields, formFields), null, 2));
+      if (bodyFields.length === 1 && bodyFields[0].fieldId === "custom" && bodyFields[0].key) {
+        try {
+          const jsonObj = JSON.parse(bodyFields[0].key);
+          setEditableJsonPreview(JSON.stringify(jsonObj, null, 2));
+        } catch {
+          setEditableJsonPreview(bodyFields[0].key);
+        }
+      } else {
+        setEditableJsonPreview(JSON.stringify(getPreviewJson(bodyFields, formFields), null, 2));
+      }
     }
   }, [bodyFields, formFields, config.enabled]);
 
@@ -164,13 +175,16 @@ const HttpConfigSettings = ({
     try {
       JSON.parse(newValue);
       setJsonError("");
+      
+      const newBodyFields = [{
+        id: 1,
+        key: newValue,
+        fieldId: "custom"
+      }];
+      
       onConfigChange({
         ...config,
-        body: JSON.stringify([{
-          id: 1,
-          key: newValue,
-          fieldId: "custom"
-        }])
+        body: JSON.stringify(newBodyFields)
       });
     } catch (error) {
       setJsonError("JSON inválido: Por favor verifica la sintaxis");
@@ -209,20 +223,40 @@ const HttpConfigSettings = ({
   };
 
   const handleAddBodyField = function() {
-    const updated = [
-      ...bodyFields,
-      {
-        id: bodyIdCounter,
-        key: "",
-        fieldId: formFields.length > 0 ? formFields[0].id : ""
+    const updated = [...bodyFields];
+    
+    if (updated.length === 1 && updated[0].fieldId === "custom") {
+      try {
+        const customJson = JSON.parse(updated[0].key);
+        if (typeof customJson === "object" && customJson !== null) {
+          updated.length = 0;
+          let id = 1;
+          for (const [key, value] of Object.entries(customJson)) {
+            updated.push({
+              id: id++,
+              key,
+              fieldId: "custom"
+            });
+          }
+          setBodyIdCounter(id);
+        }
+      } catch {
+        updated.length = 0;
       }
-    ];
+    }
+    
+    updated.push({
+      id: bodyIdCounter,
+      key: "",
+      fieldId: formFields.length > 0 ? formFields[0].id : ""
+    });
+    
     const updatedJson = JSON.stringify(updated);
     onConfigChange({
       ...config,
       body: updatedJson
     });
-    setBodyIdCounter(c => c + 1);
+    setBodyIdCounter(prevCounter => prevCounter + 1);
     
     const newPreviewObj = getPreviewJson(updated, formFields);
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
@@ -322,18 +356,30 @@ const HttpConfigSettings = ({
       const requestOptions: RequestInit = {
         method: config.method,
         headers,
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'same-origin',
+        timeout: 10000
       };
 
       if (config.method === "POST") {
         try {
-          const bodyData = JSON.parse(editableJsonPreview);
-          requestOptions.body = JSON.stringify(bodyData);
+          if (!jsonError && editableJsonPreview) {
+            const bodyData = JSON.parse(editableJsonPreview);
+            requestOptions.body = JSON.stringify(bodyData);
+          } else {
+            const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
+            requestOptions.body = JSON.stringify(requestBodyObj);
+          }
         } catch (error) {
+          console.error("Error preparing request body:", error);
           const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
           requestOptions.body = JSON.stringify(requestBodyObj);
         }
       }
-  
+      
+      console.log("Sending request with options:", requestOptions);
+      
       const response = await fetch(config.url, requestOptions);
       const data = await response.text();
       const responseObj = { 
@@ -369,7 +415,8 @@ const HttpConfigSettings = ({
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-  
+      
+      console.error("Request error:", error);
       setTestResponse({ status: 0, data: errorMessage });
       toast({
         title: "Error de conexión",
