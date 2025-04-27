@@ -199,43 +199,57 @@ const FormView = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-          const response = await fetch(form.httpConfig.url, {
+          fetch(form.httpConfig.url, {
             method: form.httpConfig.method,
             headers,
             body: JSON.stringify(bodyToSend),
             signal: controller.signal,
-          });
+          })
+            .then(async (response) => {
+              clearTimeout(timeoutId);
+              const responseData = await response.text();
+              console.log("Response status:", response.status);
+              console.log("Response data:", responseData);
 
-          clearTimeout(timeoutId);
-
-          console.log("Response status:", response.status);
-          const responseData = await response.text();
-          console.log("Response data:", responseData);
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
+              if (response.ok) {
+                toast({
+                  title: "Datos enviados correctamente",
+                  description: "La respuesta se ha guardado y enviado por HTTP.",
+                });
+              } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+            })
+            .catch((httpError) => {
+              clearTimeout(timeoutId);
+              console.error('HTTP request failed:', httpError);
+              
+              let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
+              
+              if (httpError.name === 'AbortError') {
+                errorMessage = "La solicitud HTTP excedió el tiempo de espera. Verifique la URL del endpoint.";
+              } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
+                errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
+              } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
+                errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen. Contacte al administrador para configurar los encabezados CORS correctos.";
+              }
+              
+              toast({
+                title: "Error en el envío HTTP",
+                description: errorMessage + " Por favor contacte al administrador.",
+                variant: "destructive",
+              });
+            });
 
           toast({
-            title: "Datos enviados correctamente",
-            description: "La respuesta se ha guardado y enviado por HTTP.",
+            title: "Respuesta guardada",
+            description: "Tu respuesta se ha guardado correctamente y se está enviando al servidor externo.",
           });
         } catch (httpError) {
-          console.error('HTTP request failed:', httpError);
-          
-          let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
-          
-          if (httpError.name === 'AbortError') {
-            errorMessage = "La solicitud HTTP excedió el tiempo de espera. Verifique la URL del endpoint.";
-          } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
-            errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
-          } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
-            errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen. Contacte al administrador para configurar los encabezados CORS correctos.";
-          }
-          
+          console.error('Error initiating HTTP request:', httpError);
           toast({
-            title: "Error en el envío HTTP",
-            description: errorMessage + " Por favor contacte al administrador.",
+            title: "Error al iniciar la solicitud HTTP",
+            description: "Ocurrió un problema al intentar enviar la solicitud. La respuesta se guardó localmente.",
             variant: "destructive",
           });
         }

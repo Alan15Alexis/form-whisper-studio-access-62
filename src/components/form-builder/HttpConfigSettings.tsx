@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -378,12 +377,11 @@ const HttpConfigSettings = ({
       console.log("Headers:", Object.fromEntries(headers.entries()));
       if (bodyToSend) console.log("Body:", JSON.stringify(bodyToSend));
 
-      // Direct fetch implementation that doesn't rely on mode: 'cors'
+      // Direct fetch implementation without waiting for CORS preflight
       const requestOptions: RequestInit = {
         method: config.method,
         headers,
         signal: controller.signal,
-        // Removed mode: 'cors' to let the browser handle CORS naturally
       };
 
       if (config.method === "POST" && bodyToSend) {
@@ -392,52 +390,69 @@ const HttpConfigSettings = ({
       
       console.log("Sending request with options:", requestOptions);
       
-      const response = await fetch(config.url, requestOptions);
-      clearTimeout(timeoutId);
+      fetch(config.url, requestOptions)
+        .then(async (response) => {
+          clearTimeout(timeoutId);
+          const data = await response.text();
+          const responseObj = { 
+            status: response.status, 
+            data, 
+            timestamp: new Date().toISOString() 
+          };
+          
+          setTestResponse({ status: response.status, data });
+          
+          onConfigChange({
+            ...config,
+            lastResponse: responseObj
+          });
       
-      const data = await response.text();
-      const responseObj = { 
-        status: response.status, 
-        data, 
-        timestamp: new Date().toISOString() 
-      };
-      
-      setTestResponse({ status: response.status, data });
-      
-      onConfigChange({
-        ...config,
-        lastResponse: responseObj
-      });
-  
-      if (response.ok) {
-        toast({
-          title: `Respuesta: ${response.status}`,
-          description: "Solicitud enviada con éxito",
-          variant: "default",
+          if (response.ok) {
+            toast({
+              title: `Respuesta: ${response.status}`,
+              description: "Solicitud enviada con éxito",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: `Error: ${response.status}`,
+              description: `Hubo un problema con la solicitud. Detalles: ${data}`,
+              variant: "destructive",
+            });
+          }
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          let errorMessage = "Error desconocido";
+          if (error instanceof TypeError) {
+            errorMessage = "Error de red o problema de conexión.";
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          
+          console.error("Request error:", error);
+          setTestResponse({ status: 0, data: errorMessage });
+          toast({
+            title: "Error de conexión",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          setIsLoading(false);
         });
-      } else {
-        toast({
-          title: `Error: ${response.status}`,
-          description: `Hubo un problema con la solicitud. Detalles: ${data}`,
-          variant: "destructive",
-        });
-      }
     } catch (error) {
       let errorMessage = "Error desconocido";
-      if (error instanceof TypeError) {
-        errorMessage = "Error de red o problema de conexión.";
-      } else if (error instanceof Error) {
+      if (error instanceof Error) {
         errorMessage = error.message;
       }
       
-      console.error("Request error:", error);
+      console.error("Setup error:", error);
       setTestResponse({ status: 0, data: errorMessage });
       toast({
-        title: "Error de conexión",
+        title: "Error preparando la solicitud",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
