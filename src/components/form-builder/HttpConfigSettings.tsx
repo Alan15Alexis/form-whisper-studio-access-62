@@ -353,13 +353,16 @@ const HttpConfigSettings = ({
       });
       headers.append("Content-Type", "application/json");
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const requestOptions: RequestInit = {
         method: config.method,
         headers,
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'same-origin',
-        timeout: 10000
+        signal: controller.signal
       };
 
       if (config.method === "POST") {
@@ -381,6 +384,8 @@ const HttpConfigSettings = ({
       console.log("Sending request with options:", requestOptions);
       
       const response = await fetch(config.url, requestOptions);
+      clearTimeout(timeoutId);
+      
       const data = await response.text();
       const responseObj = { 
         status: response.status, 
