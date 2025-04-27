@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/FormContext";
@@ -34,6 +33,9 @@ const FormView = () => {
   
   const totalFields = form?.fields?.length || 0;
   const progress = ((currentFieldIndex + 1) / totalFields) * 100;
+
+  const [bodyFields, setBodyFields] = useState<any[]>([]);
+  const [editableJsonPreview, setEditableJsonPreview] = useState<string>("");
   
   useEffect(() => {
     if (!id) {
@@ -70,6 +72,22 @@ const FormView = () => {
     
     setAccessGranted(hasAccess);
     setLoading(false);
+
+    // Initialize bodyFields and editableJsonPreview from form config
+    if (formData.httpConfig?.enabled && formData.httpConfig.body) {
+      try {
+        const parsedBody = JSON.parse(formData.httpConfig.body);
+        setBodyFields(parsedBody);
+        setEditableJsonPreview(JSON.stringify(parsedBody, null, 2));
+      } catch (e) {
+        console.error('Error parsing HTTP body configuration:', e);
+        setBodyFields([]);
+        setEditableJsonPreview("{}");
+      }
+    } else {
+      setBodyFields([]);
+      setEditableJsonPreview("{}");
+    }
   }, [id, token, getForm, isAuthenticated, currentUser, isUserAllowed, validateAccessToken, generateAccessLink]);
 
   const handleInputChange = (fieldId: string, value: any) => {
@@ -132,10 +150,8 @@ const FormView = () => {
     const submittedBy = currentUser?.email || "";
     
     try {
-      // First save the form response normally
       await submitFormResponse(id!, formValues);
 
-      // If HTTP submission is enabled, send the data
       if (form.httpConfig?.enabled && form.httpConfig.url) {
         const headers = new Headers();
         form.httpConfig.headers.forEach((header) => {
@@ -145,67 +161,49 @@ const FormView = () => {
         });
         headers.append("Content-Type", "application/json");
 
-        // Prepare the request body according to the configuration
         let bodyToSend = {};
         
         try {
-          // Handle both custom JSON and field-mapped JSON
-          if (form.httpConfig.body) {
-            const bodyData = JSON.parse(form.httpConfig.body);
-            
-            if (Array.isArray(bodyData)) {
-              // Field mapping: [{"id":1,"key":"email","fieldId":"field_123"}]
-              bodyData.forEach((mapping) => {
-                if (mapping.key && mapping.fieldId) {
-                  // If fieldId is "custom", we use the key as raw JSON
-                  if (mapping.fieldId === "custom") {
-                    try {
-                      const customJson = JSON.parse(mapping.key);
-                      bodyToSend = { ...bodyToSend, ...customJson };
-                    } catch (e) {
-                      bodyToSend[mapping.key] = mapping.key;
-                    }
-                  } else {
-                    // Normal field mapping
-                    bodyToSend[mapping.key] = formValues[mapping.fieldId] || '';
-                  }
-                }
-              });
-            } else if (typeof bodyData === 'object') {
-              // Direct JSON object
-              bodyToSend = bodyData;
+          const bodyData = JSON.parse(editableJsonPreview);
+          bodyToSend = bodyData;
+        } catch (error) {
+          console.error('Error parsing custom JSON:', error);
+          
+          function getDummyResponses() {
+            const r: Record<string, string> = {};
+            for (const campo of form.fields) {
+              r[campo.id] = `[${campo.label || campo.id}]`;
             }
-          } else {
-            // Fallback to sending all form values
-            bodyToSend = formValues;
-          }
-        } catch (e) {
-          console.error('Error parsing HTTP body configuration:', e);
-          bodyToSend = formValues;
+            return r;
+          };
+
+          function buildRequestBody(fields: any[], responses: Record<string, string>) {
+            const obj: Record<string, any> = {};
+            for (const f of fields) {
+              if (!f.key) continue;
+              obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
+            }
+            return obj;
+          };
+          
+          bodyToSend = buildRequestBody(bodyFields, getDummyResponses());
         }
-        
-        console.log('Sending HTTP request to:', form.httpConfig.url);
-        console.log('Request method:', form.httpConfig.method);
-        console.log('Request headers:', Object.fromEntries([...headers.entries()]));
-        console.log('Request body:', bodyToSend);
 
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-          
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+
           const response = await fetch(form.httpConfig.url, {
             method: form.httpConfig.method,
             headers,
             body: JSON.stringify(bodyToSend),
             signal: controller.signal,
-            mode: 'cors' // Explicitly request CORS mode
+            mode: 'cors'
           });
-          
+
           clearTimeout(timeoutId);
 
           const responseData = await response.text();
-          console.log('HTTP Response status:', response.status);
-          console.log('HTTP Response data:', responseData);
 
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -218,7 +216,6 @@ const FormView = () => {
         } catch (httpError) {
           console.error('HTTP request failed:', httpError);
           
-          // More specific error messages
           let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
           
           if (httpError.name === 'AbortError') {

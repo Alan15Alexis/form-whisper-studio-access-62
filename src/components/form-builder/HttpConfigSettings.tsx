@@ -138,6 +138,10 @@ const HttpConfigSettings = ({
       : null
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
+    JSON.stringify(getPreviewJson(bodyFields, formFields), null, 2)
+  );
+  const [jsonError, setJsonError] = useState<string>("");
 
   const bodyFields: BodyField[] = config.enabled
     ? getBodyFieldsFromConfigBody(config.body || "[]")
@@ -147,14 +151,9 @@ const HttpConfigSettings = ({
     bodyFields.length ? Math.max(...bodyFields.map(b => b.id))+1 : 2
   );
 
-  const previewJsonObj = getPreviewJson(bodyFields, formFields);
-  const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
-    JSON.stringify(previewJsonObj, null, 2)
-  );
-
   useEffect(() => {
     if (config.enabled) {
-      setEditableJsonPreview(JSON.stringify(previewJsonObj, null, 2));
+      setEditableJsonPreview(JSON.stringify(getPreviewJson(bodyFields, formFields), null, 2));
     }
   }, [bodyFields, formFields]);
 
@@ -164,12 +163,17 @@ const HttpConfigSettings = ({
     
     try {
       JSON.parse(newValue);
+      setJsonError("");
       onConfigChange({
         ...config,
-        body: newValue
+        body: JSON.stringify([{
+          id: 1,
+          key: newValue,
+          fieldId: "custom"
+        }])
       });
     } catch (error) {
-      console.log("Invalid JSON in preview editor");
+      setJsonError("JSON inválido: Por favor verifica la sintaxis");
     }
   };
 
@@ -241,12 +245,10 @@ const HttpConfigSettings = ({
       b.id === id ? { ...b, [field]: value } : b
     );
     
-    // Si es texto personalizado, usamos el valor key como el JSON personalizado
     if (field === "fieldId" && value === "custom") {
       try {
         JSON.parse(updated[0].key || "{}");
       } catch {
-        // Si no es un JSON válido, inicializamos con un objeto vacío
         updated = updated.map(b => ({
           ...b,
           key: "{}"
@@ -577,16 +579,24 @@ const HttpConfigSettings = ({
 
             <div className="space-y-2">
               <Label className="text-md font-medium">Vista previa del JSON (Editable)</Label>
-              <textarea
-                className="w-full min-h-[120px] p-4 font-mono text-sm border rounded-md bg-gray-50"
+              <Textarea
+                className={cn(
+                  "w-full min-h-[120px] p-4 font-mono text-sm",
+                  "bg-gray-50 border rounded-md",
+                  jsonError && "border-red-300 focus-visible:ring-red-400"
+                )}
                 value={editableJsonPreview}
                 onChange={handleJsonPreviewChange}
                 placeholder="{}"
                 disabled={!config.enabled}
               />
-              <p className="text-xs text-gray-500">
-                Puedes editar directamente el JSON para personalizar el cuerpo de la solicitud
-              </p>
+              {jsonError ? (
+                <p className="text-xs text-red-500">{jsonError}</p>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  Puedes editar directamente el JSON para personalizar el cuerpo de la solicitud
+                </p>
+              )}
             </div>
           </>
         )}
