@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -15,6 +16,7 @@ import {
 import { HttpConfig, FormField } from "@/types/form";
 import { Plus, Trash, Send, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 interface HttpConfigSettingsProps {
   config: HttpConfig;
@@ -138,9 +140,7 @@ const HttpConfigSettings = ({
       : null
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [editableJsonPreview, setEditableJsonPreview] = useState<string>(
-    JSON.stringify(getPreviewJson(bodyFields, formFields), null, 2)
-  );
+  const [editableJsonPreview, setEditableJsonPreview] = useState<string>("");
   const [jsonError, setJsonError] = useState<string>("");
 
   const bodyFields: BodyField[] = config.enabled
@@ -155,7 +155,7 @@ const HttpConfigSettings = ({
     if (config.enabled) {
       setEditableJsonPreview(JSON.stringify(getPreviewJson(bodyFields, formFields), null, 2));
     }
-  }, [bodyFields, formFields]);
+  }, [bodyFields, formFields, config.enabled]);
 
   const handleJsonPreviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -177,15 +177,15 @@ const HttpConfigSettings = ({
     }
   };
 
-  const handleToggleEnabled = (enabled: boolean) => {
+  const handleToggleEnabled = function(enabled: boolean) {
     onConfigChange({ ...config, enabled });
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUrlChange = function(e: React.ChangeEvent<HTMLInputElement>) {
     onConfigChange({ ...config, url: e.target.value });
   };
 
-  const handleAddHeader = () => {
+  const handleAddHeader = function() {
     const newId = config.headers.length
       ? Math.max(...config.headers.map(h => h.id ?? 0)) + 1
       : 1;
@@ -196,19 +196,19 @@ const HttpConfigSettings = ({
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  const handleRemoveHeader = (id: number) => {
+  const handleRemoveHeader = function(id: number) {
     const newHeaders = config.headers.filter(h => h.id !== id);
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  const handleHeaderChange = (id: number, field: "key" | "value", value: string) => {
+  const handleHeaderChange = function(id: number, field: "key" | "value", value: string) {
     const newHeaders = config.headers.map(h =>
       h.id === id ? { ...h, [field]: value } : h
     );
     onConfigChange({ ...config, headers: newHeaders });
   };
 
-  const handleAddBodyField = () => {
+  const handleAddBodyField = function() {
     const updated = [
       ...bodyFields,
       {
@@ -228,7 +228,7 @@ const HttpConfigSettings = ({
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
 
-  const handleRemoveBodyField = (id: number) => {
+  const handleRemoveBodyField = function(id: number) {
     const updated = bodyFields.filter(b => b.id !== id);
     const updatedJson = JSON.stringify(updated);
     onConfigChange({
@@ -240,7 +240,7 @@ const HttpConfigSettings = ({
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
 
-  const handleBodyFieldChange = (id: number, field: "key" | "fieldId", value: string) => {
+  const handleBodyFieldChange = function(id: number, field: "key" | "fieldId", value: string) {
     let updated = bodyFields.map(b =>
       b.id === id ? { ...b, [field]: value } : b
     );
@@ -266,7 +266,7 @@ const HttpConfigSettings = ({
     setEditableJsonPreview(JSON.stringify(newPreviewObj, null, 2));
   };
 
-  const validateUrl = (url: string) => {
+  const validateUrl = function(url: string) {
     try {
       new URL(url);
       return true;
@@ -275,7 +275,7 @@ const HttpConfigSettings = ({
     }
   };
 
-  const getDummyResponses = () => {
+  const getDummyResponses = function() {
     const r: Record<string, string> = {};
     for (const campo of formFields) {
       r[campo.id] = `[${campo.label || campo.id}]`;
@@ -283,7 +283,7 @@ const HttpConfigSettings = ({
     return r;
   };
 
-  const buildRequestBody = (fields: BodyField[], responses: Record<string, string>) => {
+  const buildRequestBody = function(fields: BodyField[], responses: Record<string, string>) {
     const obj: Record<string, any> = {};
     for (const f of fields) {
       if (!f.key) continue;
@@ -292,14 +292,14 @@ const HttpConfigSettings = ({
     return obj;
   };
 
-  const handleMethodChange = (method: 'GET' | 'POST') => {
+  const handleMethodChange = function(method: 'GET' | 'POST') {
     onConfigChange({
       ...config,
       method
     });
   };
 
-  const handleTestRequest = async () => {
+  const handleTestRequest = async function() {
     if (!validateUrl(config.url)) {
       toast({
         title: "URL inválida",
