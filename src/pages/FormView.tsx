@@ -73,7 +73,6 @@ const FormView = () => {
     setAccessGranted(hasAccess);
     setLoading(false);
 
-    // Initialize bodyFields and editableJsonPreview from form config
     if (formData.httpConfig?.enabled && formData.httpConfig.body) {
       try {
         const parsedBody = JSON.parse(formData.httpConfig.body);
@@ -166,18 +165,19 @@ const FormView = () => {
         try {
           const bodyData = JSON.parse(editableJsonPreview);
           bodyToSend = bodyData;
+          console.log("Using prepared JSON body:", bodyToSend);
         } catch (error) {
           console.error('Error parsing custom JSON:', error);
           
           function getDummyResponses() {
-            const r: Record<string, string> = {};
+            const r: Record<string, any> = {};
             for (const campo of form.fields) {
-              r[campo.id] = `[${campo.label || campo.id}]`;
+              r[campo.id] = formValues[campo.id] !== undefined ? formValues[campo.id] : `[${campo.label || campo.id}]`;
             }
             return r;
           };
 
-          function buildRequestBody(fields: any[], responses: Record<string, string>) {
+          function buildRequestBody(fields: any[], responses: Record<string, any>) {
             const obj: Record<string, any> = {};
             for (const f of fields) {
               if (!f.key) continue;
@@ -187,9 +187,15 @@ const FormView = () => {
           };
           
           bodyToSend = buildRequestBody(bodyFields, getDummyResponses());
+          console.log("Using dynamically built body:", bodyToSend);
         }
 
         try {
+          console.log("Sending HTTP request to:", form.httpConfig.url);
+          console.log("Method:", form.httpConfig.method);
+          console.log("Headers:", Object.fromEntries(headers.entries()));
+          console.log("Body:", JSON.stringify(bodyToSend));
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -198,12 +204,13 @@ const FormView = () => {
             headers,
             body: JSON.stringify(bodyToSend),
             signal: controller.signal,
-            mode: 'cors'
           });
 
           clearTimeout(timeoutId);
 
+          console.log("Response status:", response.status);
           const responseData = await response.text();
+          console.log("Response data:", responseData);
 
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -223,7 +230,7 @@ const FormView = () => {
           } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
             errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
           } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
-            errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen.";
+            errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen. Contacte al administrador para configurar los encabezados CORS correctos.";
           }
           
           toast({

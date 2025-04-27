@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { HttpConfig, FormField } from "@/types/form";
 import { Plus, Trash, Send, Settings } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface HttpConfigSettingsProps {
@@ -356,29 +357,37 @@ const HttpConfigSettings = ({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const requestOptions: RequestInit = {
-        method: config.method,
-        headers,
-        mode: 'cors',
-        cache: 'no-cache',
-        credentials: 'same-origin',
-        signal: controller.signal
-      };
-
+      let bodyToSend = null;
       if (config.method === "POST") {
         try {
           if (!jsonError && editableJsonPreview) {
             const bodyData = JSON.parse(editableJsonPreview);
-            requestOptions.body = JSON.stringify(bodyData);
+            bodyToSend = bodyData;
           } else {
             const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
-            requestOptions.body = JSON.stringify(requestBodyObj);
+            bodyToSend = requestBodyObj;
           }
         } catch (error) {
           console.error("Error preparing request body:", error);
           const requestBodyObj = buildRequestBody(bodyFields, getDummyResponses());
-          requestOptions.body = JSON.stringify(requestBodyObj);
+          bodyToSend = requestBodyObj;
         }
+      }
+      
+      console.log("Preparing to send request to:", config.url);
+      console.log("Headers:", Object.fromEntries(headers.entries()));
+      if (bodyToSend) console.log("Body:", JSON.stringify(bodyToSend));
+
+      // Direct fetch implementation that doesn't rely on mode: 'cors'
+      const requestOptions: RequestInit = {
+        method: config.method,
+        headers,
+        signal: controller.signal,
+        // Removed mode: 'cors' to let the browser handle CORS naturally
+      };
+
+      if (config.method === "POST" && bodyToSend) {
+        requestOptions.body = JSON.stringify(bodyToSend);
       }
       
       console.log("Sending request with options:", requestOptions);
