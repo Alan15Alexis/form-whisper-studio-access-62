@@ -1,10 +1,9 @@
 
-// Archivo que simula un servidor proxy para manejar solicitudes HTTP
-// Este archivo tendría que ser implementado en un servidor real
-// Aquí solo se muestra como una simulación
+// Simulated server proxy to handle HTTP requests and avoid CORS issues
+// This would need to be implemented on a real server in production
 
-export default function handler(req, res) {
-  // Solo permitimos método POST para este proxy
+export default async function handler(req, res) {
+  // Only allow POST method for this proxy
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -16,47 +15,51 @@ export default function handler(req, res) {
       return res.status(400).json({ error: 'Target URL is required' });
     }
 
-    // Aquí iría la lógica para hacer la solicitud HTTP desde el servidor
-    // En un entorno real, esto se ejecutaría en el servidor
-    
-    fetch(targetUrl, {
+    console.log(`Proxy request to: ${targetUrl}`);
+    console.log(`Method: ${method}`);
+    console.log(`Headers:`, headers);
+    if (body) console.log(`Body: ${JSON.stringify(body)}`);
+
+    // Configure the fetch options
+    const fetchOptions = {
       method: method || 'GET',
       headers: headers || {},
-      body: body ? JSON.stringify(body) : undefined
-    })
-      .then(async (response) => {
-        const contentType = response.headers.get('content-type');
-        let data;
-        
-        try {
-          if (contentType && contentType.includes('application/json')) {
-            data = await response.json();
-          } else {
-            data = await response.text();
-          }
-        } catch (error) {
-          data = await response.text();
-        }
-        
-        // Devolvemos la respuesta al cliente
-        return res.status(response.status).json({
-          status: response.status,
-          data: data,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-      })
-      .catch((error) => {
-        console.error('Error en proxy HTTP:', error);
-        return res.status(500).json({ 
-          error: 'Error al realizar la solicitud HTTP', 
-          details: error.message 
-        });
-      });
+    };
+    
+    // Only add body for non-GET requests
+    if (method !== 'GET' && body) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+    
+    // Make the actual HTTP request from the server
+    const response = await fetch(targetUrl, fetchOptions);
+    
+    // Read the response data based on content type
+    const contentType = response.headers.get('content-type');
+    let responseData;
+    
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
+    } catch (error) {
+      // If parsing fails, just get the text
+      responseData = await response.text();
+    }
+    
+    // Send back the response to the client
+    return res.status(response.status).json({
+      status: response.status,
+      data: responseData,
+      headers: Object.fromEntries(response.headers.entries())
+    });
   } catch (error) {
-    console.error('Error en proxy HTTP:', error);
+    console.error('Error in HTTP proxy:', error);
     return res.status(500).json({ 
-      error: 'Error inesperado', 
-      details: error.message 
+      error: 'Error processing HTTP request',
+      details: error.message
     });
   }
 }

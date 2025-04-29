@@ -1,4 +1,3 @@
-
 export const validateUrl = (url: string) => {
   try {
     new URL(url);
@@ -56,16 +55,20 @@ export const getFieldTypeName = (type: string): string => {
   return typeNames[type] || type;
 };
 
-// Función para enviar datos HTTP a través del proxy del backend
+// Function to send HTTP requests through the backend proxy
 export const sendHttpRequest = async (
   url: string,
   method: string,
   headers: Record<string, string>,
   body: any
-): Promise<{ status: number; data: string }> => {
+): Promise<{ status: number; data: any }> => {
   try {
-    // En lugar de usar fetch directamente, usamos nuestro propio servicio
-    // Esto evita problemas de CORS y permite un mejor manejo desde el servidor
+    console.log(`Sending request to: ${url}`);
+    console.log(`Method: ${method}`);
+    console.log(`Headers:`, headers);
+    if (body) console.log(`Body: ${JSON.stringify(body)}`);
+
+    // Send the request through our proxy endpoint
     const response = await fetch('/api/http-proxy', {
       method: 'POST',
       headers: {
@@ -79,18 +82,29 @@ export const sendHttpRequest = async (
       })
     });
 
-    const responseData = await response.text();
+    if (!response.ok) {
+      let errorText = '';
+      try {
+        const errorData = await response.json();
+        errorText = errorData.error || errorData.message || `Error ${response.status}`;
+      } catch {
+        errorText = `Error ${response.status}`;
+      }
+      
+      throw new Error(`Proxy error: ${errorText}`);
+    }
+
+    const responseData = await response.json();
     
     return {
-      status: response.status,
-      data: responseData
+      status: responseData.status,
+      data: responseData.data
     };
   } catch (error) {
-    console.error("Error en solicitud HTTP:", error);
+    console.error("HTTP Request Error:", error);
     return {
       status: 0,
-      data: error instanceof Error ? error.message : "Error desconocido"
+      data: error instanceof Error ? error.message : "Unknown error"
     };
   }
 };
-
