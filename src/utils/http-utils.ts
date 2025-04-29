@@ -55,3 +55,42 @@ export const getFieldTypeName = (type: string): string => {
   
   return typeNames[type] || type;
 };
+
+// Función para enviar datos HTTP a través del proxy del backend
+export const sendHttpRequest = async (
+  url: string,
+  method: string,
+  headers: Record<string, string>,
+  body: any
+): Promise<{ status: number; data: string }> => {
+  try {
+    // En lugar de usar fetch directamente, usamos nuestro propio servicio
+    // Esto evita problemas de CORS y permite un mejor manejo desde el servidor
+    const response = await fetch('/api/http-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        targetUrl: url,
+        method: method,
+        headers: headers,
+        body: body
+      })
+    });
+
+    const responseData = await response.text();
+    
+    return {
+      status: response.status,
+      data: responseData
+    };
+  } catch (error) {
+    console.error("Error en solicitud HTTP:", error);
+    return {
+      status: 0,
+      data: error instanceof Error ? error.message : "Error desconocido"
+    };
+  }
+};
+
