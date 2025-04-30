@@ -13,7 +13,6 @@ import FormField from "@/components/form-view/FormField";
 import FormSuccess from "@/components/form-view/FormSuccess";
 import FormAccess from "@/components/form-view/FormAccess";
 import { cn } from "@/lib/utils";
-import { sendHttpRequest } from '@/utils/http-utils';
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -153,116 +152,125 @@ const FormView = () => {
       await submitFormResponse(id!, formValues);
 
       if (form.httpConfig?.enabled && form.httpConfig.url) {
-      // Preparamos los headers
-      const headers: Record<string, string> = {};
-      form.httpConfig.headers.forEach((header) => {
-        if (header.key && header.value) {
-          headers[header.key] = header.value;
+        const headers = new Headers();
+        form.httpConfig.headers.forEach((header) => {
+          if (header.key && header.value) {
+            headers.append(header.key, header.value);
+          }
+        });
+        headers.append("Content-Type", "application/json");
+
+        let bodyToSend = {};
+        
+        try {
+          const bodyData = JSON.parse(editableJsonPreview);
+          bodyToSend = bodyData;
+          console.log("Using prepared JSON body:", bodyToSend);
+        } catch (error) {
+          console.error('Error parsing custom JSON:', error);
+          
+          function getDummyResponses() {
+            const r: Record<string, any> = {};
+            for (const campo of form.fields) {
+              r[campo.id] = formValues[campo.id] !== undefined ? formValues[campo.id] : `[${campo.label || campo.id}]`;
+            }
+            return r;
+          };
+
+          function buildRequestBody(fields: any[], responses: Record<string, any>) {
+            const obj: Record<string, any> = {};
+            for (const f of fields) {
+              if (!f.key) continue;
+              obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
+            }
+            return obj;
+          };
+          
+          bodyToSend = buildRequestBody(bodyFields, getDummyResponses());
+          console.log("Using dynamically built body:", bodyToSend);
         }
-      });
-      headers["Content-Type"] = "application/json";
 
-      let bodyToSend = {};
-      
-      try {
-        const bodyData = JSON.parse(editableJsonPreview);
-        bodyToSend = bodyData;
-        console.log("Using prepared JSON body:", bodyToSend);
-      } catch (error) {
-        console.error('Error parsing custom JSON:', error);
-        
-        function getDummyResponses() {
-          const r: Record<string, any> = {};
-          for (const campo of form.fields) {
-            r[campo.id] = formValues[campo.id] !== undefined ? formValues[campo.id] : `[${campo.label || campo.id}]`;
-          }
-          return r;
-        };
+        try {
+          console.log("Sending HTTP request to:", form.httpConfig.url);
+          console.log("Method:", form.httpConfig.method);
+          console.log("Headers:", Object.fromEntries(headers.entries()));
+          console.log("Body:", JSON.stringify(bodyToSend));
 
-        function buildRequestBody(fields: any[], responses: Record<string, any>) {
-          const obj: Record<string, any> = {};
-          for (const f of fields) {
-            if (!f.key) continue;
-            obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
-          }
-          return obj;
-        };
-        
-        bodyToSend = buildRequestBody(bodyFields, getDummyResponses());
-        console.log("Using dynamically built body:", bodyToSend);
-      }
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      try {
-        console.log("Sending HTTP request to:", form.httpConfig.url);
-        console.log("Method:", form.httpConfig.method);
-        console.log("Headers:", headers);
-        console.log("Body:", JSON.stringify(bodyToSend));
-        
-        // Enviar la solicitud HTTP a través de nuestro servicio proxy para evitar problemas de CORS
-        
-        
-        const response = await sendHttpRequest(
-          form.httpConfig.url,
-          form.httpConfig.method,
-          headers,
-          bodyToSend
-        );
-        
-        console.log("Response status:", response.status);
-        console.log("Response data:", response.data);
+          fetch(form.httpConfig.url, {
+            method: form.httpConfig.method,
+            headers,
+            body: JSON.stringify(bodyToSend),
+            signal: controller.signal,
+          })
+            .then(async (response) => {
+              clearTimeout(timeoutId);
+              const responseData = await response.text();
+              console.log("Response status:", response.status);
+              console.log("Response data:", responseData);
 
-        if (response.status >= 200 && response.status < 300) {
+              if (response.ok) {
+                toast({
+                  title: "Datos enviados correctamente",
+                  description: "La respuesta se ha guardado y enviado por HTTP.",
+                });
+              } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+            })
+            .catch((httpError) => {
+              clearTimeout(timeoutId);
+              console.error('HTTP request failed:', httpError);
+              
+              let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
+              
+              if (httpError.name === 'AbortError') {
+                errorMessage = "La solicitud HTTP excedió el tiempo de espera. Verifique la URL del endpoint.";
+              } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
+                errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
+              } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
+                errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen. Contacte al administrador para configurar los encabezados CORS correctos.";
+              }
+              
+              toast({
+                title: "Error en el envío HTTP",
+                description: errorMessage + " Por favor contacte al administrador.",
+                variant: "destructive",
+              });
+            });
+
           toast({
-            title: "Datos enviados correctamente",
-            description: "La respuesta se ha guardado y enviado por HTTP.",
+            title: "Respuesta guardada",
+            description: "Tu respuesta se ha guardado correctamente y se está enviando al servidor externo.",
           });
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        } catch (httpError) {
+          console.error('Error initiating HTTP request:', httpError);
+          toast({
+            title: "Error al iniciar la solicitud HTTP",
+            description: "Ocurrió un problema al intentar enviar la solicitud. La respuesta se guardó localmente.",
+            variant: "destructive",
+          });
         }
-      } catch (httpError) {
-        console.error('HTTP request failed:', httpError);
-        
-        let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
-        
-        if (httpError instanceof Error) {
-          if (httpError.message.includes('AbortError')) {
-            errorMessage = "La solicitud HTTP excedió el tiempo de espera. Verifique la URL del endpoint.";
-          } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
-            errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
-          } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
-            errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen. Contacte al administrador para configurar los encabezados CORS correctos.";
-          }
-        }
-        
+      } else {
         toast({
-          title: "Error en el envío HTTP",
-          description: errorMessage + " Por favor contacte al administrador.",
-          variant: "destructive",
+          title: "Respuesta guardada",
+          description: "Tu respuesta se ha guardado correctamente.",
         });
       }
-
+      setFormSubmitted(true);
+    } catch (error) {
+      console.error('Error submitting form:', error);
       toast({
-        title: "Respuesta guardada",
-        description: "Tu respuesta se ha guardado correctamente y se está enviando al servidor externo.",
+        title: "Error",
+        description: "Hubo un problema al enviar tu respuesta. Por favor, intenta nuevamente.",
+        variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Respuesta guardada",
-        description: "Tu respuesta se ha guardado correctamente.",
-      });
+    } finally {
+      setSubmitting(false);
     }
-    setFormSubmitted(true);
-  } catch (error) {
-    console.error('Error submitting form:', error);
-    toast({
-      title: "Error",
-      description: "Hubo un problema al enviar tu respuesta. Por favor, intenta nuevamente.",
-      variant: "destructive",
-    });
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   if (loading) {
     return (

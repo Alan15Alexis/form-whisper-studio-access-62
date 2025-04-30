@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { validateUrl, sendHttpRequest } from '@/utils/http-utils';
+import { validateUrl } from '@/utils/http-utils';
 import { HttpConfig, FormField } from '@/types/form';
 
 interface UseHttpConfigProps {
@@ -77,20 +77,23 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
   
     setIsLoading(true);
     try {
-      // Preparamos los headers
-      const headers: Record<string, string> = {};
+      const headers = new Headers();
       config.headers.forEach((header) => {
         if (header.key && header.value) {
-          headers[header.key] = header.value;
+          headers.append(header.key, header.value);
         }
       });
-      headers["Content-Type"] = "application/json";
+      headers.append("Content-Type", "application/json");
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       let bodyToSend = null;
       if (config.method === "POST") {
         try {
           if (!jsonError && editableJsonPreview) {
-            bodyToSend = JSON.parse(editableJsonPreview);
+            const bodyData = JSON.parse(editableJsonPreview);
+            bodyToSend = bodyData;
           }
         } catch (error) {
           console.error("Error preparing request body:", error);
@@ -98,57 +101,78 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
       }
       
       console.log("Preparing to send request to:", config.url);
-      console.log("Headers:", headers);
+      console.log("Headers:", Object.fromEntries(headers.entries()));
       if (bodyToSend) console.log("Body:", JSON.stringify(bodyToSend));
 
-      // Enviamos la solicitud a través de nuestro servicio proxy para evitar CORS
-      const response = await sendHttpRequest(
-        config.url,
-        config.method,
+      const requestOptions: RequestInit = {
+        method: config.method,
         headers,
-        bodyToSend
-      );
+        signal: controller.signal,
+      };
 
-      console.log("Response received:", response);
-      
-      setTestResponse(response);
-      
-      onConfigChange({
-        ...config,
-        lastResponse: {
-          ...response,
-          timestamp: new Date().toISOString()
-        }
-      });
-
-      if (response.status >= 200 && response.status < 300) {
-        toast({
-          title: `Respuesta: ${response.status}`,
-          description: "Solicitud enviada con éxito",
-        });
-      } else {
-        toast({
-          title: `Error: ${response.status}`,
-          description: "La solicitud no se completó correctamente",
-          variant: "destructive",
-        });
+      if (config.method === "POST" && bodyToSend) {
+        requestOptions.body = JSON.stringify(bodyToSend);
       }
-    } catch (error) {
-      console.error("Error in test request:", error);
       
+      fetch(config.url, requestOptions)
+        .then(async (response) => {
+          clearTimeout(timeoutId);
+          const data = await response.text();
+          const responseObj = { 
+            status: response.status, 
+            data, 
+            timestamp: new Date().toISOString() 
+          };
+          
+          setTestResponse({ status: response.status, data });
+          
+          onConfigChange({
+            ...config,
+            lastResponse: responseObj
+          });
+      
+          if (response.ok) {
+            toast({
+              title: `Respuesta: ${response.status}`,
+              description: "Solicitud enviada con éxito",
+            });
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          let errorMessage = "Error desconocido";
+          if (error instanceof TypeError) {
+            errorMessage = "Error de red o problema de conexión.";
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          
+          console.error("Request error:", error);
+          setTestResponse({ status: 0, data: errorMessage });
+          toast({
+            title: "Error de conexión",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } catch (error) {
       let errorMessage = "Error desconocido";
       if (error instanceof Error) {
         errorMessage = error.message;
       }
       
+      console.error("Setup error:", error);
       setTestResponse({ status: 0, data: errorMessage });
-      
       toast({
-        title: "Error de conexión",
+        title: "Error preparando la solicitud",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };

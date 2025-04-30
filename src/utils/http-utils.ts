@@ -1,3 +1,4 @@
+
 export const validateUrl = (url: string) => {
   try {
     new URL(url);
@@ -53,58 +54,4 @@ export const getFieldTypeName = (type: string): string => {
   };
   
   return typeNames[type] || type;
-};
-
-// Function to send HTTP requests through the backend proxy
-export const sendHttpRequest = async (
-  url: string,
-  method: string,
-  headers: Record<string, string>,
-  body: any
-): Promise<{ status: number; data: any }> => {
-  try {
-    console.log(`Sending request to: ${url}`);
-    console.log(`Method: ${method}`);
-    console.log(`Headers:`, headers);
-    if (body) console.log(`Body: ${JSON.stringify(body)}`);
-
-    // Send the request through our proxy endpoint
-    const response = await fetch('/api/http-proxy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        targetUrl: url,
-        method: method,
-        headers: headers,
-        body: body
-      })
-    });
-
-    if (!response.ok) {
-      let errorText = '';
-      try {
-        const errorData = await response.json();
-        errorText = errorData.error || errorData.message || `Error ${response.status}`;
-      } catch {
-        errorText = `Error ${response.status}`;
-      }
-      
-      throw new Error(`Proxy error: ${errorText}`);
-    }
-
-    const responseData = await response.json();
-    
-    return {
-      status: responseData.status,
-      data: responseData.data
-    };
-  } catch (error) {
-    console.error("HTTP Request Error:", error);
-    return {
-      status: 0,
-      data: error instanceof Error ? error.message : "Unknown error"
-    };
-  }
 };
