@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,18 +26,38 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
 
   const canEdit = !!form.allowEditOwnResponses;
   const canView = !!form.allowViewOwnResponses;
+  
+  // Generate card styles based on form color
+  const cardStyle = form.formColor ? {
+    borderTop: `4px solid ${form.formColor}`,
+    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 0 0 ${form.formColor}20`
+  } : {};
+  
+  // Apply a subtle background color for the badge if form color is set
+  const badgeStyle = form.formColor ? {
+    backgroundColor: hasResponded ? form.formColor : `${form.formColor}15`,
+    borderColor: `${form.formColor}30`
+  } : {};
 
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full">
+    <Card 
+      className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full"
+      style={cardStyle}
+    >
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl">{form.title}</CardTitle>
+            <CardTitle className="text-xl" style={{ color: form.formColor || 'inherit' }}>
+              {form.title}
+            </CardTitle>
             <CardDescription className="text-sm text-muted-foreground mt-1">
               Created {format(new Date(form.createdAt), 'MMM d, yyyy')}
             </CardDescription>
           </div>
-          <Badge variant={hasResponded ? "default" : "secondary"}>
+          <Badge 
+            variant={hasResponded ? "default" : "secondary"}
+            style={form.formColor ? badgeStyle : {}}
+          >
             {hasResponded ? (
               <><CheckCircle2 className="mr-1 h-3 w-3" /> Responded</>
             ) : (
@@ -58,6 +79,10 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           <Button 
             asChild 
             variant={hasResponded ? "secondary" : "default"}
+            style={form.formColor && !hasResponded ? {
+              backgroundColor: form.formColor,
+              borderColor: form.formColor,
+            } : {}}
           >
             <Link to={`/forms/${form.id}`}>
               <SendHorizontal className="mr-2 h-4 w-4" />
@@ -69,6 +94,10 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           <Button 
             asChild 
             variant="outline"
+            style={form.formColor ? {
+              borderColor: `${form.formColor}40`,
+              color: form.formColor
+            } : {}}
           >
             <Link to={`/forms/${form.id}/responses`}>
               <FileText className="mr-2 h-4 w-4" />

@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,13 +27,29 @@ const FormCard = ({ form }: FormCardProps) => {
   };
 
   const shareUrl = generateAccessLink(form.id);
+  
+  // Generate card styles based on form color
+  const cardStyle = form.formColor ? {
+    borderTop: `4px solid ${form.formColor}`,
+    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 0 0 ${form.formColor}20`
+  } : {};
+  
+  // Apply a subtle background color for the badge if form color is set
+  const badgeStyle = form.formColor ? {
+    backgroundColor: `${form.formColor}15`,
+    color: form.formColor,
+    borderColor: `${form.formColor}30`
+  } : {};
 
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full">
+    <Card 
+      className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full" 
+      style={cardStyle}
+    >
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl flex items-center">
+            <CardTitle className="text-xl flex items-center" style={{ color: form.formColor || 'inherit' }}>
               {form.title}
               {form.isPrivate ? (
                 <Lock className="ml-2 h-4 w-4 text-amber-500" />
@@ -44,7 +61,10 @@ const FormCard = ({ form }: FormCardProps) => {
               Created {format(new Date(form.createdAt), 'MMM d, yyyy')}
             </CardDescription>
           </div>
-          <Badge variant={form.isPrivate ? "outline" : "secondary"}>
+          <Badge 
+            variant={form.isPrivate ? "outline" : "secondary"}
+            style={form.isPrivate ? badgeStyle : {}}
+          >
             {form.isPrivate ? 'Private' : 'Public'}
           </Badge>
         </div>
