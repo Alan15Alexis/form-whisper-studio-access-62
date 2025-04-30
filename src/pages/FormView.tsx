@@ -13,6 +13,7 @@ import FormField from "@/components/form-view/FormField";
 import FormSuccess from "@/components/form-view/FormSuccess";
 import FormAccess from "@/components/form-view/FormAccess";
 import { cn } from "@/lib/utils";
+import { sendHttpRequest } from "@/utils/http-utils";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -152,13 +153,14 @@ const FormView = () => {
       await submitFormResponse(id!, formValues);
 
       if (form.httpConfig?.enabled && form.httpConfig.url) {
-        const headers = new Headers();
+        // Preparamos los headers
+        const headers: Record<string, string> = {};
         form.httpConfig.headers.forEach((header) => {
           if (header.key && header.value) {
-            headers.append(header.key, header.value);
+            headers[header.key] = header.value;
           }
         });
-        headers.append("Content-Type", "application/json");
+        headers["Content-Type"] = "application/json";
 
         let bodyToSend = {};
         
@@ -191,68 +193,55 @@ const FormView = () => {
         }
 
         try {
-          console.log("Sending HTTP request to:", form.httpConfig.url);
+          console.log("Enviando solicitud HTTP a:", form.httpConfig.url);
           console.log("Method:", form.httpConfig.method);
-          console.log("Headers:", Object.fromEntries(headers.entries()));
+          console.log("Headers:", headers);
           console.log("Body:", JSON.stringify(bodyToSend));
 
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-          fetch(form.httpConfig.url, {
+          // Utilizamos nuestra función mejorada para enviar la solicitud
+          const response = await sendHttpRequest({
+            url: form.httpConfig.url,
             method: form.httpConfig.method,
             headers,
-            body: JSON.stringify(bodyToSend),
-            signal: controller.signal,
-          })
-            .then(async (response) => {
-              clearTimeout(timeoutId);
-              const responseData = await response.text();
-              console.log("Response status:", response.status);
-              console.log("Response data:", responseData);
-
-              if (response.ok) {
-                toast({
-                  title: "Datos enviados correctamente",
-                  description: "La respuesta se ha guardado y enviado por HTTP.",
-                });
-              } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-            })
-            .catch((httpError) => {
-              clearTimeout(timeoutId);
-              console.error('HTTP request failed:', httpError);
-              
-              let errorMessage = "Se guardó la respuesta pero falló el envío HTTP.";
-              
-              if (httpError.name === 'AbortError') {
-                errorMessage = "La solicitud HTTP excedió el tiempo de espera. Verifique la URL del endpoint.";
-              } else if (httpError.message.includes('Network') || httpError.message.includes('network')) {
-                errorMessage = "Error de red. Verifique su conexión a internet y que el endpoint sea accesible.";
-              } else if (httpError.message.includes('CORS') || httpError.message.includes('cors')) {
-                errorMessage = "Error de CORS. El servidor no permite solicitudes desde este origen. Contacte al administrador para configurar los encabezados CORS correctos.";
-              }
-              
-              toast({
-                title: "Error en el envío HTTP",
-                description: errorMessage + " Por favor contacte al administrador.",
-                variant: "destructive",
-              });
-            });
-
-          toast({
-            title: "Respuesta guardada",
-            description: "Tu respuesta se ha guardado correctamente y se está enviando al servidor externo.",
+            body: bodyToSend,
+            timeout: 15000 // 15 segundos de timeout
           });
+
+          if (response.ok) {
+            toast({
+              title: "Datos enviados correctamente",
+              description: "La respuesta se ha guardado y enviado por HTTP.",
+            });
+          } else {
+            let errorMsg = `Error HTTP: ${response.status}`;
+            if (response.statusText === "cors") {
+              errorMsg = "Error de CORS: El servidor no permite solicitudes desde este origen. Contacta al administrador para configurar correctamente el servidor.";
+            } else if (response.statusText === "timeout") {
+              errorMsg = "La solicitud excedió el tiempo de espera. Verifica la URL del endpoint.";
+            } else if (response.statusText === "network") {
+              errorMsg = "Error de conexión de red. Verifica tu conexión a internet y que el endpoint sea accesible.";
+            }
+            
+            toast({
+              title: "Error en el envío HTTP",
+              description: errorMsg,
+              variant: "destructive",
+            });
+          }
         } catch (httpError) {
-          console.error('Error initiating HTTP request:', httpError);
+          console.error('Error iniciando solicitud HTTP:', httpError);
           toast({
             title: "Error al iniciar la solicitud HTTP",
             description: "Ocurrió un problema al intentar enviar la solicitud. La respuesta se guardó localmente.",
             variant: "destructive",
           });
         }
+
+        // Notificamos al usuario que la respuesta se ha guardado
+        toast({
+          title: "Respuesta guardada",
+          description: "Tu respuesta se ha guardado correctamente y se ha intentado enviar al servidor externo.",
+        });
       } else {
         toast({
           title: "Respuesta guardada",

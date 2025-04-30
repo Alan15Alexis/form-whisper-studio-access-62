@@ -55,3 +55,77 @@ export const getFieldTypeName = (type: string): string => {
   
   return typeNames[type] || type;
 };
+
+// Función mejorada para enviar solicitudes HTTP directamente al destino
+export const sendHttpRequest = async (config: {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  body: any;
+  timeout?: number;
+}) => {
+  const { url, method, headers, body, timeout = 10000 } = config;
+  
+  console.log(`Realizando solicitud ${method} a ${url}`);
+  console.log("Headers:", headers);
+  console.log("Body:", JSON.stringify(body));
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    const requestOptions: RequestInit = {
+      method,
+      headers,
+      body: method !== 'GET' ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+      mode: 'cors', // Intentamos con cors primero
+    };
+    
+    const response = await fetch(url, requestOptions);
+    clearTimeout(timeoutId);
+    
+    let responseData;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await response.json();
+    } else {
+      responseData = await response.text();
+    }
+    
+    return {
+      status: response.status,
+      data: responseData,
+      ok: response.ok,
+      statusText: response.statusText
+    };
+  } catch (error: any) {
+    console.error("Error en la solicitud HTTP:", error);
+    
+    // Determinamos el tipo de error para dar mensajes más descriptivos
+    let errorType = "unknown";
+    let errorMessage = "Error desconocido";
+    
+    if (error.name === 'AbortError') {
+      errorType = "timeout";
+      errorMessage = "La solicitud excedió el tiempo de espera";
+    } else if (error.message?.includes('networker') || 
+              error.message?.includes('Network') ||
+              error.message?.includes('Failed to fetch')) {
+      errorType = "network";
+      errorMessage = "Error de conexión de red";
+    } else if (error.message?.includes('CORS') || 
+              error.message?.includes('cors')) {
+      errorType = "cors";
+      errorMessage = "Error de CORS: el servidor no permite solicitudes desde este origen";
+    }
+    
+    return {
+      status: 0,
+      data: errorMessage,
+      ok: false,
+      statusText: errorType,
+      error: error.message || "Error al procesar la solicitud"
+    };
+  }
+};

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { validateUrl } from '@/utils/http-utils';
+import { validateUrl, sendHttpRequest } from '@/utils/http-utils';
 import { HttpConfig, FormField } from '@/types/form';
 
 interface UseHttpConfigProps {
@@ -77,102 +77,91 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
   
     setIsLoading(true);
     try {
-      const headers = new Headers();
+      // Preparar los headers
+      const headers: Record<string, string> = {};
       config.headers.forEach((header) => {
         if (header.key && header.value) {
-          headers.append(header.key, header.value);
+          headers[header.key] = header.value;
         }
       });
-      headers.append("Content-Type", "application/json");
+      headers["Content-Type"] = "application/json";
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+      // Preparar el body
       let bodyToSend = null;
       if (config.method === "POST") {
         try {
           if (!jsonError && editableJsonPreview) {
-            const bodyData = JSON.parse(editableJsonPreview);
-            bodyToSend = bodyData;
+            bodyToSend = JSON.parse(editableJsonPreview);
           }
         } catch (error) {
-          console.error("Error preparing request body:", error);
+          console.error("Error preparando el body:", error);
         }
       }
       
-      console.log("Preparing to send request to:", config.url);
-      console.log("Headers:", Object.fromEntries(headers.entries()));
+      console.log("Preparando solicitud a:", config.url);
+      console.log("Headers:", headers);
       if (bodyToSend) console.log("Body:", JSON.stringify(bodyToSend));
 
-      const requestOptions: RequestInit = {
+      // Realizar la solicitud HTTP directamente
+      const response = await sendHttpRequest({
+        url: config.url,
         method: config.method,
         headers,
-        signal: controller.signal,
+        body: bodyToSend,
+        timeout: 15000 // 15 segundos de timeout
+      });
+      
+      const responseObj = { 
+        status: response.status, 
+        data: typeof response.data === 'object' ? JSON.stringify(response.data) : response.data, 
+        timestamp: new Date().toISOString() 
       };
-
-      if (config.method === "POST" && bodyToSend) {
-        requestOptions.body = JSON.stringify(bodyToSend);
-      }
       
-      fetch(config.url, requestOptions)
-        .then(async (response) => {
-          clearTimeout(timeoutId);
-          const data = await response.text();
-          const responseObj = { 
-            status: response.status, 
-            data, 
-            timestamp: new Date().toISOString() 
-          };
-          
-          setTestResponse({ status: response.status, data });
-          
-          onConfigChange({
-            ...config,
-            lastResponse: responseObj
-          });
+      setTestResponse({ 
+        status: response.status, 
+        data: typeof response.data === 'object' ? JSON.stringify(response.data) : response.data 
+      });
       
-          if (response.ok) {
-            toast({
-              title: `Respuesta: ${response.status}`,
-              description: "Solicitud enviada con éxito",
-            });
-          } else {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-        })
-        .catch((error) => {
-          clearTimeout(timeoutId);
-          let errorMessage = "Error desconocido";
-          if (error instanceof TypeError) {
-            errorMessage = "Error de red o problema de conexión.";
-          } else if (error instanceof Error) {
-            errorMessage = error.message;
-          }
-          
-          console.error("Request error:", error);
-          setTestResponse({ status: 0, data: errorMessage });
-          toast({
-            title: "Error de conexión",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        })
-        .finally(() => {
-          setIsLoading(false);
+      onConfigChange({
+        ...config,
+        lastResponse: responseObj
+      });
+  
+      if (response.ok) {
+        toast({
+          title: `Respuesta: ${response.status}`,
+          description: "Solicitud enviada con éxito",
         });
-    } catch (error) {
+      } else {
+        let errorMsg = `HTTP error: ${response.status}`;
+        if (response.statusText === "cors") {
+          errorMsg = "Error de CORS: El servidor no permite solicitudes desde este origen";
+        } else if (response.statusText === "timeout") {
+          errorMsg = "La solicitud excedió el tiempo de espera";
+        } else if (response.statusText === "network") {
+          errorMsg = "Error de conexión de red";
+        }
+        
+        toast({
+          title: `Error: ${response.status || "Conexión"}`,
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
       let errorMessage = "Error desconocido";
       if (error instanceof Error) {
         errorMessage = error.message;
       }
       
-      console.error("Setup error:", error);
+      console.error("Error en la solicitud:", error);
       setTestResponse({ status: 0, data: errorMessage });
       toast({
-        title: "Error preparando la solicitud",
+        title: "Error de conexión",
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
