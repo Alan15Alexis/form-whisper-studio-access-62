@@ -113,9 +113,13 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
         {onRemove && (
           <Button
             type="button"
-            variant="ghost"
-            className="col-span-2 text-red-500 hover:text-red-700 mt-1"
+            variant="outline"
+            className="col-span-2 mt-1"
             onClick={handleRemove}
+            style={form.formColor ? {
+              borderColor: `${form.formColor}40`,
+              color: form.formColor
+            } : {}}
           >
             <Trash2 className="w-4 h-4 mr-2" /> Quitar de mi vista
           </Button>
