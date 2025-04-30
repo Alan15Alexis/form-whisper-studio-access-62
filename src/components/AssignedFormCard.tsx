@@ -27,10 +27,11 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
   const canEdit = !!form.allowEditOwnResponses;
   const canView = !!form.allowViewOwnResponses;
   
-  // Generate card styles based on form color
+  // Create a more prominent card style based on form color
   const cardStyle = form.formColor ? {
-    borderTop: `4px solid ${form.formColor}`,
-    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 0 0 ${form.formColor}20`
+    backgroundColor: `${form.formColor}05`, // Very light background color
+    borderLeft: `4px solid ${form.formColor}`,
+    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px ${form.formColor}20`
   } : {};
   
   // Apply a subtle background color for the badge if form color is set
@@ -44,7 +45,7 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
       className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full"
       style={cardStyle}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3" style={form.formColor ? { borderBottom: `1px solid ${form.formColor}20` } : {}}>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-xl" style={{ color: form.formColor || 'inherit' }}>
@@ -74,14 +75,18 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           <span>{form.fields.length} fields</span>
         </div>
       </CardContent>
-      <CardFooter className="pt-3 grid grid-cols-2 gap-2">
+      <CardFooter 
+        className="pt-3 grid grid-cols-2 gap-2"
+        style={form.formColor ? { borderTop: `1px solid ${form.formColor}10` } : {}}
+      >
         {(!hasResponded || canEdit) && (
           <Button 
             asChild 
             variant={hasResponded ? "secondary" : "default"}
-            style={form.formColor && !hasResponded ? {
-              backgroundColor: form.formColor,
+            style={form.formColor ? {
+              backgroundColor: hasResponded ? `${form.formColor}15` : form.formColor,
               borderColor: form.formColor,
+              color: hasResponded ? form.formColor : "#fff"
             } : {}}
           >
             <Link to={`/forms/${form.id}`}>

@@ -28,10 +28,11 @@ const FormCard = ({ form }: FormCardProps) => {
 
   const shareUrl = generateAccessLink(form.id);
   
-  // Generate card styles based on form color
+  // Create a more prominent card style based on form color
   const cardStyle = form.formColor ? {
-    borderTop: `4px solid ${form.formColor}`,
-    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 0 0 ${form.formColor}20`
+    backgroundColor: `${form.formColor}05`, // Very light background color
+    borderLeft: `4px solid ${form.formColor}`,
+    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px ${form.formColor}20`
   } : {};
   
   // Apply a subtle background color for the badge if form color is set
@@ -40,13 +41,20 @@ const FormCard = ({ form }: FormCardProps) => {
     color: form.formColor,
     borderColor: `${form.formColor}30`
   } : {};
+  
+  // Style for buttons to match form color theme
+  const primaryButtonStyle = form.formColor ? {
+    backgroundColor: `${form.formColor}15`, 
+    color: form.formColor,
+    borderColor: form.formColor
+  } : {};
 
   return (
     <Card 
       className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full" 
       style={cardStyle}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3" style={form.formColor ? { borderBottom: `1px solid ${form.formColor}20` } : {}}>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-xl flex items-center" style={{ color: form.formColor || 'inherit' }}>
@@ -83,11 +91,15 @@ const FormCard = ({ form }: FormCardProps) => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-3 grid grid-cols-4 gap-2">
+      <CardFooter 
+        className="pt-3 grid grid-cols-4 gap-2"
+        style={form.formColor ? { borderTop: `1px solid ${form.formColor}10` } : {}}
+      >
         <Button 
           asChild 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          style={form.formColor ? { color: form.formColor } : {}}
           title="Ver formulario"
         >
           <Link to={`/forms/${form.id}`}>
@@ -98,6 +110,7 @@ const FormCard = ({ form }: FormCardProps) => {
           asChild 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          style={form.formColor ? { color: form.formColor } : {}}
           title="Editar formulario"
         >
           <Link to={`/forms/${form.id}/edit`}>
@@ -108,6 +121,7 @@ const FormCard = ({ form }: FormCardProps) => {
           asChild 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          style={form.formColor ? { color: form.formColor } : {}}
           title="Ver respuestas"
         >
           <Link to={`/forms/${form.id}/responses`}>
@@ -117,6 +131,7 @@ const FormCard = ({ form }: FormCardProps) => {
         <Button 
           variant="ghost" 
           className="btn-minimal btn-outline w-full h-9"
+          style={form.formColor ? { color: form.formColor } : {}}
           onClick={() => setShareDialogOpen(true)}
           title="Compartir formulario"
         >
