@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { HttpConfig, FormField } from "@/types/form";
 import { useHttpConfig } from "@/hooks/useHttpConfig";
 import HttpHeadersEditor from "./HttpHeadersEditor";
+import HttpBodyEditor from "./HttpBodyEditor";
 import HttpResponsePreview from "./HttpResponsePreview";
 import { validateUrl } from "@/utils/http-utils";
 
@@ -40,11 +41,15 @@ const HttpConfigSettings = ({
     isLoading,
     editableJsonPreview,
     jsonError,
+    bodyFields,
     handleJsonPreviewChange,
     handleToggleEnabled,
     handleUrlChange,
     handleMethodChange,
     handleTestRequest,
+    handleAddBodyField,
+    handleRemoveBodyField,
+    handleBodyFieldChange
   } = useHttpConfig({ config, onConfigChange, formFields });
 
   if (!isAdmin) return null;
@@ -115,27 +120,39 @@ const HttpConfigSettings = ({
         />
 
         {config.method === "POST" && (
-          <div className="space-y-2">
-            <Label className="text-md font-medium">JSON del Body (Editable)</Label>
-            <Textarea
-              className={cn(
-                "w-full min-h-[120px] p-4 font-mono text-sm",
-                "bg-gray-50 border rounded-md",
-                jsonError && "border-red-300 focus-visible:ring-red-400"
-              )}
-              value={editableJsonPreview}
-              onChange={handleJsonPreviewChange}
-              placeholder="{}"
-              disabled={!config.enabled}
+          <>
+            <HttpBodyEditor
+              bodyFields={bodyFields}
+              formFields={formFields}
+              onAddField={handleAddBodyField}
+              onRemoveField={handleRemoveBodyField}
+              onFieldChange={handleBodyFieldChange}
+              enabled={config.enabled}
             />
-            {jsonError ? (
-              <p className="text-xs text-red-500">{jsonError}</p>
-            ) : (
-              <p className="text-xs text-gray-500">
-                Puedes editar directamente el JSON para personalizar el cuerpo de la solicitud
-              </p>
-            )}
-          </div>
+
+            <div className="space-y-2">
+              <Label className="text-md font-medium">Vista previa del JSON</Label>
+              <Textarea
+                className={cn(
+                  "w-full min-h-[120px] p-4 font-mono text-sm",
+                  "bg-gray-50 border rounded-md",
+                  jsonError && "border-red-300 focus-visible:ring-red-400"
+                )}
+                value={editableJsonPreview}
+                onChange={handleJsonPreviewChange}
+                placeholder="{}"
+                disabled={!config.enabled}
+                readOnly
+              />
+              {jsonError ? (
+                <p className="text-xs text-red-500">{jsonError}</p>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  Vista previa del JSON que será enviado cuando los usuarios envíen el formulario
+                </p>
+              )}
+            </div>
+          </>
         )}
 
         <div className="pt-4">

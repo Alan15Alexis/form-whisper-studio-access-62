@@ -14,6 +14,7 @@ import FormSuccess from "@/components/form-view/FormSuccess";
 import FormAccess from "@/components/form-view/FormAccess";
 import { cn } from "@/lib/utils";
 import { sendHttpRequest } from "@/utils/http-utils";
+import { BodyField } from "@/hooks/useHttpConfig";
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -35,8 +36,7 @@ const FormView = () => {
   const totalFields = form?.fields?.length || 0;
   const progress = ((currentFieldIndex + 1) / totalFields) * 100;
 
-  const [bodyFields, setBodyFields] = useState<any[]>([]);
-  const [editableJsonPreview, setEditableJsonPreview] = useState<string>("");
+  const [bodyFields, setBodyFields] = useState<BodyField[]>([]);
   
   useEffect(() => {
     if (!id) {
@@ -78,15 +78,12 @@ const FormView = () => {
       try {
         const parsedBody = JSON.parse(formData.httpConfig.body);
         setBodyFields(parsedBody);
-        setEditableJsonPreview(JSON.stringify(parsedBody, null, 2));
       } catch (e) {
         console.error('Error parsing HTTP body configuration:', e);
         setBodyFields([]);
-        setEditableJsonPreview("{}");
       }
     } else {
       setBodyFields([]);
-      setEditableJsonPreview("{}");
     }
   }, [id, token, getForm, isAuthenticated, currentUser, isUserAllowed, validateAccessToken, generateAccessLink]);
 
@@ -164,32 +161,30 @@ const FormView = () => {
 
         let bodyToSend = {};
         
-        try {
-          const bodyData = JSON.parse(editableJsonPreview);
-          bodyToSend = bodyData;
-          console.log("Using prepared JSON body:", bodyToSend);
-        } catch (error) {
-          console.error('Error parsing custom JSON:', error);
+        // Generate the body object using the body fields configuration
+        if (bodyFields.length > 0) {
+          const mappedBody: Record<string, any> = {};
           
-          function getDummyResponses() {
-            const r: Record<string, any> = {};
-            for (const campo of form.fields) {
-              r[campo.id] = formValues[campo.id] !== undefined ? formValues[campo.id] : `[${campo.label || campo.id}]`;
+          bodyFields.forEach(field => {
+            if (field.key) {
+              if (field.fieldId === "custom") {
+                // This is a custom static value
+                try {
+                  mappedBody[field.key] = JSON.parse(field.key);
+                } catch {
+                  mappedBody[field.key] = field.key; // Treat as string if not valid JSON
+                }
+              } else {
+                // This maps to a form field response
+                mappedBody[field.key] = formValues[field.fieldId];
+              }
             }
-            return r;
-          };
-
-          function buildRequestBody(fields: any[], responses: Record<string, any>) {
-            const obj: Record<string, any> = {};
-            for (const f of fields) {
-              if (!f.key) continue;
-              obj[f.key] = responses[f.fieldId] !== undefined ? responses[f.fieldId] : "";
-            }
-            return obj;
-          };
+          });
           
-          bodyToSend = buildRequestBody(bodyFields, getDummyResponses());
-          console.log("Using dynamically built body:", bodyToSend);
+          bodyToSend = mappedBody;
+        } else {
+          // Fallback to sending all form values
+          bodyToSend = formValues;
         }
 
         try {

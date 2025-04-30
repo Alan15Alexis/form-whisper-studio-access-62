@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { validateUrl, sendHttpRequest } from '@/utils/http-utils';
 import { HttpConfig, FormField } from '@/types/form';
@@ -29,6 +29,49 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
   const [isLoading, setIsLoading] = useState(false);
   const [editableJsonPreview, setEditableJsonPreview] = useState<string>("");
   const [jsonError, setJsonError] = useState<string>("");
+  const [bodyFields, setBodyFields] = useState<BodyField[]>(
+    config.body ? JSON.parse(config.body) : DEFAULT_BODY_FIELDS
+  );
+
+  // Effect to initialize bodyFields from config.body
+  useEffect(() => {
+    if (config.body) {
+      try {
+        const parsedFields = JSON.parse(config.body);
+        setBodyFields(parsedFields);
+        updateJsonPreview(parsedFields);
+      } catch (e) {
+        console.error("Error parsing body fields:", e);
+        setBodyFields(DEFAULT_BODY_FIELDS);
+        updateJsonPreview(DEFAULT_BODY_FIELDS);
+      }
+    } else {
+      setBodyFields(DEFAULT_BODY_FIELDS);
+      updateJsonPreview(DEFAULT_BODY_FIELDS);
+    }
+  }, [config.body]);
+
+  const updateJsonPreview = (fields: BodyField[]) => {
+    try {
+      // Generate a preview of what the JSON will look like when sent
+      const previewObj: Record<string, any> = {};
+      fields.forEach(field => {
+        if (field.key) {
+          if (field.fieldId === "custom") {
+            previewObj[field.key] = "valor personalizado";
+          } else {
+            const matchingField = formFields.find(f => f.id === field.fieldId);
+            previewObj[field.key] = `[Respuesta de: ${matchingField?.label || field.fieldId}]`;
+          }
+        }
+      });
+      setEditableJsonPreview(JSON.stringify(previewObj, null, 2));
+      setJsonError("");
+    } catch (error) {
+      console.error("Error generating JSON preview:", error);
+      setJsonError("Error al generar vista previa JSON");
+    }
+  };
 
   const handleJsonPreviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -38,12 +81,14 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
       JSON.parse(newValue);
       setJsonError("");
       
+      // When manually editing JSON, we'll create a single custom field
       const newBodyFields = [{
         id: 1,
         key: newValue,
         fieldId: "custom"
       }];
       
+      setBodyFields(newBodyFields);
       onConfigChange({
         ...config,
         body: JSON.stringify(newBodyFields)
@@ -51,6 +96,42 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
     } catch (error) {
       setJsonError("JSON inválido: Por favor verifica la sintaxis");
     }
+  };
+
+  const handleAddBodyField = () => {
+    const newId = Math.max(0, ...bodyFields.map(f => f.id)) + 1;
+    const updatedFields = [...bodyFields, { id: newId, key: "", fieldId: "custom" }];
+    setBodyFields(updatedFields);
+    updateJsonPreview(updatedFields);
+    
+    onConfigChange({
+      ...config,
+      body: JSON.stringify(updatedFields)
+    });
+  };
+
+  const handleRemoveBodyField = (id: number) => {
+    const updatedFields = bodyFields.filter(field => field.id !== id);
+    setBodyFields(updatedFields);
+    updateJsonPreview(updatedFields);
+    
+    onConfigChange({
+      ...config,
+      body: JSON.stringify(updatedFields)
+    });
+  };
+
+  const handleBodyFieldChange = (id: number, key: string, fieldId: string) => {
+    const updatedFields = bodyFields.map(field => 
+      field.id === id ? { ...field, key, fieldId } : field
+    );
+    setBodyFields(updatedFields);
+    updateJsonPreview(updatedFields);
+    
+    onConfigChange({
+      ...config,
+      body: JSON.stringify(updatedFields)
+    });
   };
 
   const handleToggleEnabled = (enabled: boolean) => {
@@ -171,11 +252,15 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
     isLoading,
     editableJsonPreview,
     jsonError,
+    bodyFields,
     handleJsonPreviewChange,
     handleToggleEnabled,
     handleUrlChange,
     handleMethodChange,
     handleTestRequest,
-    setEditableJsonPreview
+    setEditableJsonPreview,
+    handleAddBodyField,
+    handleRemoveBodyField,
+    handleBodyFieldChange
   };
 };
