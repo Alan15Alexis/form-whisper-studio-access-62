@@ -71,21 +71,6 @@ const Index = () => {
               )}
             </div>
           </motion.div>
-          
-          <div className="mt-20">
-            <motion.div
-              className="rounded-xl bg-white shadow-xl p-4 border border-gray-100"
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1555421689-3f034debb7a6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"
-                alt="Form Builder Dashboard"
-                className="rounded-lg border border-gray-200 shadow-sm"
-              />
-            </motion.div>
-          </div>
         </div>
       </div>
 
@@ -112,22 +97,6 @@ const Index = () => {
               </motion.div>
             ))}
           </div>
-        </div>
-      </div>
-      
-      {/* CTA Section */}
-      <div className="bg-primary text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
-          <p className="mb-8 text-lg opacity-90 max-w-xl mx-auto">
-            Join hundreds of users who are creating beautiful, accessible forms with FormWhisper.
-          </p>
-          <Button asChild size="lg" variant="secondary" className="group">
-            <Link to={isAuthenticated ? "/dashboard" : "/register"}>
-              {isAuthenticated ? "Go to Dashboard" : "Create Your First Form"} 
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </Button>
         </div>
       </div>
       
