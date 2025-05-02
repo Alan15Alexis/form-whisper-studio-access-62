@@ -67,7 +67,7 @@ const Index = () => {
         });
 
         // Redirigir directamente a DashboardUser
-        navigate('/dashboard-user'); // Cambiar la ruta a DashboardUser
+        navigate('/dashboardUser'); // Cambiar la ruta a DashboardUser
       } else {
         toast({
           title: "Acceso denegado",
