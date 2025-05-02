@@ -69,9 +69,7 @@ const Index = () => {
         // Redirigir según el rol del usuario
         if (!isAdmin) {
           navigate('/dashboard?role=user'); // Redirigir al dashboard como usuario
-        } else {
-          navigate('/dashboard?role=admin'); // Redirigir al dashboard como administrador
-        }
+          }
       } else {
         toast({
           title: "Acceso denegado",
