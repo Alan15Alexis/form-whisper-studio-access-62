@@ -1,8 +1,10 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Form, FormField, FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from './AuthContext';
+import { sendHttpRequest } from '@/utils/http-utils';
 
 interface FormContextType {
   forms: Form[];
@@ -22,6 +24,9 @@ interface FormContextType {
 }
 
 const FormContext = createContext<FormContextType | undefined>(undefined);
+
+// MySQL API configuration 
+const MYSQL_API_ENDPOINT = 'http://localhost:3000/api/submit-form'; // Reemplaza con tu URL real
 
 // For demo purposes - would be replaced with real API calls
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -241,6 +246,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     
+    const form = getForm(formId);
+    
     const response: FormResponse = {
       id: uuidv4(),
       formId,
@@ -249,7 +256,42 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       submittedAt: new Date().toISOString(),
     };
     
+    // Save response locally
     setResponses(prev => [...prev, response]);
+    
+    // Send to MySQL database through API
+    try {
+      // Prepare data for MySQL submission
+      const mysqlData = {
+        form_id: formId,
+        responses: JSON.stringify(data),
+        submitted_by: currentUser?.email || 'anonymous',
+        form_title: form?.title || 'Untitled Form'
+      };
+      
+      // Send to MySQL API endpoint
+      await sendHttpRequest({
+        url: MYSQL_API_ENDPOINT,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: mysqlData,
+        timeout: 15000
+      });
+      
+      toast({
+        title: "Respuesta guardada",
+        description: "La respuesta fue guardada localmente y en la base de datos MySQL",
+      });
+    } catch (error) {
+      console.error('Error saving to MySQL:', error);
+      toast({
+        title: "Error al guardar en MySQL",
+        description: "La respuesta fue guardada localmente, pero hubo un problema al guardarla en la base de datos MySQL",
+        variant: "destructive"
+      });
+    }
     
     return response;
   };

@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils";
 import { sendHttpRequest } from "@/utils/http-utils";
 import { BodyField } from "@/hooks/useHttpConfig";
 
+// API endpoint for MySQL database
+const MYSQL_API_ENDPOINT = 'http://localhost:3000/api/submit-form'; // Reemplaza con tu URL real
+
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
   const navigate = useNavigate();
@@ -147,8 +150,10 @@ const FormView = () => {
     const submittedBy = currentUser?.email || "";
     
     try {
+      // Envía los datos a través del FormContext (que ahora también los envía a MySQL)
       await submitFormResponse(id!, formValues);
 
+      // Si hay una configuración HTTP personalizada, la usamos como estaba configurado
       if (form.httpConfig?.enabled && form.httpConfig.url) {
         // Preparamos los headers
         const headers: Record<string, string> = {};
@@ -237,12 +242,41 @@ const FormView = () => {
           title: "Respuesta guardada",
           description: "Tu respuesta se ha guardado correctamente y se ha intentado enviar al servidor externo.",
         });
-      } else {
-        toast({
-          title: "Respuesta guardada",
-          description: "Tu respuesta se ha guardado correctamente.",
-        });
+      } 
+      // Si no, aseguramos de todos modos que los datos se envíen a MySQL
+      else {
+        try {
+          // Preparar datos para MySQL
+          const mysqlData = {
+            form_id: id,
+            responses: JSON.stringify(formValues),
+            submitted_by: submittedBy || 'anonymous',
+            form_title: form?.title || 'Untitled Form'
+          };
+          
+          // Enviar a MySQL directamente
+          await sendHttpRequest({
+            url: MYSQL_API_ENDPOINT,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: mysqlData,
+            timeout: 15000
+          });
+          
+          toast({
+            title: "Datos guardados en MySQL",
+            description: "Tu respuesta se ha guardado correctamente en la base de datos MySQL.",
+          });
+        } catch (error) {
+          console.error('Error al guardar en MySQL:', error);
+          toast({
+            title: "Error al guardar en MySQL",
+            description: "Hubo un problema al guardar tu respuesta en la base de datos. Se ha guardado localmente.",
+            variant: "destructive",
+          });
+        }
       }
+      
       setFormSubmitted(true);
     } catch (error) {
       console.error('Error submitting form:', error);
