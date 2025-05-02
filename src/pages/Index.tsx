@@ -67,9 +67,9 @@ const Index = () => {
         });
 
         // Redirigir según el rol del usuario
-        if (!isAdmin) {
+        if (isAuthenticated && !isAdmin) {
           navigate('/dashboard'); // Redirigir al dashboard de usuario
-        } else if (isAdmin) {
+        } else if (isAuthenticated && isAdmin) {
           navigate('/dashboard'); // Redirigir al dashboard de administrador
         }
       } else {
