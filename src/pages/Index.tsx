@@ -10,27 +10,28 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "@/contexts/FormContext";
+import AssignedForms from "./AssignedForms";
 
 const features = [
   {
     icon: <FileText className="h-10 w-10 text-primary" />,
-    title: "Dynamic Form Builder",
-    description: "Create beautiful forms with a wide range of field types and customization options."
+    title: "Generador de formularios dinámicos",
+    description: "Cree formularios con una amplia gama de tipos de campos y opciones de personalización."
   },
   {
     icon: <Lock className="h-10 w-10 text-primary" />,
-    title: "Private Forms",
-    description: "Control who can access and submit your forms with user-specific permissions."
+    title: "Formularios Privados",
+    description: "Controle quién puede acceder y enviar sus formularios con permisos específicos del usuario."
   },
   {
     icon: <CheckCircle className="h-10 w-10 text-primary" />,
-    title: "Response Management",
-    description: "View, manage, and export all form submissions in one centralized dashboard."
+    title: "Gestión de respuestas",
+    description: "Vea, administre y exporte todos los envíos de formularios en un panel centralizado."
   },
   {
     icon: <Users className="h-10 w-10 text-primary" />,
-    title: "User Access Control",
-    description: "Grant or revoke access to specific users and create shareable private links."
+    title: "Control de acceso de usuarios",
+    description: "Concede o revoca el acceso a usuarios específicos y crea enlaces privados que se puedan compartir."
   }
 ];
 
@@ -65,7 +66,7 @@ const Index = () => {
           title: "Acceso concedido",
           description: "Redirigiendo al dashboard...",
         });
-        navigate('/dashboard');
+        navigate('/AssignedForms');
       } else {
         toast({
           title: "Acceso denegado",
@@ -109,17 +110,10 @@ const Index = () => {
       <div className="pt-16 min-h-screen flex flex-col items-center justify-center">
         <div className="container mx-auto px-4 flex-1 flex flex-col items-center justify-center">
           {/* Added minimalist title */}
-          <motion.h1
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-light mb-8 text-center text-gray-800"
-          >
-            Crea formularios simples
-          </motion.h1>
+          
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6">
-              Build Forms<br />
-              <span className="text-primary">Simplified</span>
+              Construye Formularios <br />
+              <span className="text-primary">Simplicado</span>
             </h1>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -159,8 +153,8 @@ const Index = () => {
         <div className="bg-gray-50 py-16 w-full">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold">Powerful Features</h2>
-              <p className="text-gray-600 mt-2">Everything you need to create and manage forms</p>
+              <h2 className="text-3xl font-bold">Potentes funciones</h2>
+              <p className="text-gray-600 mt-2">Todo lo que necesitas para crear y gestionar formularios</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
