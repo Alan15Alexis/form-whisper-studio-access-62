@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { useForm } from "@/contexts/FormContext";
+import { useForm } from "@/contexts/form";
 import AssignedForms from "./AssignedForms";
 
 const features = [

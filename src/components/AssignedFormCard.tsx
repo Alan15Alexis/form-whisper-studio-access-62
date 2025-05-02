@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link } from "react-router-dom";
 import { CheckCircle2, CircleDot, FileText, SendHorizontal, Trash2 } from "lucide-react";
-import { useForm } from "@/contexts/FormContext";
+import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
 
 interface AssignedFormCardProps {
