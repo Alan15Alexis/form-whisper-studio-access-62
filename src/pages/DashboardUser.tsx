@@ -6,14 +6,8 @@ import { useForm } from "@/contexts/FormContext";
 import { useAuth } from "@/contexts/AuthContext";
 import AssignedFormCard from "@/components/AssignedFormCard";
 
-interface DashboardUserProps {
-  assignedForms?: any[];
-  hideForm?: (formId: string) => void;
-  currentUser?: any;
-}
-
-const DashboardUser = ({ assignedForms: propAssignedForms, hideForm: propHideForm, currentUser: propCurrentUser }: DashboardUserProps) => {
-  const { forms, addAllowedUser, removeAllowedUser, isUserAllowed } = useForm();
+const DashboardUser = () => {
+  const { forms, removeAllowedUser } = useForm();
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
@@ -23,28 +17,18 @@ const DashboardUser = ({ assignedForms: propAssignedForms, hideForm: propHideFor
       navigate("/login");
     }
   }, [isAuthenticated, navigate]);
-
-  // Usar props si se proporcionan, de lo contrario usar contexto
-  const user = propCurrentUser || currentUser;
   
   // Get assigned forms for the user by filtering all forms where the user is allowed
-  const getAssignedFormsForUser = (email?: string) => {
-    if (!email) return [];
-    return forms.filter(form => form.isPrivate && form.allowedUsers.includes(email));
-  };
-  
-  const userAssignedForms = propAssignedForms || getAssignedFormsForUser(user?.email);
+  const userAssignedForms = forms.filter(form => 
+    form.isPrivate && 
+    currentUser?.email && 
+    form.allowedUsers.includes(currentUser.email)
+  );
   
   // Función para ocultar un formulario (quitar el usuario de la lista de usuarios permitidos)
-  const hideFormForUser = (email: string, formId: string) => {
-    return removeAllowedUser(formId, email);
-  };
-  
-  const hideForm = propHideForm || hideFormForUser;
-
   const handleHideForm = (formId: string) => {
-    if (user?.email) {
-      hideForm(user.email, formId);
+    if (currentUser?.email) {
+      removeAllowedUser(formId, currentUser.email);
     }
   };
 
@@ -52,7 +36,7 @@ const DashboardUser = ({ assignedForms: propAssignedForms, hideForm: propHideFor
     <Layout title="Mis Formularios Asignados">
       <div className="mb-6">
         <h2 className="text-lg text-gray-600">
-          Bienvenido, {user?.name || user?.email || "Usuario"}. Aquí están los formularios asignados a ti.
+          Bienvenido, {currentUser?.name || currentUser?.email || "Usuario"}. Aquí están los formularios asignados a ti.
         </h2>
       </div>
       

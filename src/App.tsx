@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,8 +36,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser assignedForms={undefined} hideForm={undefined} currentUser={undefined} /></PrivateRoute>} />
-              <Route path="/dashboard-admin" element={<PrivateRoute><DashboardAdmin userForms={undefined} currentUser={undefined} /></PrivateRoute>} />
+              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser /></PrivateRoute>} />
+              <Route path="/dashboard-admin" element={<PrivateRoute><DashboardAdmin /></PrivateRoute>} />
               <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
               <Route path="/forms/new" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/edit" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
