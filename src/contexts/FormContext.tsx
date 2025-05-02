@@ -1,10 +1,9 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Form, FormField, FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from './AuthContext';
-import { sendHttpRequest } from '@/utils/http-utils';
+import { sendHttpRequest, validateFormResponses } from '@/utils/http-utils';
 
 interface FormContextType {
   forms: Form[];
@@ -26,7 +25,7 @@ interface FormContextType {
 const FormContext = createContext<FormContextType | undefined>(undefined);
 
 // MySQL API configuration 
-const MYSQL_API_ENDPOINT = 'http://localhost:3000/api/submit-form'; // Reemplaza con tu URL real
+const MYSQL_API_ENDPOINT = 'http://localhost:3000/api/submit-form';
 
 // For demo purposes - would be replaced with real API calls
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -243,8 +242,15 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const submitFormResponse = async (formId: string, data: Record<string, any>): Promise<FormResponse> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Validar que los datos no estén vacíos
+    if (!validateFormResponses(data)) {
+      toast({
+        title: "Error",
+        description: "No se pueden enviar respuestas vacías",
+        variant: "destructive",
+      });
+      throw new Error("Las respuestas del formulario no pueden estar vacías");
+    }
     
     const form = getForm(formId);
     

@@ -17,7 +17,7 @@ import { sendHttpRequest } from "@/utils/http-utils";
 import { BodyField } from "@/hooks/useHttpConfig";
 
 // API endpoint for MySQL database
-const MYSQL_API_ENDPOINT = 'http://localhost:3000/api/submit-form'; // Reemplaza con tu URL real
+const MYSQL_API_ENDPOINT = 'http://localhost:3000/api/submit-form';
 
 const FormView = () => {
   const { id, token } = useParams<{ id: string; token: string }>();
@@ -140,6 +140,16 @@ const FormView = () => {
       toast({
         title: "Error",
         description: `Por favor, complete todos los campos obligatorios: ${missingFields.map((f: any) => f.label).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validar que el formulario tenga al menos una respuesta
+    if (!formValues || Object.keys(formValues).length === 0) {
+      toast({
+        title: "Error",
+        description: "No se pueden enviar respuestas vacías",
         variant: "destructive",
       });
       return;

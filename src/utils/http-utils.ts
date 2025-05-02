@@ -129,3 +129,14 @@ export const sendHttpRequest = async (config: {
     };
   }
 };
+
+// Función para validar respuestas de formularios
+export const validateFormResponses = (responses: Record<string, any>): boolean => {
+  // Validar que las respuestas no estén vacías
+  if (!responses || Object.keys(responses).length === 0) {
+    return false;
+  }
+  
+  // Se pueden añadir más validaciones específicas según necesidades
+  return true;
+};
