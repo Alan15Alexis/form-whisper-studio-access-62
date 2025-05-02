@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, FileText, LayoutDashboard, Users, LogOut, Menu, X, ClipboardList } from 'lucide-react';
+import { Home, LogOut, Menu, X, ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 
 interface LayoutProps {
@@ -22,18 +22,12 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
     navigate('/');
   };
 
-  // Customize navigation links based on user role
+  // Simplificamos los enlaces de navegación
   const navLinks = [
-    // Only show Home link for non-admin users or unauthenticated users
-    { to: '/', label: 'Home', icon: <Home className="mr-2 h-4 w-4" />, hideForAdmin: true },
-    // Show Dashboard link for authenticated users
-    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="mr-2 h-4 w-4" />, authRequired: true },
-    // Show My Forms for regular users only
-    { to: '/assigned-forms', label: 'My Forms', icon: <ClipboardList className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: false, userOnly: true },
-    // Show New Form for admin users only
-    { to: '/forms/new', label: 'New Form', icon: <FileText className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: true },
-    // Show Users for admin users only
-    { to: '/users', label: 'Users', icon: <Users className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: true },
+    // Solo mostramos el enlace de inicio para usuarios no autenticados
+    { to: '/', label: 'Home', icon: <Home className="mr-2 h-4 w-4" />, hideForAdmin: false, hideForUser: false },
+    // Solo mostramos "Mis Formularios" para usuarios regulares
+    { to: '/assigned-forms', label: 'Mis Formularios', icon: <ClipboardList className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: false, userOnly: true },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -59,11 +53,12 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
               
               <div className="hidden md:flex items-center space-x-6">
                 {navLinks.map((link) => {
-                  // Skip links based on conditions
+                  // Omitir enlaces según condiciones
                   if (link.authRequired && !isAuthenticated) return null;
                   if (link.adminOnly && !isAdmin) return null;
                   if (link.userOnly && isAdmin) return null;
-                  if (link.hideForAdmin && isAdmin) return null; // Hide Home for admin
+                  if (link.hideForAdmin && isAdmin) return null;
+                  if (link.hideForUser && !isAdmin) return null;
 
                   return (
                     <Link 
@@ -113,11 +108,12 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
             <div className="md:hidden bg-white border-b shadow-md animate-fadeIn">
               <div className="container mx-auto px-4 py-3 flex flex-col space-y-2">
                 {navLinks.map((link) => {
-                  // Skip links based on conditions (same as desktop)
+                  // Omitir enlaces según condiciones (igual que escritorio)
                   if (link.authRequired && !isAuthenticated) return null;
                   if (link.adminOnly && !isAdmin) return null;
                   if (link.userOnly && isAdmin) return null;
-                  if (link.hideForAdmin && isAdmin) return null; // Hide Home for admin
+                  if (link.hideForAdmin && isAdmin) return null;
+                  if (link.hideForUser && !isAdmin) return null;
 
                   return (
                     <Link 

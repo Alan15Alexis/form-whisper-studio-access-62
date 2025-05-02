@@ -40,35 +40,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (credentials: AuthCredentials & { role?: string }): Promise<User | null> => {
     setIsLoading(true);
     try {
-      // Mock login - would be replaced with API call
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      // Simplified login - only requires email for user role
+      // For admin role, still check password
       const { email, password, role = "user" } = credentials;
       
-      // Check credentials based on role
-      if (role === "admin" && email === 'admin@beed.studio' && password === 'password123') {
+      // Admin login still requires password
+      if (role === "admin") {
+        if (email === 'admin@beed.studio' && password === 'password123') {
+          const user: User = {
+            id: '1',
+            email: 'admin@beed.studio',
+            name: 'Admin User',
+            role: 'admin'
+          };
+          
+          localStorage.setItem('user', JSON.stringify(user));
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          toast({
+            title: 'Login successful',
+            description: `Bienvenido ${user.name || user.email}!`,
+            variant: 'default',
+          });
+          return user;
+        } else {
+          toast({
+            title: 'Login failed',
+            description: 'Credenciales inválidas para el rol de administrador',
+            variant: 'destructive',
+          });
+          return null;
+        }
+      } 
+      // Para usuarios regulares, solo requerimos email
+      else {
+        // Crear usuario con el email proporcionado
         const user: User = {
-          id: '1',
-          email: 'admin@beed.studio',
-          name: 'Admin User',
-          role: 'admin'
-        };
-        
-        localStorage.setItem('user', JSON.stringify(user));
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        toast({
-          title: 'Login successful',
-          description: `Bienvenido ${user.name || user.email}!`,
-          variant: 'default',
-        });
-        return user;
-      } else if (role === "user" && email === 'user@example.com' && password === 'password123') {
-        const user: User = {
-          id: '2',
-          email: 'user@example.com',
-          name: 'Demo User',
+          id: Math.random().toString(36).substring(2, 11), // Generate a random ID
+          email,
+          name: email.split('@')[0], // Use part of email as name
           role: 'user'
         };
         
@@ -76,19 +86,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setCurrentUser(user);
         setIsAuthenticated(true);
         toast({
-          title: 'Login successful',
-          description: `Bienvenido ${user.name || user.email}!`,
+          title: 'Acceso concedido',
+          description: `Bienvenido a tus formularios asignados`,
           variant: 'default',
         });
         return user;
       }
-      
-      toast({
-        title: 'Login failed',
-        description: 'Credenciales inválidas para el rol seleccionado',
-        variant: 'destructive',
-      });
-      return null;
     } catch (error) {
       console.error('Login error:', error);
       toast({

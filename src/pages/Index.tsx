@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "@/contexts/form";
-import AssignedForms from "./AssignedForms";
 
 const features = [
   {
@@ -62,14 +62,14 @@ const Index = () => {
       if (allowed) {
         toast({
           title: "Acceso concedido",
-          description: "Redirigiendo al dashboard...",
+          description: "Redirigiendo a formularios asignados...",
         });
 
-        // Autenticar al usuario
+        // Autenticar al usuario (solo con email, sin verificar contraseña)
         login({ email, password: "defaultPassword", role: "user" });
 
-        // Redirigir directamente a DashboardUser
-        navigate('/dashboard-user');
+        // Redirigir directamente a la página de Formularios Asignados
+        navigate('/assigned-forms');
       } else {
         toast({
           title: "Acceso denegado",

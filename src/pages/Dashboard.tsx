@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/contexts/form";
@@ -15,7 +16,7 @@ const Dashboard = () => {
     if (currentUser?.role === "admin") {
       navigate("/dashboard-admin");
     } else if (currentUser?.role === "user") {
-      navigate("/dashboard-user");
+      navigate("/assigned-forms"); // Cambiamos la redirección aquí
     }
   }, [currentUser, navigate]);
 
