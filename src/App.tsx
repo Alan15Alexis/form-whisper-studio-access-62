@@ -1,9 +1,8 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { FormProvider } from "./contexts/FormContext";
 
@@ -11,7 +10,6 @@ import { FormProvider } from "./contexts/FormContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
 import AssignedForms from "./pages/AssignedForms";
 import FormBuilder from "./pages/FormBuilder";
 import FormView from "./pages/FormView";
@@ -37,18 +35,16 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser assignedForms={undefined} hideForm={undefined} currentUser={undefined} /></PrivateRoute>} />
+              <Route path="/dashboard-admin" element={<PrivateRoute><DashboardAdmin userForms={undefined} currentUser={undefined} /></PrivateRoute>} />
               <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
               <Route path="/forms/new" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/edit" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
               <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />
               <Route path="/forms/:id" element={<FormView />} />
               <Route path="/forms/:id/access/:token" element={<FormView />} />
-              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser assignedForms={[]} hideForm={() => {}} currentUser={null} /></PrivateRoute>} />
-              <Route path="/dashboard-admin" element={<DashboardAdmin userForms={undefined} currentUser={undefined} />} />
               <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />
               <Route path="*" element={<NotFound />} />
-              
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

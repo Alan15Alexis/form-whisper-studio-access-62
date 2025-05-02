@@ -56,7 +56,6 @@ const Index = () => {
 
     setIsValidating(true);
 
-    // Validar el correo electrónico contra los usuarios permitidos para el formulario predeterminado
     setTimeout(() => {
       const allowed = isUserAllowed(defaultFormId, email);
 
@@ -67,7 +66,7 @@ const Index = () => {
         });
 
         // Autenticar al usuario
-        login({ email, password: "defaultPassword" }); // Asegúrate de que esta función esté definida en tu AuthContext
+        login({ email, password: "defaultPassword", role: "user" });
 
         // Redirigir directamente a DashboardUser
         navigate('/dashboard-user');

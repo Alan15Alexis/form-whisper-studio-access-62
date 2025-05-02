@@ -53,12 +53,18 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    
+
     try {
-      // Always use admin role for login
-      const user = { email, password, role: "admin" };
+      // Simular autenticación
+      const user = { email, password, role: email === "admin@correo.com" ? "admin" : "user" };
       login(user);
-      navigate("/dashboard");
+
+      // Redirigir según el rol
+      if (user.role === "admin") {
+        navigate("/dashboard-admin");
+      } else {
+        navigate("/dashboard-user");
+      }
     } catch (error) {
       console.error("Login error:", error);
       setError("Se produjo un error al iniciar sesión. Por favor, inténtalo de nuevo.");
