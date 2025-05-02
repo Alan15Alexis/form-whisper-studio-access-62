@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const AuthContext = createContext({
   isAuthenticated: false,
   currentUser: null,
-  login: () => {},
+  login: (user: { email: string; password: string; role: string }) => {},
   logout: () => {},
 });
 
