@@ -44,7 +44,7 @@ const App = () => (
               <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />
               <Route path="/forms/:id" element={<FormView />} />
               <Route path="/forms/:id/access/:token" element={<FormView />} />
-              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser assignedForms={undefined} hideForm={undefined} currentUser={undefined} /></PrivateRoute>} />
+              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser assignedForms={[]} hideForm={() => {}} currentUser={null} /></PrivateRoute>} />
               <Route path="/dashboard-admin" element={<DashboardAdmin userForms={undefined} currentUser={undefined} />} />
               <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />
               <Route path="*" element={<NotFound />} />

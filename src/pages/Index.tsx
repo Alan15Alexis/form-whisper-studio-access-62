@@ -35,7 +35,7 @@ const features = [
 ];
 
 const Index = () => {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, login } = useAuth();
   const { forms, isUserAllowed } = useForm();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -66,8 +66,11 @@ const Index = () => {
           description: "Redirigiendo al dashboard...",
         });
 
+        // Autenticar al usuario
+        login({ email, password: "defaultPassword" }); // Asegúrate de que esta función esté definida en tu AuthContext
+
         // Redirigir directamente a DashboardUser
-        navigate('/dashboardUser'); // Cambiar la ruta a DashboardUser
+        navigate('/dashboard-user');
       } else {
         toast({
           title: "Acceso denegado",

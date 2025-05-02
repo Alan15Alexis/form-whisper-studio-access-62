@@ -1,13 +1,41 @@
-
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Mail, KeyRound, LogIn } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const AuthContext = createContext({
+  isAuthenticated: false,
+  currentUser: null,
+  login: () => {},
+  logout: () => {},
+});
+
+export const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const login = (user) => {
+    setIsAuthenticated(true);
+    setCurrentUser(user);
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, currentUser, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -28,12 +56,9 @@ const Login = () => {
     
     try {
       // Always use admin role for login
-      const user = await login({ email, password, role: "admin" });
-      if (user) {
-        navigate("/dashboard");
-      } else {
-        setError("Credenciales inválidas. Por favor, inténtalo de nuevo.");
-      }
+      const user = { email, password, role: "admin" };
+      login(user);
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       setError("Se produjo un error al iniciar sesión. Por favor, inténtalo de nuevo.");
