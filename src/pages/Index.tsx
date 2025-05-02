@@ -68,7 +68,7 @@ const Index = () => {
 
         // Redirigir según el rol del usuario
         if (isAuthenticated && !isAdmin) {
-          navigate('/AssignedForms'); // Redirigir al dashboard de usuario
+          navigate('/dashboard'); // Redirigir al dashboard de usuario
         } else if (isAuthenticated && isAdmin) {
           navigate('/dashboard'); // Redirigir al dashboard de administrador
         }
