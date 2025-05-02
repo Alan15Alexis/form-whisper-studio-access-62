@@ -6,17 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FormCard from "@/components/FormCard";
 import AssignedFormCard from "@/components/AssignedFormCard";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Plus } from "lucide-react";
 
 const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
   const { forms, isUserAllowed } = useForm();
-  
+  const location = useLocation();
+
+  // Leer el parámetro de consulta "role"
+  const queryParams = new URLSearchParams(location.search);
+  const role = queryParams.get("role");
+
   const [hiddenForms, setHiddenForms] = useState<string[]>([]);
 
   useEffect(() => {
-    if(currentUser?.id) {
+    if (currentUser?.id) {
       const stored = localStorage.getItem(`hiddenForms:${currentUser.id}`);
       setHiddenForms(stored ? JSON.parse(stored) : []);
     }
@@ -25,25 +30,26 @@ const Dashboard = () => {
   const hideForm = (formId: string) => {
     const updated = [...hiddenForms, formId];
     setHiddenForms(updated);
-    if(currentUser?.id) {
+    if (currentUser?.id) {
       localStorage.setItem(`hiddenForms:${currentUser.id}`, JSON.stringify(updated));
     }
   };
 
   const userForms = forms.filter(form => form.ownerId === currentUser?.id);
-  
-  const assignedForms = forms.filter(form => 
-    form.isPrivate && 
-    currentUser?.email && 
-    isUserAllowed(form.id, currentUser.email) &&
-    form.ownerId !== currentUser.id &&
-    !hiddenForms.includes(form.id)
+
+  const assignedForms = forms.filter(
+    form =>
+      form.isPrivate &&
+      currentUser?.email &&
+      isUserAllowed(form.id, currentUser.email) &&
+      form.ownerId !== currentUser.id &&
+      !hiddenForms.includes(form.id)
   );
-  
-  const sortedForms = [...userForms].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+
+  const sortedForms = [...userForms].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  
+
   const publicForms = sortedForms.filter(form => !form.isPrivate);
   const privateForms = sortedForms.filter(form => form.isPrivate);
 
@@ -53,7 +59,7 @@ const Dashboard = () => {
         <h2 className="text-xl font-medium">
           Bienvenido, {currentUser?.name || currentUser?.email}
         </h2>
-        {isAdmin && (
+        {role === "admin" && (
           <Button asChild>
             <Link to="/forms/new">
               <Plus className="mr-2 h-4 w-4" /> New Form
@@ -62,10 +68,10 @@ const Dashboard = () => {
         )}
       </div>
 
-      {!isAdmin ? (
+      {role !== "admin" ? (
         <div className="space-y-8">
           <div>
-            <h3 className="text-lg font-medium mb-4">Forms Assigned to You</h3>
+            <h3 className="text-lg font-medium mb-4">Formularios asignados para ti</h3>
             {assignedForms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {assignedForms.map(form => (
@@ -86,7 +92,7 @@ const Dashboard = () => {
             <TabsTrigger value="public">Public ({publicForms.length})</TabsTrigger>
             <TabsTrigger value="private">Private ({privateForms.length})</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="all" className="animate-fadeIn">
             {sortedForms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -102,42 +108,6 @@ const Dashboard = () => {
                   <Link to="/forms/new">
                     <Plus className="mr-2 h-4 w-4" /> Create New Form
                   </Link>
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="public" className="animate-fadeIn">
-            {publicForms.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {publicForms.map(form => (
-                  <FormCard key={form.id} form={form} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium mb-2">No public forms</h3>
-                <p className="text-gray-500 mb-6">Public forms can be accessed by anyone</p>
-                <Button asChild>
-                  <Link to="/forms/new">Create a Public Form</Link>
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="private" className="animate-fadeIn">
-            {privateForms.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {privateForms.map(form => (
-                  <FormCard key={form.id} form={form} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium mb-2">No private forms</h3>
-                <p className="text-gray-500 mb-6">Private forms can only be accessed by specified users</p>
-                <Button asChild>
-                  <Link to="/forms/new">Create a Private Form</Link>
                 </Button>
               </div>
             )}
