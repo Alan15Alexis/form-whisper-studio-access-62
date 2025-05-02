@@ -47,7 +47,7 @@ const Index = () => {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6">
-              Build Beautiful Forms<br />
+              Build Forms<br />
               <span className="text-primary">Simplified</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
