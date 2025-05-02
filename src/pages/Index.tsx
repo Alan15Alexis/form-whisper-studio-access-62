@@ -95,7 +95,7 @@ const Index = () => {
             </a>
           </div>
           <div>
-            <Link to="/admin-login">
+            <Link to="/login">
               <Button variant="ghost" className="flex items-center gap-2">
                 <LogIn className="h-5 w-5" />
                 <span className="hidden sm:inline">Admin Login</span>
@@ -108,6 +108,16 @@ const Index = () => {
       {/* Main Content */}
       <div className="pt-16 min-h-screen flex flex-col items-center justify-center">
         <div className="container mx-auto px-4 flex-1 flex flex-col items-center justify-center">
+          {/* Added minimalist title */}
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl md:text-4xl font-light mb-8 text-center text-gray-800"
+          >
+            Crea formularios simples
+          </motion.h1>
+          
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
