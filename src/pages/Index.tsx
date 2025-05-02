@@ -67,9 +67,9 @@ const Index = () => {
         });
 
         // Redirigir según el rol del usuario
-        if (isAuthenticated && !isAdmin) {
+        if (!isAdmin) {
           navigate('/dashboard'); // Redirigir al dashboard de usuario
-        } else if (isAuthenticated && isAdmin) {
+        } else if (isAdmin) {
           navigate('/dashboard'); // Redirigir al dashboard de administrador
         }
       } else {
@@ -116,10 +116,11 @@ const Index = () => {
         <div className="container mx-auto px-4 flex-1 flex flex-col items-center justify-center">
           {/* Added minimalist title */}
           
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6">
-              Construye Formularios <br />
-              <span className="text-primary">Simplicado</span>
-            </h1>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-12 text-center mt-12">
+            Construye Formularios <br />
+            <span className="text-primary">Simplicado</span>
+          </h1>
+          
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
