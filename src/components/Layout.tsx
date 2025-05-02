@@ -22,11 +22,17 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
     navigate('/');
   };
 
+  // Customize navigation links based on user role
   const navLinks = [
-    { to: '/', label: 'Home', icon: <Home className="mr-2 h-4 w-4" /> },
-    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: false },
+    // Only show Home link for non-admin users or unauthenticated users
+    { to: '/', label: 'Home', icon: <Home className="mr-2 h-4 w-4" />, hideForAdmin: true },
+    // Show Dashboard link for authenticated users
+    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="mr-2 h-4 w-4" />, authRequired: true },
+    // Show My Forms for regular users only
     { to: '/assigned-forms', label: 'My Forms', icon: <ClipboardList className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: false, userOnly: true },
+    // Show New Form for admin users only
     { to: '/forms/new', label: 'New Form', icon: <FileText className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: true },
+    // Show Users for admin users only
     { to: '/users', label: 'Users', icon: <Users className="mr-2 h-4 w-4" />, authRequired: true, adminOnly: true },
   ];
 
@@ -53,10 +59,11 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
               
               <div className="hidden md:flex items-center space-x-6">
                 {navLinks.map((link) => {
-                  // Skip links based on authentication and role
+                  // Skip links based on conditions
                   if (link.authRequired && !isAuthenticated) return null;
                   if (link.adminOnly && !isAdmin) return null;
                   if (link.userOnly && isAdmin) return null;
+                  if (link.hideForAdmin && isAdmin) return null; // Hide Home for admin
 
                   return (
                     <Link 
@@ -106,10 +113,11 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
             <div className="md:hidden bg-white border-b shadow-md animate-fadeIn">
               <div className="container mx-auto px-4 py-3 flex flex-col space-y-2">
                 {navLinks.map((link) => {
-                  // Skip links based on authentication and role
+                  // Skip links based on conditions (same as desktop)
                   if (link.authRequired && !isAuthenticated) return null;
                   if (link.adminOnly && !isAdmin) return null;
                   if (link.userOnly && isAdmin) return null;
+                  if (link.hideForAdmin && isAdmin) return null; // Hide Home for admin
 
                   return (
                     <Link 

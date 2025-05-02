@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,13 +26,13 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Simular autenticación
+      // Authentication logic
       const role = email === "admin@beed.studio" || email === "admin@correo.com" ? "admin" : "user";
       const user = { email, password, role };
       const loggedInUser = await login(user);
 
       if (loggedInUser) {
-        // Redirigir según el rol
+        // Redirect based on role
         if (loggedInUser.role === "admin") {
           navigate("/dashboard-admin");
         } else {
