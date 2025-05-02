@@ -1,10 +1,15 @@
 
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { FileText, CheckCircle, Lock, ArrowRight, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { FileText, CheckCircle, Lock, ArrowRight, Users, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
+import { useForm } from "@/contexts/FormContext";
 
 const features = [
   {
@@ -31,76 +36,138 @@ const features = [
 
 const Index = () => {
   const { isAuthenticated } = useAuth();
+  const { forms, isUserAllowed } = useForm();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  
+  // Default form to check against (first form in the list)
+  const defaultFormId = forms.length > 0 ? forms[0].id : "1";
+  
+  const handleContinue = () => {
+    if (!email.trim() || !email.includes('@')) {
+      toast({
+        title: "Error",
+        description: "Por favor, ingresa un correo electrónico válido",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsValidating(true);
+    
+    // Validate email against allowed users for the first form
+    setTimeout(() => {
+      const allowed = isUserAllowed(defaultFormId, email);
+      
+      if (allowed) {
+        toast({
+          title: "Acceso concedido",
+          description: "Redirigiendo al dashboard...",
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: "Acceso denegado",
+          description: "Tu correo no está autorizado para acceder a este formulario",
+          variant: "destructive",
+        });
+      }
+      
+      setIsValidating(false);
+    }, 800);
+  };
   
   return (
     <Layout hideNav>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-          <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary to-blue-200 opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
+      {/* Custom Header */}
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div>
+            <a href="https://beed.studio" target="_blank" rel="noopener noreferrer">
+              <img 
+                src="/lovable-uploads/90fe245b-54ef-4362-85ea-387a90015ebb.png" 
+                alt="Beed" 
+                className="h-8" 
+                width="192" 
+                height="32"
+              />
+            </a>
+          </div>
+          <div>
+            <Link to="/admin-login">
+              <Button variant="ghost" className="flex items-center gap-2">
+                <LogIn className="h-5 w-5" />
+                <span className="hidden sm:inline">Admin Login</span>
+              </Button>
+            </Link>
+          </div>
         </div>
-        
-        <div className="container mx-auto px-4 pt-16 pb-24 text-center">
+      </div>
+
+      {/* Main Content */}
+      <div className="pt-16 min-h-screen flex flex-col items-center justify-center">
+        <div className="container mx-auto px-4 flex-1 flex flex-col items-center justify-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            className="w-full max-w-md"
           >
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6">
-              Build Forms<br />
-              <span className="text-primary">Simplified</span>
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
-              Create dynamic forms with controlled access, collect responses,
-              and manage it all with a minimalist interface.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              {isAuthenticated ? (
-                <Button asChild size="lg" className="px-8 py-6 text-lg">
-                  <Link to="/dashboard">Go to Dashboard</Link>
-                </Button>
-              ) : (
-                <>
-                  <Button asChild size="lg" className="px-8 py-6 text-lg">
-                    <Link to="/register">Get Started</Link>
+            <Card className="shadow-lg border border-gray-100">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold">Responder formulario</CardTitle>
+                <CardDescription>Por favor ingresa tu correo para continuar</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mt-2 space-y-4">
+                  <Input
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full"
+                  />
+                  <Button 
+                    className="w-full" 
+                    onClick={handleContinue}
+                    disabled={isValidating}
+                  >
+                    {isValidating ? "Validando..." : "Continuar"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <Button asChild variant="outline" size="lg" className="px-8 py-6 text-lg">
-                    <Link to="/login">Sign In</Link>
-                  </Button>
-                </>
-              )}
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
-      </div>
 
-      {/* Features Section */}
-      <div className="bg-gray-50 py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold">Powerful Features</h2>
-            <p className="text-gray-600 mt-2">Everything you need to create and manage forms</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 * index }}
-              >
-                <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
-            ))}
+        {/* Features Section (kept from original) */}
+        <div className="bg-gray-50 py-16 w-full">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold">Powerful Features</h2>
+              <p className="text-gray-600 mt-2">Everything you need to create and manage forms</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {features.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 * index }}
+                >
+                  <div className="mb-4">{feature.icon}</div>
+                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      
-      {/* Footer content is handled by the Layout component */}
     </Layout>
   );
 };
