@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -36,7 +35,7 @@ const features = [
 ];
 
 const Index = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const { forms, isUserAllowed } = useForm();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -54,19 +53,25 @@ const Index = () => {
       });
       return;
     }
-    
+
     setIsValidating(true);
-    
-    // Validate email against allowed users for the first form
+
+    // Validar el correo electrónico contra los usuarios permitidos para el formulario predeterminado
     setTimeout(() => {
       const allowed = isUserAllowed(defaultFormId, email);
-      
+
       if (allowed) {
         toast({
           title: "Acceso concedido",
           description: "Redirigiendo al dashboard...",
         });
-        navigate('/AssignedForms');
+
+        // Redirigir según el rol del usuario
+        if (isAuthenticated && !isAdmin) {
+          navigate('/AssignedForms'); // Redirigir al dashboard de usuario
+        } else if (isAuthenticated && isAdmin) {
+          navigate('/dashboard'); // Redirigir al dashboard de administrador
+        }
       } else {
         toast({
           title: "Acceso denegado",
@@ -74,7 +79,7 @@ const Index = () => {
           variant: "destructive",
         });
       }
-      
+
       setIsValidating(false);
     }, 800);
   };
