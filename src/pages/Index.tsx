@@ -66,10 +66,8 @@ const Index = () => {
           description: "Redirigiendo al dashboard...",
         });
 
-        // Redirigir según el rol del usuario
-        if (!isAdmin) {
-          navigate('/dashboard?role=user'); // Redirigir al dashboard como usuario
-          }
+        // Redirigir directamente a DashboardUser
+        navigate('/dashboard-user'); // Cambiar la ruta a DashboardUser
       } else {
         toast({
           title: "Acceso denegado",

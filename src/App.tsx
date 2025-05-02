@@ -20,6 +20,8 @@ import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import PrivateRoute from "./components/PrivateRoute";
 import PublicRoute from "./components/PublicRoute";
+import DashboardUser from "./pages/DashboardUser";
+import DashboardAdmin from "./pages/DashboardAdmin";
 
 const queryClient = new QueryClient();
 
@@ -42,8 +44,11 @@ const App = () => (
               <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />
               <Route path="/forms/:id" element={<FormView />} />
               <Route path="/forms/:id/access/:token" element={<FormView />} />
+              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser assignedForms={undefined} hideForm={undefined} currentUser={undefined} /></PrivateRoute>} />
+              <Route path="/dashboard-admin" element={<DashboardAdmin userForms={undefined} currentUser={undefined} />} />
               <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />
               <Route path="*" element={<NotFound />} />
+              
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
