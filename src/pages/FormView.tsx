@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -8,10 +9,11 @@ import { FormField as FormFieldType, Form as FormType } from "@/types/form";
 import FormField from "@/components/form-view/FormField";
 import { ArrowLeft, Send } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import FormAccess from "@/components/form-view/FormAccess";
 
 const FormView = () => {
   const { id, token } = useParams();
-  const { forms, submitFormResponse, validateAccessToken } = useForm();
+  const { forms, submitFormResponse, validateAccessToken, isUserAllowed } = useForm();
   const { isAuthenticated, currentUser } = useAuth();
   const [form, setForm] = useState<FormType | null>(null);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
@@ -31,8 +33,14 @@ const FormView = () => {
       if (id) {
         const foundForm = getFormById(id);
         
+        // If form doesn't exist, end validation
+        if (!foundForm) {
+          setValidationLoading(false);
+          return;
+        }
+        
         // If form is not private, allow access
-        if (foundForm && !foundForm.isPrivate) {
+        if (!foundForm.isPrivate) {
           setForm(foundForm);
           setAccessValidated(true);
           setValidationLoading(false);
@@ -40,7 +48,7 @@ const FormView = () => {
         }
         
         // If form is private, check authentication or token
-        if (foundForm && foundForm.isPrivate) {
+        if (foundForm.isPrivate) {
           // If user is authenticated and has access to the form
           if (isAuthenticated && currentUser) {
             // Admin has access to all forms
@@ -52,7 +60,7 @@ const FormView = () => {
             }
             
             // Check if user is in allowed users
-            if (foundForm.allowedUsers.includes(currentUser.email)) {
+            if (isUserAllowed(foundForm.id, currentUser.email)) {
               setForm(foundForm);
               setAccessValidated(true);
               setValidationLoading(false);
@@ -63,15 +71,21 @@ const FormView = () => {
           // If token is provided, validate it
           if (token) {
             try {
-              const valid = await validateAccessToken(id, token);
+              const valid = await validateAccessToken(foundForm.id, token);
               if (valid) {
                 setForm(foundForm);
                 setAccessValidated(true);
+                setValidationLoading(false);
+                return;
               }
             } catch (error) {
               console.error("Error validating token:", error);
             }
           }
+          
+          // If we get here, set the form but don't validate access yet
+          // This will show the FormAccess component to validate email
+          setForm(foundForm);
         }
         
         setValidationLoading(false);
@@ -79,7 +93,7 @@ const FormView = () => {
     };
     
     validateAccess();
-  }, [id, token, isAuthenticated, currentUser, forms, validateAccessToken]);
+  }, [id, token, isAuthenticated, currentUser, forms, validateAccessToken, isUserAllowed]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormResponses(prev => ({
@@ -135,6 +149,10 @@ const FormView = () => {
     }
   };
 
+  const handleAccessGranted = () => {
+    setAccessValidated(true);
+  };
+
   if (validationLoading) {
     return (
       <Layout hideNav>
@@ -145,14 +163,25 @@ const FormView = () => {
     );
   }
 
-  if (!accessValidated || !form) {
+  if (form && form.isPrivate && !accessValidated) {
+    return (
+      <Layout hideNav>
+        <FormAccess 
+          onAccessGranted={handleAccessGranted} 
+          isUserAllowed={(email) => isUserAllowed(form.id, email)}
+        />
+      </Layout>
+    );
+  }
+
+  if (!form) {
     return (
       <Layout hideNav>
         <div className="max-w-3xl mx-auto">
           <div className="bg-white shadow-md rounded-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Acceso Denegado</h1>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Formulario no encontrado</h1>
             <p className="text-gray-600 mb-6">
-              No tienes permiso para acceder a este formulario o el formulario no existe.
+              El formulario que estás buscando no existe o ha sido eliminado.
             </p>
             <Button variant="outline" onClick={() => navigate("/")}>
               <ArrowLeft className="mr-2 h-4 w-4" />

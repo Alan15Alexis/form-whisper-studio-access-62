@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+
+import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,36 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Mail, KeyRound, LogIn } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-const AuthContext = createContext({
-  isAuthenticated: false,
-  currentUser: null,
-  login: (user: { email: string; password: string; role: string }) => {},
-  logout: () => {},
-});
-
-export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  const login = (user) => {
-    setIsAuthenticated(true);
-    setCurrentUser(user);
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, currentUser, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = () => useContext(AuthContext);
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -56,14 +28,19 @@ const Login = () => {
 
     try {
       // Simular autenticación
-      const user = { email, password, role: email === "admin@correo.com" ? "admin" : "user" };
-      login(user);
+      const role = email === "admin@beed.studio" || email === "admin@correo.com" ? "admin" : "user";
+      const user = { email, password, role };
+      const loggedInUser = await login(user);
 
-      // Redirigir según el rol
-      if (user.role === "admin") {
-        navigate("/dashboard-admin");
+      if (loggedInUser) {
+        // Redirigir según el rol
+        if (loggedInUser.role === "admin") {
+          navigate("/dashboard-admin");
+        } else {
+          navigate("/dashboard-user");
+        }
       } else {
-        navigate("/dashboard-user");
+        setError("Credenciales inválidas. Por favor, verifica e intenta nuevamente.");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -94,9 +71,9 @@ const Login = () => {
       <main className="flex-grow flex items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-md shadow-lg border-gray-200">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Iniciar sesión como Administrador</CardTitle>
+            <CardTitle className="text-2xl font-bold">Iniciar sesión</CardTitle>
             <CardDescription>
-              Introduce tus credenciales de administrador para acceder al panel de control
+              Introduce tus credenciales para acceder al panel de control
             </CardDescription>
           </CardHeader>
 
@@ -116,7 +93,7 @@ const Login = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="admin@correo.com"
+                    placeholder="admin@beed.studio"
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -161,7 +138,7 @@ const Login = () => {
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">
-                    <LogIn className="mr-2 h-4 w-4" /> Iniciar sesión como Administrador
+                    <LogIn className="mr-2 h-4 w-4" /> Iniciar sesión
                   </span>
                 )}
               </Button>
@@ -171,6 +148,7 @@ const Login = () => {
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-center text-xs text-gray-500">
               <p>Para demo, usa: admin@beed.studio / password123</p>
+              <p>O para usuario: user@example.com / password123</p>
             </div>
             
             <Link to="/" className="w-full">
