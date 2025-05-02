@@ -1,11 +1,11 @@
-
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
-import { useForm } from '@/contexts/FormContext';
-import { Form, FormField, HttpConfig } from '@/types/form';
-import { v4 as uuidv4 } from 'uuid';
-import { useDragAndDrop } from './form-builder/useDragAndDrop';
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
+import { useForm } from "@/contexts/form";
+import { Form, FormField, HttpConfig } from "@/types/form";
+import { toast } from "@/components/ui/use-toast";
+import { useFormFields } from "./form-builder/useFormFields";
+import { useDragAndDrop } from "./form-builder/useDragAndDrop";
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();

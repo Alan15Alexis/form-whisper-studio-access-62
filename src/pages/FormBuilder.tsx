@@ -6,7 +6,6 @@ import { useFormBuilder } from "@/hooks/useFormBuilder";
 import FormBuilderHeader from "@/components/form-builder/FormBuilderHeader";
 import FormBuilderTabs from "@/components/form-builder/FormBuilderTabs";
 import { DragDropContext } from "react-beautiful-dnd";
-import { HttpConfig } from "@/types/form";
 
 const FormBuilder = () => {
   const { id } = useParams<{ id: string }>();
