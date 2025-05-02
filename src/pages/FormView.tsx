@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -12,7 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 
 const FormView = () => {
   const { id, token } = useParams();
-  const { getFormById, submitResponse, validateAccessToken } = useForm();
+  const { forms, submitFormResponse, validateAccessToken } = useForm();
   const { isAuthenticated, currentUser } = useAuth();
   const [form, setForm] = useState<FormType | null>(null);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
@@ -20,6 +19,11 @@ const FormView = () => {
   const [accessValidated, setAccessValidated] = useState(false);
   const [validationLoading, setValidationLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Get form by ID function
+  const getFormById = (formId: string) => {
+    return forms.find(form => form.id === formId);
+  };
 
   // Validate access token if provided
   useEffect(() => {
@@ -75,7 +79,7 @@ const FormView = () => {
     };
     
     validateAccess();
-  }, [id, token, isAuthenticated, currentUser, getFormById, validateAccessToken]);
+  }, [id, token, isAuthenticated, currentUser, forms, validateAccessToken]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormResponses(prev => ({
@@ -106,7 +110,7 @@ const FormView = () => {
     setIsSubmitting(true);
     
     try {
-      await submitResponse(id, formResponses);
+      await submitFormResponse(id, formResponses);
       toast({
         title: "Respuesta enviada correctamente",
         description: "Gracias por completar este formulario",

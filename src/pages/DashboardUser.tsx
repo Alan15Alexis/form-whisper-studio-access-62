@@ -13,7 +13,7 @@ interface DashboardUserProps {
 }
 
 const DashboardUser = ({ assignedForms: propAssignedForms, hideForm: propHideForm, currentUser: propCurrentUser }: DashboardUserProps) => {
-  const { getAssignedForms, hideFormForUser } = useForm();
+  const { forms, addAllowedUser, removeAllowedUser, isUserAllowed } = useForm();
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
@@ -26,7 +26,20 @@ const DashboardUser = ({ assignedForms: propAssignedForms, hideForm: propHideFor
 
   // Usar props si se proporcionan, de lo contrario usar contexto
   const user = propCurrentUser || currentUser;
-  const assignedForms = propAssignedForms || getAssignedForms(user?.email);
+  
+  // Get assigned forms for the user by filtering all forms where the user is allowed
+  const getAssignedFormsForUser = (email?: string) => {
+    if (!email) return [];
+    return forms.filter(form => form.isPrivate && form.allowedUsers.includes(email));
+  };
+  
+  const userAssignedForms = propAssignedForms || getAssignedFormsForUser(user?.email);
+  
+  // Función para ocultar un formulario (quitar el usuario de la lista de usuarios permitidos)
+  const hideFormForUser = (email: string, formId: string) => {
+    return removeAllowedUser(formId, email);
+  };
+  
   const hideForm = propHideForm || hideFormForUser;
 
   const handleHideForm = (formId: string) => {
@@ -43,9 +56,9 @@ const DashboardUser = ({ assignedForms: propAssignedForms, hideForm: propHideFor
         </h2>
       </div>
       
-      {assignedForms && assignedForms.length > 0 ? (
+      {userAssignedForms && userAssignedForms.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assignedForms.map(form => (
+          {userAssignedForms.map(form => (
             <AssignedFormCard 
               key={form.id} 
               form={form} 
