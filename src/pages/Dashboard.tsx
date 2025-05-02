@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/contexts/FormContext";
 import { useLocation } from "react-router-dom";
 import DashboardUser from "./DashboardUser";
-import DashboardAdmin from "/DashboardAdmin"; 
+import DashboardAdmin from "./DashboardAdmin";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
