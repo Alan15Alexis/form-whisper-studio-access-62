@@ -9,16 +9,20 @@ interface FormBuilderHeaderProps {
   isSaving: boolean;
   isEditMode: boolean;
   onSave: () => void;
+  formTitle: string;
 }
 
-const FormBuilderHeader = ({ isSaving, isEditMode, onSave }: FormBuilderHeaderProps) => {
+const FormBuilderHeader = ({ isSaving, isEditMode, onSave, formTitle }: FormBuilderHeaderProps) => {
   const navigate = useNavigate();
 
   return (
     <div className="mb-6 flex justify-between items-center">
-      <Button variant="outline" onClick={() => navigate(-1)}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back
-      </Button>
+      <div className="flex items-center gap-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        <h1 className="text-xl font-semibold">{formTitle || 'New Form'}</h1>
+      </div>
       
       <FormActions isSaving={isSaving} onSave={onSave} />
     </div>

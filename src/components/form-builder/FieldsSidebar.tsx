@@ -1,150 +1,44 @@
-import React, { useState } from "react";
-import { 
-  ChevronDown,
-  ChevronRight
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Droppable, Draggable } from "react-beautiful-dnd";
-import { FieldCategory } from "@/types/form";
-import { cn } from "@/lib/utils";
-import { renderIcon } from "@/lib/utils";
 
-const fieldCategories: FieldCategory[] = [
-  {
-    id: "essential",
-    title: "🔹 Esenciales",
-    fields: [
-      { type: "welcome", icon: "MessageSquare", label: "Mensaje de bienvenida" },
-      { type: "text", icon: "Type", label: "Texto corto" },
-      { type: "textarea", icon: "AlignLeft", label: "Texto largo" },
-      { type: "radio", icon: "Radio", label: "Selección individual" },
-      { type: "yesno", icon: "Check", label: "Sí / No" },
-      { type: "checkbox", icon: "CheckSquare", label: "Selección múltiple" },
-      { type: "select", icon: "ChevronDown", label: "Selección desplegable" },
-      { type: "image-select", icon: "Image", label: "Selección de imagen" },
-      { type: "number", icon: "Hash", label: "Número" }
-    ]
-  },
-  {
-    id: "contact",
-    title: "📇 Detalles de contacto",
-    fields: [
-      { type: "fullname", icon: "User", label: "Nombre completo" },
-      { type: "email", icon: "Mail", label: "Email" },
-      { type: "address", icon: "MapPin", label: "Dirección" },
-      { type: "phone", icon: "Phone", label: "Teléfono" }
-    ]
-  },
-  {
-    id: "uploads",
-    title: "📤 Cargas",
-    fields: [
-      { type: "image-upload", icon: "Image", label: "Subir imagen" },
-      { type: "file-upload", icon: "FileUp", label: "Subir archivo" },
-      { type: "drawing", icon: "PenTool", label: "Dibujo" }
-    ]
-  },
-  {
-    id: "ratings",
-    title: "⭐ Escalas de calificación",
-    fields: [
-      { type: "matrix", icon: "Grid3X3", label: "Matriz de selección" },
-      { type: "opinion-scale", icon: "BarChart", label: "Escala de opinión" },
-      { type: "star-rating", icon: "Star", label: "Calificación de estrellas" },
-      { type: "ranking", icon: "BarChart", label: "Clasificación" }
-    ]
-  },
-  {
-    id: "datetime",
-    title: "📅 Fecha y hora",
-    fields: [
-      { type: "timer", icon: "Timer", label: "Temporizador" },
-      { type: "date", icon: "Calendar", label: "Fecha" },
-      { type: "time", icon: "Clock", label: "Hora" }
-    ]
-  },
-  {
-    id: "legal",
-    title: "📜 Legales y consentimiento",
-    fields: [
-      { type: "terms", icon: "FileText", label: "Términos y condiciones" },
-      { type: "signature", icon: "Edit3", label: "Signature" }
-    ]
-  }
-];
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TypeIcon, ClipboardCheck, SquareCheck, ListIcon, Calendar, RadioIcon, StarIcon, Gauge, CircleDot, ListTodo } from "lucide-react";
 
-const FieldsSidebar = () => {
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
-    fieldCategories.reduce((acc, category) => ({ ...acc, [category.id]: true }), {})
-  );
+interface FieldsSidebarProps {
+  onAddField: (fieldType: string) => void;
+}
 
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [categoryId]: !prev[categoryId]
-    }));
-  };
+const FieldsSidebar = ({ onAddField }: FieldsSidebarProps) => {
+  const fieldTypes = [
+    { type: "text", label: "Text", icon: TypeIcon },
+    { type: "textarea", label: "Text Area", icon: ClipboardCheck },
+    { type: "checkbox", label: "Checkbox", icon: SquareCheck },
+    { type: "select", label: "Dropdown", icon: ListIcon },
+    { type: "radio", label: "Radio", icon: RadioIcon },
+    { type: "date", label: "Date", icon: Calendar },
+    { type: "rating", label: "Rating", icon: StarIcon },
+    { type: "slider", label: "Slider", icon: Gauge },
+    { type: "boolean", label: "Yes/No", icon: CircleDot },
+    { type: "checklist", label: "Checklist", icon: ListTodo },
+  ];
 
   return (
-    <Card className="sticky top-4">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Campos de Formulario</CardTitle>
-      </CardHeader>
-      <CardContent className="p-3">
-        <Droppable droppableId="FIELDS_SIDEBAR" isDropDisabled={true}>
-          {(provided) => (
-            <div
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-              className="space-y-4"
+    <Card>
+      <CardContent className="p-4">
+        <h3 className="text-lg font-semibold mb-3">Add Field</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {fieldTypes.map((field) => (
+            <Button
+              key={field.type}
+              variant="outline"
+              className="justify-start h-auto py-2 px-3"
+              onClick={() => onAddField(field.type)}
             >
-              {fieldCategories.map((category) => (
-                <div key={category.id} className="mb-4">
-                  <div 
-                    className="flex items-center justify-between cursor-pointer mb-1 p-1 hover:bg-muted/50 rounded-md"
-                    onClick={() => toggleCategory(category.id)}
-                  >
-                    <h3 className="text-sm font-medium">{category.title}</h3>
-                    {expandedCategories[category.id] ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  
-                  {expandedCategories[category.id] && (
-                    <div className="space-y-1 pl-2">
-                      {category.fields.map((field, index) => (
-                        <Draggable
-                          key={`${category.id}-${field.type}`}
-                          draggableId={`field-${field.type}`}
-                          index={index}
-                        >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={cn(
-                                "flex items-center gap-2 p-2 text-sm rounded-md cursor-move",
-                                "hover:bg-primary/5 transition-colors",
-                                snapshot.isDragging && "bg-primary/10 shadow-md"
-                              )}
-                            >
-                              {renderIcon(field.icon)}
-                              <span>{field.label}</span>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+              <field.icon className="mr-2 h-4 w-4" />
+              <span>{field.label}</span>
+            </Button>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
