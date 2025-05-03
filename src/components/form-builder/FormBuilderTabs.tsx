@@ -26,6 +26,8 @@ interface FormBuilderTabsProps {
   onHttpConfigChange?: (config: any) => void;
   addField: (fieldType: string) => void;
   formId?: string;
+  allowedUserName?: string;
+  setAllowedUserName?: (name: string) => void;
 }
 
 const FormBuilderTabs = ({
@@ -45,7 +47,9 @@ const FormBuilderTabs = ({
   onFormColorChange,
   onHttpConfigChange,
   addField,
-  formId
+  formId,
+  allowedUserName = "",
+  setAllowedUserName = () => {}
 }: FormBuilderTabsProps) => {
   return (
     <Tabs defaultValue="fields" className="w-full mt-6">
@@ -103,6 +107,8 @@ const FormBuilderTabs = ({
             onAllowedUserEmailChange={setAllowedUserEmail}
             onAddAllowedUser={addAllowedUser}
             onRemoveAllowedUser={removeAllowedUser}
+            allowedUserName={allowedUserName}
+            onAllowedUserNameChange={setAllowedUserName}
           />
         </TabsContent>
       )}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -6,6 +7,7 @@ import { Form, FormField, HttpConfig } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
 import { useDragAndDrop } from "./form-builder/useDragAndDrop";
+import { addInvitedUser } from "@/integrations/supabase/client";
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ export const useFormBuilder = (formId?: string) => {
   });
 
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
+  const [allowedUserName, setAllowedUserName] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Add new field function
@@ -117,7 +120,7 @@ export const useFormBuilder = (formId?: string) => {
     }));
   };
 
-  const addAllowedUser = () => {
+  const addAllowedUser = async () => {
     if (!allowedUserEmail || allowedUserEmail.trim() === '') {
       toast({
         title: 'Email required',
@@ -148,20 +151,34 @@ export const useFormBuilder = (formId?: string) => {
       return;
     }
 
-    // Add to the list
-    const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail];
-    setFormData(prev => ({ 
-      ...prev, 
-      allowedUsers: updatedAllowedUsers 
-    }));
-    
-    // Clear input
-    setAllowedUserEmail('');
-    
-    toast({
-      title: 'User added',
-      description: `${allowedUserEmail} has been added to allowed users`,
-    });
+    try {
+      // Add to the list
+      const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail];
+      setFormData(prev => ({ 
+        ...prev, 
+        allowedUsers: updatedAllowedUsers 
+      }));
+      
+      // Add to Supabase usuario_invitado table
+      const nombre = allowedUserName.trim() || 'Usuario Invitado';
+      await addInvitedUser(nombre, allowedUserEmail);
+      
+      // Clear inputs
+      setAllowedUserEmail('');
+      setAllowedUserName('');
+      
+      toast({
+        title: 'User added',
+        description: `${allowedUserEmail} has been added to allowed users`,
+      });
+    } catch (error) {
+      console.error('Error adding invited user:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not add user to the database',
+        variant: 'destructive'
+      });
+    }
   };
 
   const removeAllowedUser = (email: string) => {
@@ -237,6 +254,7 @@ export const useFormBuilder = (formId?: string) => {
   return {
     formData,
     allowedUserEmail,
+    allowedUserName,
     isSaving,
     isEditMode,
     handleTitleChange,
@@ -250,6 +268,7 @@ export const useFormBuilder = (formId?: string) => {
     removeAllowedUser,
     handleSubmit,
     setAllowedUserEmail,
+    setAllowedUserName,
     handleDragEnd,
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,

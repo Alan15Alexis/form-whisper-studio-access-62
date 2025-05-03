@@ -1,6 +1,4 @@
 
-//Paguina para crear y edeitar formularios
-import React from "react";
 import { useParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
@@ -10,10 +8,10 @@ import { DragDropContext } from "react-beautiful-dnd";
 
 const FormBuilder = () => {
   const { id } = useParams<{ id: string }>();
-  
   const {
     formData,
     allowedUserEmail,
+    allowedUserName,
     isSaving,
     isEditMode,
     handleTitleChange,
@@ -27,6 +25,7 @@ const FormBuilder = () => {
     removeAllowedUser,
     handleSubmit,
     setAllowedUserEmail,
+    setAllowedUserName,
     handleDragEnd,
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
@@ -34,20 +33,18 @@ const FormBuilder = () => {
     handleHttpConfigChange
   } = useFormBuilder(id);
 
-  const handleSave = () => {
-    handleSubmit();
-  };
-
   return (
-    <Layout title={isEditMode ? "Edit Form" : "Create Form"}>
-      <FormBuilderHeader 
-        isSaving={isSaving} 
-        isEditMode={isEditMode} 
-        onSave={handleSave}
-      />
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-          <FormBuilderTabs 
+    <Layout>
+      <div className="container py-8">
+        <FormBuilderHeader
+          isEditMode={isEditMode}
+          formTitle={formData.title || ''}
+          isSaving={isSaving}
+          onSave={handleSubmit}
+        />
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <FormBuilderTabs
             formData={formData}
             onTitleChange={handleTitleChange}
             onDescriptionChange={handleDescriptionChange}
@@ -65,9 +62,11 @@ const FormBuilder = () => {
             onHttpConfigChange={handleHttpConfigChange}
             addField={addField}
             formId={id}
+            allowedUserName={allowedUserName}
+            setAllowedUserName={setAllowedUserName}
           />
-        </form>
-      </DragDropContext>
+        </DragDropContext>
+      </div>
     </Layout>
   );
 };

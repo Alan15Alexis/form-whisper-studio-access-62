@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Mail, X, HelpCircle } from "lucide-react";
+import { UserPlus, Mail, X, HelpCircle, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AccessControlProps {
@@ -11,6 +11,8 @@ interface AccessControlProps {
   onAllowedUserEmailChange: (email: string) => void;
   onAddAllowedUser: () => void;
   onRemoveAllowedUser: (email: string) => void;
+  allowedUserName?: string;
+  onAllowedUserNameChange?: (name: string) => void;
 }
 
 const AccessControl = ({ 
@@ -18,7 +20,9 @@ const AccessControl = ({
   allowedUserEmail, 
   onAllowedUserEmailChange, 
   onAddAllowedUser, 
-  onRemoveAllowedUser 
+  onRemoveAllowedUser,
+  allowedUserName = "",
+  onAllowedUserNameChange = () => {}
 }: AccessControlProps) => {
   return (
     <Card className="p-6">
@@ -46,8 +50,18 @@ const AccessControl = ({
             Añade direcciones de correo electrónico de usuarios que pueden acceder a este formulario privado
           </p>
           
-          <div className="flex space-x-2 mb-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col space-y-2 mb-4">
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={allowedUserName}
+                onChange={(e) => onAllowedUserNameChange(e.target.value)}
+                placeholder="Nombre del usuario"
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 value={allowedUserEmail}
@@ -57,11 +71,12 @@ const AccessControl = ({
                 className="pl-10"
               />
             </div>
+            
             <Button 
               type="button" 
               onClick={onAddAllowedUser}
               disabled={!allowedUserEmail.trim()}
-              className="px-4"
+              className="w-full"
             >
               <UserPlus className="mr-2 h-4 w-4" />
               Añadir
