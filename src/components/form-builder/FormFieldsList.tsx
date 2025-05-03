@@ -9,14 +9,15 @@ interface FormFieldsListProps {
   updateField: (id: string, updatedField: FormField) => void;
   removeField: (id: string) => void;
   onToggleFormScoring?: (enabled: boolean) => void;
-  addField?: (type: string) => void;
+  formShowTotalScore?: boolean;
 }
 
 const FormFieldsList = ({ 
   formData, 
   updateField, 
   removeField,
-  onToggleFormScoring 
+  onToggleFormScoring,
+  formShowTotalScore
 }: FormFieldsListProps) => {
   return (
     <div className="space-y-4">
@@ -46,7 +47,7 @@ const FormFieldsList = ({
                         onChange={(updatedField) => updateField(field.id, updatedField)}
                         onDelete={() => removeField(field.id)}
                         isDragging={snapshot.isDragging}
-                        formShowTotalScore={formData.showTotalScore}
+                        formShowTotalScore={formShowTotalScore}
                         onToggleFormScoring={onToggleFormScoring}
                       />
                     </div>
@@ -63,7 +64,7 @@ const FormFieldsList = ({
         )}
       </Droppable>
       
-      {formData.showTotalScore && formData.fields && formData.fields.some(f => f.hasNumericValues) && (
+      {formShowTotalScore && formData.fields && formData.fields.some(f => f.hasNumericValues) && (
         <div className="mt-4 p-4 border rounded-lg bg-secondary/10">
           <h3 className="font-medium">Puntuación Total</h3>
           <p className="text-sm text-muted-foreground mt-1">

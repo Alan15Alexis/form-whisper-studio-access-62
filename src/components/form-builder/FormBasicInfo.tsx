@@ -28,7 +28,7 @@ const FormBasicInfo = ({ formData, onTitleChange, onDescriptionChange }: FormBas
           <Label htmlFor="title" className="text-lg font-medium">Título del Formulario</Label>
           <Input
             id="title"
-            value={formData.title}
+            value={formData.title || ''}
             onChange={handleTitleChange}
             placeholder="Introduce el título del formulario"
             required

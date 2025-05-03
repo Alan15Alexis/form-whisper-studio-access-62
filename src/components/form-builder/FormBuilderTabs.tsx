@@ -57,8 +57,7 @@ const FormBuilderTabs = ({
       
       <TabsContent value="fields" className="space-y-6">
         <FormBasicInfo 
-          title={formData.title || ''}
-          description={formData.description || ''}
+          formData={formData}
           onTitleChange={onTitleChange}
           onDescriptionChange={onDescriptionChange}
         />
@@ -66,7 +65,7 @@ const FormBuilderTabs = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-9">
             <FormFieldsList 
-              fields={formData.fields || []} 
+              formData={formData}
               updateField={updateField}
               removeField={removeField}
               formShowTotalScore={formData.showTotalScore}
