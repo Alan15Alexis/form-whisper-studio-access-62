@@ -33,6 +33,27 @@ export type Database = {
         }
         Relationships: []
       }
+      usuario_administrador: {
+        Row: {
+          contrasena: string | null
+          correo: string | null
+          id: number
+          nombre: string | null
+        }
+        Insert: {
+          contrasena?: string | null
+          correo?: string | null
+          id?: number
+          nombre?: string | null
+        }
+        Update: {
+          contrasena?: string | null
+          correo?: string | null
+          id?: number
+          nombre?: string | null
+        }
+        Relationships: []
+      }
       usuario_invitado: {
         Row: {
           correo: string | null

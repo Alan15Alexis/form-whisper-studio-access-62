@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User, AuthCredentials } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
+import { registerAdmin, validateAdminCredentials } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -40,17 +41,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (credentials: AuthCredentials & { role?: string }): Promise<User | null> => {
     setIsLoading(true);
     try {
-      // Simplified login - only requires email for user role
-      // For admin role, still check password
       const { email, password, role = "user" } = credentials;
       
-      // Admin login still requires password
+      // Para rol admin, verificar en la base de datos
       if (role === "admin") {
-        if (email === 'admin@beed.studio' && password === 'password123') {
+        const adminUser = await validateAdminCredentials(email, password);
+        
+        if (adminUser) {
           const user: User = {
-            id: '1',
-            email: 'admin@beed.studio',
-            name: 'Admin User',
+            id: adminUser.id.toString(),
+            email: adminUser.correo,
+            name: adminUser.nombre,
             role: 'admin'
           };
           
@@ -119,30 +120,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (credentials: AuthCredentials & { name: string, role?: string }): Promise<User | null> => {
     setIsLoading(true);
     try {
-      // Mock registration - would be replaced with API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { email, password, name, role = "user" } = credentials;
       
-      const { email, name, role = "user" } = credentials;
+      // Registrar en la tabla usuario_invitado
+      const newUser = await registerAdmin(name, email, password);
       
-      // Type casting the role to ensure it matches expected values
-      const userRole: "admin" | "user" = role === "admin" ? "admin" : "user";
-      
-      const user: User = {
-        id: Math.random().toString(36).substring(2, 11), // Generate a random ID
-        email,
-        name,
-        role: userRole
-      };
-      
-      localStorage.setItem('user', JSON.stringify(user));
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      toast({
-        title: 'Registration successful',
-        description: `Tu cuenta ${userRole === "admin" ? "de administrador" : "de usuario"} ha sido creada`,
-        variant: 'default',
-      });
-      return user;
+      if (newUser) {
+        // Type casting the role to ensure it matches expected values
+        const userRole: "admin" | "user" = role === "admin" ? "admin" : "user";
+        
+        const user: User = {
+          id: newUser.id.toString(),
+          email,
+          name,
+          role: userRole
+        };
+        
+        localStorage.setItem('user', JSON.stringify(user));
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        toast({
+          title: 'Registration successful',
+          description: `Tu cuenta ${userRole === "admin" ? "de administrador" : "de usuario"} ha sido creada`,
+          variant: 'default',
+        });
+        return user;
+      } else {
+        throw new Error("No se pudo registrar al usuario");
+      }
     } catch (error) {
       console.error('Registration error:', error);
       toast({

@@ -70,3 +70,45 @@ export const validateInvitedUser = async (correo: string) => {
   
   return !!data;
 };
+
+// Función para registrar un nuevo administrador
+export const registerAdmin = async (nombre: string, correo: string, contrasena: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('usuario_invitado')
+      .insert([{ nombre, correo, contrasena }])
+      .select();
+    
+    if (error) {
+      console.error('Error registrando administrador:', error);
+      throw error;
+    }
+    
+    return data && data[0];
+  } catch (error) {
+    console.error('Error en el registro:', error);
+    throw error;
+  }
+};
+
+// Función para validar credenciales de administrador
+export const validateAdminCredentials = async (correo: string, contrasena: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('usuario_invitado')
+      .select('*')
+      .eq('correo', correo.toLowerCase())
+      .eq('contrasena', contrasena)
+      .single();
+    
+    if (error) {
+      console.error('Error validando credenciales:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error en la validación:', error);
+    return null;
+  }
+};
