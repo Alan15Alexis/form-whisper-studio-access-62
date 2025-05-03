@@ -74,8 +74,9 @@ export const validateInvitedUser = async (correo: string) => {
 // Función para registrar un nuevo administrador
 export const registerAdmin = async (nombre: string, correo: string, contrasena: string) => {
   try {
+    // Insert into usuario_administrador table
     const { data, error } = await supabase
-      .from('usuario_invitado')
+      .from('usuario_administrador')
       .insert([{ nombre, correo, contrasena }])
       .select();
     
@@ -95,7 +96,7 @@ export const registerAdmin = async (nombre: string, correo: string, contrasena: 
 export const validateAdminCredentials = async (correo: string, contrasena: string) => {
   try {
     const { data, error } = await supabase
-      .from('usuario_invitado')
+      .from('usuario_administrador')
       .select('*')
       .eq('correo', correo.toLowerCase())
       .eq('contrasena', contrasena)

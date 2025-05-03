@@ -19,7 +19,6 @@ import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import PrivateRoute from "./components/PrivateRoute";
 import PublicRoute from "./components/PublicRoute";
-import DashboardUser from "./pages/DashboardUser";
 import DashboardAdmin from "./pages/DashboardAdmin";
 
 const queryClient = new QueryClient();
@@ -36,12 +35,11 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/dashboard-user" element={<PrivateRoute><DashboardUser /></PrivateRoute>} />
-              <Route path="/dashboard-admin" element={<PrivateRoute><DashboardAdmin /></PrivateRoute>} />
+              <Route path="/dashboard-admin" element={<PrivateRoute role="admin"><DashboardAdmin /></PrivateRoute>} />
               <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
-              <Route path="/forms/new" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
-              <Route path="/forms/:id/edit" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
-              <Route path="/forms/:id/responses" element={<PrivateRoute><FormResponses /></PrivateRoute>} />
+              <Route path="/forms/new" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
+              <Route path="/forms/:id/edit" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
+              <Route path="/forms/:id/responses" element={<PrivateRoute role="admin"><FormResponses /></PrivateRoute>} />
               <Route path="/forms/:id" element={<FormView />} />
               <Route path="/forms/:id/access/:token" element={<FormView />} />
               <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />

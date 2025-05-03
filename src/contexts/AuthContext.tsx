@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User, AuthCredentials } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
-import { registerAdmin, validateAdminCredentials } from '@/integrations/supabase/client';
+import { registerAdmin, validateAdminCredentials, validateInvitedUser } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -16,7 +16,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock authentication service - would be replaced with real authentication
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { email, password, role = "user" } = credentials;
       
-      // Para rol admin, verificar en la base de datos
+      // Para rol admin, verificar en la tabla usuario_administrador
       if (role === "admin") {
         const adminUser = await validateAdminCredentials(email, password);
         
@@ -73,25 +72,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return null;
         }
       } 
-      // Para usuarios regulares, solo requerimos email
+      // Para usuarios regulares, validamos si están en la tabla usuario_invitado
       else {
-        // Crear usuario con el email proporcionado
-        const user: User = {
-          id: Math.random().toString(36).substring(2, 11), // Generate a random ID
-          email,
-          name: email.split('@')[0], // Use part of email as name
-          role: 'user'
-        };
+        const isInvited = await validateInvitedUser(email);
         
-        localStorage.setItem('user', JSON.stringify(user));
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        toast({
-          title: 'Acceso concedido',
-          description: `Bienvenido a tus formularios asignados`,
-          variant: 'default',
-        });
-        return user;
+        if (isInvited) {
+          // Create user object
+          const user: User = {
+            id: Math.random().toString(36).substring(2, 11), // Generate a random ID
+            email,
+            name: email.split('@')[0], // Use part of email as name
+            role: 'user'
+          };
+          
+          localStorage.setItem('user', JSON.stringify(user));
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          toast({
+            title: 'Acceso concedido',
+            description: `Bienvenido a tus formularios asignados`,
+            variant: 'default',
+          });
+          return user;
+        } else {
+          toast({
+            title: 'Acceso denegado',
+            description: 'Tu correo no está autorizado para acceder',
+            variant: 'destructive',
+          });
+          return null;
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -122,31 +132,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { email, password, name, role = "user" } = credentials;
       
-      // Registrar en la tabla usuario_invitado
-      const newUser = await registerAdmin(name, email, password);
-      
-      if (newUser) {
-        // Type casting the role to ensure it matches expected values
-        const userRole: "admin" | "user" = role === "admin" ? "admin" : "user";
+      if (role === "admin") {
+        // Registrar en la tabla usuario_administrador
+        const newAdmin = await registerAdmin(name, email, password);
         
-        const user: User = {
-          id: newUser.id.toString(),
-          email,
-          name,
-          role: userRole
-        };
-        
-        localStorage.setItem('user', JSON.stringify(user));
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        toast({
-          title: 'Registration successful',
-          description: `Tu cuenta ${userRole === "admin" ? "de administrador" : "de usuario"} ha sido creada`,
-          variant: 'default',
-        });
-        return user;
+        if (newAdmin) {
+          const user: User = {
+            id: newAdmin.id.toString(),
+            email,
+            name,
+            role: "admin"
+          };
+          
+          localStorage.setItem('user', JSON.stringify(user));
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          toast({
+            title: 'Registration successful',
+            description: `Tu cuenta de administrador ha sido creada`,
+            variant: 'default',
+          });
+          return user;
+        } else {
+          throw new Error("No se pudo registrar al administrador");
+        }
       } else {
-        throw new Error("No se pudo registrar al usuario");
+        // Para usuarios regulares, podríamos registrarlos en usuario_invitado
+        throw new Error("El registro de usuarios regulares no está implementado");
       }
     } catch (error) {
       console.error('Registration error:', error);
