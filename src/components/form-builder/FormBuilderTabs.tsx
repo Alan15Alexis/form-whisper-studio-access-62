@@ -90,7 +90,7 @@ const FormBuilderTabs = ({
           onFormColorChange={onFormColorChange}
           httpConfig={formData.httpConfig}
           onHttpConfigChange={onHttpConfigChange}
-          formFields={formData.fields}
+          formFields={formData.fields || []}
           formId={formId}
         />
       </TabsContent>

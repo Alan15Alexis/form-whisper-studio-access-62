@@ -26,20 +26,20 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
       ? { status: config.lastResponse.status, data: config.lastResponse.data } 
       : null
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [editableJsonPreview, setEditableJsonPreview] = useState<string>("");
   const [jsonError, setJsonError] = useState<string>("");
-  const [bodyFields, setBodyFields] = useState<BodyField[]>(
-    config.body ? JSON.parse(config.body) : DEFAULT_BODY_FIELDS
-  );
+  const [bodyFields, setBodyFields] = useState<BodyField[]>(DEFAULT_BODY_FIELDS);
 
   // Effect to initialize bodyFields from config.body
   useEffect(() => {
     if (config.body) {
       try {
         const parsedFields = JSON.parse(config.body);
-        setBodyFields(parsedFields);
-        updateJsonPreview(parsedFields);
+        // Ensure parsed fields is an array or use default
+        const validFields = Array.isArray(parsedFields) ? parsedFields : DEFAULT_BODY_FIELDS;
+        setBodyFields(validFields);
+        updateJsonPreview(validFields);
       } catch (e) {
         console.error("Error parsing body fields:", e);
         setBodyFields(DEFAULT_BODY_FIELDS);
@@ -53,9 +53,12 @@ export const useHttpConfig = ({ config, onConfigChange, formFields }: UseHttpCon
 
   const updateJsonPreview = (fields: BodyField[]) => {
     try {
+      // Ensure fields is an array
+      const safeFields = Array.isArray(fields) ? fields : DEFAULT_BODY_FIELDS;
+      
       // Generate a preview of what the JSON will look like when sent
       const previewObj: Record<string, any> = {};
-      fields.forEach(field => {
+      safeFields.forEach(field => {
         if (field.key) {
           if (field.fieldId === "custom") {
             previewObj[field.key] = "valor personalizado";

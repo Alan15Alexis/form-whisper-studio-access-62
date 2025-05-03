@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      formulario: {
+        Row: {
+          created_at: string
+          id: number
+          nombre_formulario: string | null
+          nombre_invitado: string | null
+          respuestas: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          nombre_formulario?: string | null
+          nombre_invitado?: string | null
+          respuestas?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          nombre_formulario?: string | null
+          nombre_invitado?: string | null
+          respuestas?: Json | null
+        }
+        Relationships: []
+      }
       usuario_invitado: {
         Row: {
           correo: string | null

@@ -26,6 +26,9 @@ const HttpBodyEditor: React.FC<HttpBodyEditorProps> = ({
   onFieldChange,
   enabled = true,
 }) => {
+  // Ensure bodyFields is always an array, even if it's passed as undefined, null, or a non-array value
+  const safeBodyFields = Array.isArray(bodyFields) ? bodyFields : [];
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -44,7 +47,7 @@ const HttpBodyEditor: React.FC<HttpBodyEditorProps> = ({
       </div>
       
       <div className="space-y-3">
-        {bodyFields.map((field) => (
+        {safeBodyFields.map((field) => (
           <div key={field.id} className="flex items-center gap-2">
             <div className="flex-1">
               <Input
@@ -81,7 +84,7 @@ const HttpBodyEditor: React.FC<HttpBodyEditorProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => onRemoveField(field.id)}
-              disabled={!enabled || bodyFields.length <= 1}
+              disabled={!enabled || safeBodyFields.length <= 1}
               className="flex-none"
             >
               <Trash2 className="h-4 w-4 text-red-500" />
