@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HttpConfig } from "@/types/form";
 import HttpConfigSettings from "./HttpConfigSettings";
 import { useAuth } from "@/contexts/AuthContext";
+import InvitedUsersManager from "./InvitedUsersManager";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -29,6 +30,7 @@ interface FormSettingsProps {
   httpConfig?: HttpConfig;
   onHttpConfigChange?: (config: HttpConfig) => void;
   formFields?: any[];
+  formId?: string;
 }
 
 // Cambia la declaración del componente para aceptar formFields
@@ -43,7 +45,8 @@ const FormSettings = ({
   onFormColorChange,
   httpConfig,
   onHttpConfigChange,
-  formFields = []
+  formFields = [],
+  formId = ""
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -137,6 +140,11 @@ const FormSettings = ({
           </div>
         </div>
       </Card>
+
+      {/* Gestión de usuarios invitados - Solo visible para administradores */}
+      {isAdmin && isPrivate && formId && (
+        <InvitedUsersManager formId={formId} />
+      )}
       
       {/* Configuración HTTP - Solo visible para administradores */}
       <HttpConfigSettings 

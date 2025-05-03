@@ -7,18 +7,24 @@ import DashboardUser from "./DashboardUser";
 import DashboardAdmin from "./DashboardAdmin";
 
 const Dashboard = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const { forms, isUserAllowed } = useForm();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect based on user role
+    // If not authenticated, redirect to login
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    
+    // If authenticated, redirect based on user role
     if (currentUser?.role === "admin") {
       navigate("/dashboard-admin");
     } else if (currentUser?.role === "user") {
-      navigate("/assigned-forms"); // Cambiamos la redirección aquí
+      navigate("/assigned-forms");
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, isAuthenticated]);
 
   // This component will just handle redirection and won't render much
   return (

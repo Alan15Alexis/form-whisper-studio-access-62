@@ -9,6 +9,7 @@ import { LockKeyhole, Mail, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { validateInvitedUser } from "@/integrations/supabase/client";
 
 interface FormAccessProps {
   onAccessGranted: () => void;
@@ -37,11 +38,16 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
     setValidatingAccess(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // First check if the user is allowed via standard access control
+      const hasStandardAccess = isUserAllowed(emailToCheck);
       
-      const hasAccess = isUserAllowed(emailToCheck);
+      // If not allowed via standard access, check in the usuario_invitado table
+      let hasInvitedAccess = false;
+      if (!hasStandardAccess) {
+        hasInvitedAccess = await validateInvitedUser(emailToCheck);
+      }
       
-      if (hasAccess) {
+      if (hasStandardAccess || hasInvitedAccess) {
         toast({
           title: "Acceso Concedido",
           description: "Tu correo electrónico ha sido verificado. Tienes acceso a este formulario.",
@@ -60,6 +66,7 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
         description: "Ha ocurrido un error al verificar tu acceso.",
         variant: "destructive", 
       });
+      console.error("Error validating access:", error);
     } finally {
       setValidatingAccess(false);
     }
