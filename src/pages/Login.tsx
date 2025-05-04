@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ const Login = () => {
   const [isUserRegistering, setIsUserRegistering] = useState(false);
   const [userRegisterError, setUserRegisterError] = useState("");
   
-  const [activeTab, setActiveTab] = useState<"login" | "register" | "register-user">("login");
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -155,24 +154,21 @@ const Login = () => {
           <Tabs 
             defaultValue="login" 
             value={activeTab} 
-            onValueChange={(value) => setActiveTab(value as "login" | "register" | "register-user")}
+            onValueChange={(value) => setActiveTab(value as "login" | "register")}
             className="w-full"
           >
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">
                 {activeTab === "login" && "Iniciar sesión"}
                 {activeTab === "register" && "Crear cuenta de administrador"}
-                {activeTab === "register-user" && "Registrar usuario invitado"}
               </CardTitle>
               <CardDescription>
                 {activeTab === "login" && "Introduce tus credenciales para acceder al panel de control"}
                 {activeTab === "register" && "Ingresa tus datos para registrarte como administrador"}
-                {activeTab === "register-user" && "Ingresa los datos para registrar un usuario invitado"}
               </CardDescription>
-              <TabsList className="grid grid-cols-3">
+              <TabsList className="grid grid-cols-2">
                 <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
                 <TabsTrigger value="register">Reg. Admin</TabsTrigger>
-                <TabsTrigger value="register-user">Reg. Usuario</TabsTrigger>
               </TabsList>
             </CardHeader>
 
