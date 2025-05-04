@@ -7,9 +7,10 @@ import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
 import { FormField as FormFieldType, Form as FormType } from "@/types/form";
 import FormField from "@/components/form-view/FormField";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import FormAccess from "@/components/form-view/FormAccess";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const FormView = () => {
   const { id, token } = useParams();
@@ -20,6 +21,7 @@ const FormView = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accessValidated, setAccessValidated] = useState(false);
   const [validationLoading, setValidationLoading] = useState(true);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const navigate = useNavigate();
 
   // Get form by ID function
@@ -153,6 +155,18 @@ const FormView = () => {
     setAccessValidated(true);
   };
 
+  const handleNext = () => {
+    if (form && currentQuestionIndex < form.fields.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
   if (validationLoading) {
     return (
       <Layout hideNav>
@@ -193,52 +207,101 @@ const FormView = () => {
     );
   }
 
+  // If we have a form, show the current question in a card
+  const currentField = form.fields[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === form.fields.length - 1;
+  const isFirstQuestion = currentQuestionIndex === 0;
+  
+  const cardStyle = form.formColor ? { 
+    borderTop: `4px solid ${form.formColor}`,
+    boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
+  } : {};
+
+  const buttonStyle = form.formColor ? {
+    backgroundColor: form.formColor,
+    borderColor: form.formColor
+  } : {};
+
   return (
     <Layout hideNav>
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Button variant="outline" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
+          <div className="text-sm text-gray-500">
+            Pregunta {currentQuestionIndex + 1} de {form.fields.length}
+          </div>
         </div>
-        
-        <div className="bg-white shadow-md rounded-lg p-8" 
-             style={form.formColor ? { borderTop: `4px solid ${form.formColor}` } : {}}>
-          <h1 className="text-3xl font-bold mb-2" style={form.formColor ? { color: form.formColor } : {}}>
-            {form.title}
-          </h1>
+
+        <Card style={cardStyle} className="mb-6">
+          <CardHeader>
+            <CardTitle 
+              style={form.formColor ? { color: form.formColor } : {}}
+              className="text-2xl font-bold"
+            >
+              {form.title}
+            </CardTitle>
+            {form.description && (
+              <CardDescription className="text-gray-600">
+                {form.description}
+              </CardDescription>
+            )}
+          </CardHeader>
           
-          {form.description && (
-            <p className="text-gray-600 mb-8">{form.description}</p>
-          )}
-          
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {form.fields.map((field: FormFieldType) => (
-              <div key={field.id} className="form-field">
-                <FormField
-                  field={field}
-                  value={formResponses[field.id] || ""}
-                  onChange={(value) => handleFieldChange(field.id, value)}
-                />
-              </div>
-            ))}
-            
-            <div className="pt-4">
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="w-full md:w-auto"
-                style={form.formColor ? { 
-                  backgroundColor: form.formColor,
-                  borderColor: form.formColor 
-                } : {}}
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {isSubmitting ? "Enviando respuesta..." : "Enviar respuesta"}
-              </Button>
+          <CardContent>
+            <div className="form-field border-0 shadow-none p-0">
+              <FormField
+                field={currentField}
+                value={formResponses[currentField.id] || ""}
+                onChange={(value) => handleFieldChange(currentField.id, value)}
+              />
             </div>
-          </form>
+          </CardContent>
+          
+          <CardFooter className="flex justify-between pt-4">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={isFirstQuestion}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Anterior
+            </Button>
+            
+            <div>
+              {isLastQuestion ? (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  style={buttonStyle}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {isSubmitting ? "Enviando..." : "Enviar respuesta"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNext}
+                  style={buttonStyle}
+                >
+                  Siguiente
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+        
+        {/* Progress indicator */}
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+          <div 
+            className="h-2.5 rounded-full" 
+            style={{ 
+              width: `${((currentQuestionIndex + 1) / form.fields.length) * 100}%`,
+              backgroundColor: form.formColor || '#686df3'
+            }}
+          ></div>
         </div>
       </div>
     </Layout>
