@@ -57,23 +57,31 @@ export const removeInvitedUser = async (id: number) => {
 
 // Function to validate if a user is invited
 export const validateInvitedUser = async (correo: string) => {
-  const { data, error } = await supabase
-    .from('usuario_invitado')
-    .select('*')
-    .eq('correo', correo.toLowerCase())
-    .single();
-  
-  if (error && error.code !== 'PGRST116') { // Not found error code
-    console.error('Error validating invited user:', error);
+  console.log("Validating invited user:", correo);
+  try {
+    const { data, error } = await supabase
+      .from('usuario_invitado')
+      .select('*')
+      .eq('correo', correo.toLowerCase())
+      .maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') { // Not found error code
+      console.error('Error validating invited user:', error);
+      return false;
+    }
+    
+    console.log("Invited user validation result:", !!data);
+    return !!data;
+  } catch (err) {
+    console.error("Exception validating invited user:", err);
     return false;
   }
-  
-  return !!data;
 };
 
 // Función para registrar un nuevo administrador
 export const registerAdmin = async (nombre: string, correo: string, contrasena: string) => {
   try {
+    console.log("Registering admin:", { nombre, correo });
     // Insert into usuario_administrador table
     const { data, error } = await supabase
       .from('usuario_administrador')
@@ -85,6 +93,7 @@ export const registerAdmin = async (nombre: string, correo: string, contrasena: 
       throw error;
     }
     
+    console.log("Admin registered successfully:", data?.[0]);
     return data && data[0];
   } catch (error) {
     console.error('Error en el registro:', error);
@@ -95,18 +104,20 @@ export const registerAdmin = async (nombre: string, correo: string, contrasena: 
 // Función para validar credenciales de administrador
 export const validateAdminCredentials = async (correo: string, contrasena: string) => {
   try {
+    console.log("Validating admin credentials for:", correo);
     const { data, error } = await supabase
       .from('usuario_administrador')
       .select('*')
       .eq('correo', correo.toLowerCase())
       .eq('contrasena', contrasena)
-      .single();
+      .maybeSingle();
     
     if (error) {
       console.error('Error validando credenciales:', error);
       return null;
     }
     
+    console.log("Admin validation result:", !!data);
     return data;
   } catch (error) {
     console.error('Error en la validación:', error);

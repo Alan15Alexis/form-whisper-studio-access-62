@@ -40,10 +40,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (credentials: AuthCredentials & { role?: string }): Promise<User | null> => {
     setIsLoading(true);
     try {
-      const { email, password, role = "user" } = credentials;
+      const { email, password, role } = credentials;
       
-      // Para rol admin, verificar en la tabla usuario_administrador
-      if (role === "admin") {
+      // Check if this is an admin login attempt
+      if (role === "admin" || (email === "admin@beed.studio" || email === "admin@correo.com")) {
+        // Try to validate as admin
         const adminUser = await validateAdminCredentials(email, password);
         
         if (adminUser) {
@@ -63,21 +64,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             variant: 'default',
           });
           return user;
-        } else {
-          toast({
-            title: 'Login failed',
-            description: 'Credenciales inválidas para el rol de administrador',
-            variant: 'destructive',
-          });
-          return null;
         }
       } 
-      // Para usuarios regulares, validamos si están en la tabla usuario_invitado
-      else {
+      
+      // If not admin or admin validation failed, try as regular user
+      if (role !== "admin") {
         const isInvited = await validateInvitedUser(email);
         
         if (isInvited) {
-          // Create user object
+          // Create user object for invited user
           const user: User = {
             id: Math.random().toString(36).substring(2, 11), // Generate a random ID
             email,
@@ -103,6 +98,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return null;
         }
       }
+      
+      // If we get here, authentication failed
+      toast({
+        title: 'Login failed',
+        description: 'Credenciales inválidas. Por favor, verifica e intenta nuevamente.',
+        variant: 'destructive',
+      });
+      return null;
     } catch (error) {
       console.error('Login error:', error);
       toast({

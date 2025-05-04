@@ -18,7 +18,7 @@ interface FormAccessProps {
 
 const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
   const navigate = useNavigate();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser, isAuthenticated, login } = useAuth();
   const [accessEmail, setAccessEmail] = useState("");
   const [validatingAccess, setValidatingAccess] = useState(false);
 
@@ -47,7 +47,22 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
         hasInvitedAccess = await validateInvitedUser(emailToCheck);
       }
       
+      console.log("Access check results:", { 
+        email: emailToCheck, 
+        standardAccess: hasStandardAccess, 
+        invitedAccess: hasInvitedAccess 
+      });
+      
       if (hasStandardAccess || hasInvitedAccess) {
+        // If not already authenticated, log the user in
+        if (!isAuthenticated) {
+          await login({ 
+            email: emailToCheck, 
+            password: "defaultPassword", 
+            role: "user" 
+          });
+        }
+        
         toast({
           title: "Acceso Concedido",
           description: "Tu correo electrónico ha sido verificado. Tienes acceso a este formulario.",

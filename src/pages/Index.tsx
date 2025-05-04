@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "@/contexts/form";
+import { validateInvitedUser } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { isAuthenticated, isAdmin, login } = useAuth();
@@ -21,7 +22,7 @@ const Index = () => {
   // Default form to check against (first form in the list)
   const defaultFormId = forms.length > 0 ? forms[0].id : "1";
   
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!email.trim() || !email.includes('@')) {
       toast({
         title: "Error",
@@ -33,17 +34,23 @@ const Index = () => {
 
     setIsValidating(true);
 
-    setTimeout(() => {
+    try {
+      // First check standard access
       const allowed = isUserAllowed(defaultFormId, email);
+      
+      // Then check if user is in invited users table
+      const isInvited = await validateInvitedUser(email);
+      
+      console.log("Access check results:", { email, standardAccess: allowed, invitedAccess: isInvited });
 
-      if (allowed) {
+      if (allowed || isInvited) {
         toast({
           title: "Acceso concedido",
           description: "Redirigiendo a formularios asignados...",
         });
 
         // Autenticar al usuario (solo con email, sin verificar contraseña)
-        login({ email, password: "defaultPassword", role: "user" });
+        await login({ email, password: "defaultPassword", role: "user" });
 
         // Redirigir directamente a la página de Formularios Asignados
         navigate('/assigned-forms');
@@ -54,9 +61,16 @@ const Index = () => {
           variant: "destructive",
         });
       }
-
+    } catch (error) {
+      console.error("Error validating access:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al verificar el acceso",
+        variant: "destructive",
+      });
+    } finally {
       setIsValidating(false);
-    }, 800);
+    }
   };
   
   return (
