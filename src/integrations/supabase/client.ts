@@ -29,7 +29,7 @@ export const fetchInvitedUsers = async () => {
 export const addInvitedUser = async (nombre: string, correo: string) => {
   const { data, error } = await supabase
     .from('usuario_invitado')
-    .insert([{ nombre, correo }])
+    .insert([{ nombre, correo: correo.toLowerCase() }])
     .select();
   
   if (error) {
@@ -85,7 +85,7 @@ export const registerAdmin = async (nombre: string, correo: string, contrasena: 
     // Insert into usuario_administrador table
     const { data, error } = await supabase
       .from('usuario_administrador')
-      .insert([{ nombre, correo, contrasena }])
+      .insert([{ nombre, correo: correo.toLowerCase(), contrasena }])
       .select();
     
     if (error) {

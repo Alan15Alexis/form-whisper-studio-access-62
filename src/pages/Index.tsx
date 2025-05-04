@@ -35,29 +35,31 @@ const Index = () => {
     setIsValidating(true);
 
     try {
-      // First check standard access
-      const allowed = isUserAllowed(defaultFormId, email);
-      
-      // Then check if user is in invited users table
+      // Check if user is in the invited users table - this is the primary validation
       const isInvited = await validateInvitedUser(email);
       
-      console.log("Access check results:", { email, standardAccess: allowed, invitedAccess: isInvited });
+      // Log detailed information for debugging
+      console.log("Access validation results:", {
+        email,
+        isInvitedUser: isInvited,
+        standardAccessCheck: isUserAllowed(defaultFormId, email)
+      });
 
-      if (allowed || isInvited) {
+      if (isInvited) {
         toast({
           title: "Acceso concedido",
           description: "Redirigiendo a formularios asignados...",
         });
 
-        // Autenticar al usuario (solo con email, sin verificar contraseña)
-        await login({ email, password: "defaultPassword", role: "user" });
+        // Authenticate the user with email only (no password check for invited users)
+        await login({ email, password: "", role: "user" });
 
-        // Redirigir directamente a la página de Formularios Asignados
+        // Redirect directly to Assigned Forms page
         navigate('/assigned-forms');
       } else {
         toast({
           title: "Acceso denegado",
-          description: "Tu correo no está autorizado para acceder a este formulario",
+          description: "Tu correo no está registrado en nuestra lista de usuarios invitados",
           variant: "destructive",
         });
       }

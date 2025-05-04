@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User, AuthCredentials } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
@@ -64,48 +63,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             variant: 'default',
           });
           return user;
-        }
-      } 
-      
-      // If not admin or admin validation failed, try as regular user
-      if (role !== "admin") {
-        const isInvited = await validateInvitedUser(email);
-        
-        if (isInvited) {
-          // Create user object for invited user
-          const user: User = {
-            id: Math.random().toString(36).substring(2, 11), // Generate a random ID
-            email,
-            name: email.split('@')[0], // Use part of email as name
-            role: 'user'
-          };
-          
-          localStorage.setItem('user', JSON.stringify(user));
-          setCurrentUser(user);
-          setIsAuthenticated(true);
-          toast({
-            title: 'Acceso concedido',
-            description: `Bienvenido a tus formularios asignados`,
-            variant: 'default',
-          });
-          return user;
         } else {
           toast({
-            title: 'Acceso denegado',
-            description: 'Tu correo no está autorizado para acceder',
+            title: 'Login failed',
+            description: 'Credenciales de administrador inválidas.',
             variant: 'destructive',
           });
           return null;
         }
+      } 
+      
+      // If not admin login or admin validation failed, try as regular user
+      // For regular users, we ONLY check if they are in the usuario_invitado table
+      const isInvited = await validateInvitedUser(email);
+      
+      if (isInvited) {
+        console.log("User is in the invited users table, authentication successful");
+        // Create user object for invited user - no password validation needed
+        const user: User = {
+          id: Math.random().toString(36).substring(2, 11), // Generate a random ID
+          email,
+          name: email.split('@')[0], // Use part of email as name
+          role: 'user'
+        };
+        
+        localStorage.setItem('user', JSON.stringify(user));
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        toast({
+          title: 'Acceso concedido',
+          description: `Bienvenido a tus formularios asignados`,
+          variant: 'default',
+        });
+        return user;
+      } else {
+        console.log("User is not in the invited users table, authentication failed");
+        toast({
+          title: 'Acceso denegado',
+          description: 'Tu correo no está autorizado para acceder',
+          variant: 'destructive',
+        });
+        return null;
       }
       
-      // If we get here, authentication failed
-      toast({
-        title: 'Login failed',
-        description: 'Credenciales inválidas. Por favor, verifica e intenta nuevamente.',
-        variant: 'destructive',
-      });
-      return null;
     } catch (error) {
       console.error('Login error:', error);
       toast({

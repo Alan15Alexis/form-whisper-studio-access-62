@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,7 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
   const [validatingAccess, setValidatingAccess] = useState(false);
 
   const handleAccessRequest = async () => {
-    // Si el usuario está autenticado, usar su email
+    // If user is authenticated, use their email
     const emailToCheck = isAuthenticated && currentUser?.email ? currentUser.email : accessEmail.trim();
     
     if (!emailToCheck) {
@@ -38,27 +37,24 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
     setValidatingAccess(true);
     
     try {
-      // First check if the user is allowed via standard access control
+      // Check if the user is in the invited users table - PRIMARY validation method
+      const isInvited = await validateInvitedUser(emailToCheck);
+      
+      // We also check standard access as a fallback
       const hasStandardAccess = isUserAllowed(emailToCheck);
       
-      // If not allowed via standard access, check in the usuario_invitado table
-      let hasInvitedAccess = false;
-      if (!hasStandardAccess) {
-        hasInvitedAccess = await validateInvitedUser(emailToCheck);
-      }
-      
-      console.log("Access check results:", { 
+      console.log("Form access check results:", { 
         email: emailToCheck, 
-        standardAccess: hasStandardAccess, 
-        invitedAccess: hasInvitedAccess 
+        invitedUserAccess: isInvited,
+        standardAccess: hasStandardAccess
       });
       
-      if (hasStandardAccess || hasInvitedAccess) {
+      if (isInvited || hasStandardAccess) {
         // If not already authenticated, log the user in
         if (!isAuthenticated) {
           await login({ 
             email: emailToCheck, 
-            password: "defaultPassword", 
+            password: "", // No password needed for invited users
             role: "user" 
           });
         }
@@ -71,7 +67,7 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
       } else {
         toast({
           title: "Acceso Denegado",
-          description: "Tu correo electrónico no está en la lista de usuarios permitidos para este formulario.",
+          description: "Tu correo electrónico no está en la lista de usuarios invitados.",
           variant: "destructive",
         });
       }
@@ -87,7 +83,7 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
     }
   };
 
-  // Si el usuario está autenticado, mostrar su email automáticamente
+  // If user is authenticated, show their email automatically
   if (isAuthenticated && currentUser?.email && !accessEmail) {
     setAccessEmail(currentUser.email);
   }
