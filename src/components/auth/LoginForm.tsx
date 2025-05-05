@@ -24,25 +24,14 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // Check if attempting to login as admin
-      const isAdminLogin = email === "admin@beed.studio" || email === "admin@correo.com" || 
-                           email.includes("admin");
-      
-      // Make sure we're providing both email and password for admin authentication
-      if (isAdminLogin && !password) {
-        setError("La contraseña es requerida para iniciar sesión como administrador.");
+      if (!email.trim() || !password.trim()) {
+        setError("Por favor, ingresa tu correo y contraseña.");
         setIsLoading(false);
         return;
       }
       
       // Authentication logic using both email and password
-      const user = { 
-        email, 
-        password,
-        role: isAdminLogin ? "admin" : "user"
-      };
-      
-      const loggedInUser = await login(user);
+      const loggedInUser = await login({ email, password });
 
       if (loggedInUser) {
         // Redirect based on role
@@ -78,7 +67,7 @@ const LoginForm = () => {
           <Input
             id="email"
             type="email"
-            placeholder="admin@beed.studio"
+            placeholder="correo@ejemplo.com"
             className="pl-10"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

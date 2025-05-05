@@ -45,12 +45,6 @@ const LoginLayout = ({ children, activeTab }: LoginLayoutProps) => {
 export const LoginFooter = ({ activeTab }: { activeTab: "login" | "register" | "register-user" }) => {
   return (
     <CardFooter className="flex flex-col space-y-4">
-      <div className="text-center text-xs text-gray-500">
-        {activeTab === "login" && (
-          <p>Para demo, usa: admin@beed.studio / password123</p>
-        )}
-      </div>
-      
       <Link to="/" className="w-full">
         <Button variant="outline" className="w-full">
           Volver al inicio
