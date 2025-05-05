@@ -52,7 +52,7 @@ export const submitFormResponseOperation = (
     
     try {
       // Get admin email (form creator)
-      const adminEmail = form.ownerId ? currentUser?.role === 'admin' ? currentUser.email : form.createdBy : null;
+      const adminEmail = form.createdBy || null;
       
       // Save to Supabase (usuario_invitado table)
       await supabase
