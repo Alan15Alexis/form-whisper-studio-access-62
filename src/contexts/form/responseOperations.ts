@@ -24,10 +24,25 @@ export const submitFormResponseOperation = (
     
     const form = getForm(formId);
     
+    if (!form) {
+      throw new Error("No se encontró el formulario");
+    }
+    
+    // Convert response data to use question labels instead of IDs
+    const formattedResponses: Record<string, any> = {};
+    
+    // Create a mapping between field IDs and their labels
+    form.fields.forEach(field => {
+      if (data[field.id] !== undefined) {
+        const label = field.label || `Pregunta ${field.id.substring(0, 5)}`;
+        formattedResponses[label] = data[field.id];
+      }
+    });
+    
     const response: FormResponse = {
       id: uuidv4(),
       formId,
-      responses: data,
+      responses: data, // Keep original format for internal usage
       submittedBy: currentUser?.email,
       submittedAt: new Date().toISOString(),
     };
@@ -36,13 +51,17 @@ export const submitFormResponseOperation = (
     setResponses(prev => [...prev, response]);
     
     try {
+      // Get admin email (form creator)
+      const adminEmail = form.ownerId ? currentUser?.role === 'admin' ? currentUser.email : form.createdBy : null;
+      
       // Save to Supabase (usuario_invitado table)
       await supabase
         .from('formulario')
         .insert({
-          nombre_formulario: form?.title || 'Untitled Form',
+          nombre_formulario: form.title || 'Untitled Form',
           nombre_invitado: currentUser?.email || 'anonymous',
-          respuestas: data
+          nombre_administrador: adminEmail || null,
+          respuestas: formattedResponses // Use formatted responses with labels
         });
 
       // Send to MySQL database through API
@@ -50,9 +69,9 @@ export const submitFormResponseOperation = (
         // Prepare data for MySQL submission
         const mysqlData = {
           form_id: formId,
-          responses: JSON.stringify(data),
+          responses: JSON.stringify(formattedResponses), // Use formatted responses with labels
           submitted_by: currentUser?.email || 'anonymous',
-          form_title: form?.title || 'Untitled Form'
+          form_title: form.title || 'Untitled Form'
         };
         
         // Send to MySQL API endpoint

@@ -132,11 +132,11 @@ const FormView = () => {
         description: "Gracias por completar este formulario",
       });
       
-      // Si el usuario está autenticado y es un usuario normal, redirige al dashboard
+      // Redirect to assigned forms page for regular users
       if (isAuthenticated && currentUser && currentUser.role !== "admin") {
-        navigate("/dashboard-user");
+        navigate("/assigned-forms");
       } else {
-        // Limpiar formulario
+        // Clear form responses if not redirecting
         setFormResponses({});
       }
     } catch (error) {

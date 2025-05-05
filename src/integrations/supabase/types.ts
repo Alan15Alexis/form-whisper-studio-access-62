@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          nombre_administrador: string | null
           nombre_formulario: string | null
           nombre_invitado: string | null
           respuestas: Json | null
@@ -20,6 +21,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: number
+          nombre_administrador?: string | null
           nombre_formulario?: string | null
           nombre_invitado?: string | null
           respuestas?: Json | null
@@ -27,6 +29,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: number
+          nombre_administrador?: string | null
           nombre_formulario?: string | null
           nombre_invitado?: string | null
           respuestas?: Json | null
