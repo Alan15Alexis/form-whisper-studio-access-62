@@ -36,7 +36,7 @@ export const authenticateAdminUser = async (email: string, password: string) => 
         id: data.id,
         email: data.correo,
         name: data.nombre,
-        role: 'admin'
+        role: 'admin' as const
       };
     }
     
@@ -79,7 +79,7 @@ export const authenticateInvitedUser = async (email: string) => {
         id: data.id,
         email: data.correo, 
         name: data.nombre,
-        role: 'user'
+        role: 'user' as const
       };
     }
     
@@ -87,6 +87,54 @@ export const authenticateInvitedUser = async (email: string) => {
   } catch (error) {
     console.error('Invited user validation error:', error);
     return null;
+  }
+};
+
+// Utility function to validate if a user is in the invited users list
+export const validateInvitedUser = async (email: string): Promise<boolean> => {
+  try {
+    console.info(`Checking if ${email} is in the invited users list`);
+    
+    const { data, error } = await supabase
+      .from('usuario_invitado')
+      .select('id')
+      .eq('correo', email)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error validating invited user:', error);
+      return false;
+    }
+    
+    const isInvited = !!data;
+    console.info(`User ${email} invitation status: ${isInvited ? 'Invited' : 'Not invited'}`);
+    return isInvited;
+  } catch (error) {
+    console.error('Error validating invited user:', error);
+    return false;
+  }
+};
+
+// Utility function to fetch all invited users
+export const fetchInvitedUsers = async () => {
+  try {
+    console.info('Fetching all invited users');
+    
+    const { data, error } = await supabase
+      .from('usuario_invitado')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching invited users:', error);
+      throw error;
+    }
+    
+    console.info(`Fetched ${data.length} invited users`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching invited users:', error);
+    throw error;
   }
 };
 
@@ -112,6 +160,29 @@ export const addInvitedUser = async (name: string, email: string) => {
     return data;
   } catch (error) {
     console.error('Error registering user:', error);
+    throw error;
+  }
+};
+
+// Utility function to remove an invited user
+export const removeInvitedUser = async (id: number) => {
+  try {
+    console.info(`Removing invited user with ID: ${id}`);
+    
+    const { error } = await supabase
+      .from('usuario_invitado')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error removing invited user:', error);
+      throw error;
+    }
+    
+    console.info('Invited user removed successfully');
+    return true;
+  } catch (error) {
+    console.error('Error removing invited user:', error);
     throw error;
   }
 };
