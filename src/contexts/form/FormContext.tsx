@@ -62,13 +62,13 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setForms,
     setAccessTokens,
     setAllowedUsers,
-    currentUser?.id
+    currentUser?.id ? String(currentUser.id) : undefined
   );
 
   const updateForm = updateFormOperation(
     forms,
     setForms,
-    setAllowedUsers
+    setAllowedUsers,
   );
 
   const deleteForm = deleteFormOperation(
@@ -84,7 +84,10 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const submitFormResponse = submitFormResponseOperation(
     getForm,
     setResponses,
-    currentUser,
+    currentUser ? {
+      id: String(currentUser.id),
+      email: currentUser.email
+    } : null,
     MYSQL_API_ENDPOINT
   );
 
@@ -108,7 +111,10 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isUserAllowed = isUserAllowedOperation(
     forms,
     allowedUsers,
-    currentUser
+    currentUser ? {
+      id: String(currentUser.id),
+      email: currentUser.email
+    } : null
   );
 
   const generateAccessLink = generateAccessLinkOperation(
