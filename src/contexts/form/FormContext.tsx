@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -85,7 +84,6 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getForm,
     setResponses,
     currentUser ? {
-      id: String(currentUser.id),
       email: currentUser.email
     } : null,
     MYSQL_API_ENDPOINT
