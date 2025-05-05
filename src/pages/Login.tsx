@@ -25,7 +25,7 @@ const Login = () => {
   const [registerError, setRegisterError] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   
-  // Estados para registro de usuario normal
+  // Estados para registro de usuario normal (mantenidos para compatibilidad)
   const [userRegisterName, setUserRegisterName] = useState("");
   const [userRegisterEmail, setUserRegisterEmail] = useState("");
   const [isUserRegistering, setIsUserRegistering] = useState(false);
@@ -43,8 +43,24 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Authentication logic
-      const user = { email, password };
+      // Check if attempting to login as admin
+      const isAdminLogin = email === "admin@beed.studio" || email === "admin@correo.com" || 
+                           email.includes("admin") || activeTab === "login";
+      
+      // Make sure we're providing both email and password for admin authentication
+      if (isAdminLogin && !password) {
+        setError("La contraseña es requerida para iniciar sesión como administrador.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Authentication logic using both email and password
+      const user = { 
+        email, 
+        password,
+        role: isAdminLogin ? "admin" : "user"
+      };
+      
       const loggedInUser = await login(user);
 
       if (loggedInUser) {

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User, AuthCredentials } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Check if this is an admin login attempt
       if (role === "admin" || (email === "admin@beed.studio" || email === "admin@correo.com")) {
-        // Try to validate as admin
+        // Validate admin credentials using both email and password
         const adminUser = await validateAdminCredentials(email, password);
         
         if (adminUser) {
