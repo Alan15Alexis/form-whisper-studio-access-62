@@ -31,15 +31,17 @@ const DashboardAdmin = () => {
       setLoading(true);
       try {
         console.log("Fetching forms from Supabase...");
+        console.log("Current user email:", currentUser?.email);
+        
         // Add admin filter to only fetch forms created by this admin
-        const query = supabase
+        let query = supabase
           .from('formulario_construccion')
           .select('*')
           .order('created_at', { ascending: false });
           
         // If user is logged in, filter by their email
         if (currentUser?.email) {
-          query.eq('administrador', currentUser.email);
+          query = query.eq('administrador', currentUser.email);
         }
         
         const { data, error } = await query;
@@ -57,6 +59,7 @@ const DashboardAdmin = () => {
         if (data) {
           console.log("Forms fetched successfully:", data);
           console.log("Current user:", currentUser);
+          console.log("Number of forms found:", data.length);
           
           // Transform Supabase data to match our Form interface
           const transformedForms: Form[] = data.map(item => ({
@@ -93,11 +96,17 @@ const DashboardAdmin = () => {
       }
     };
     
-    fetchFormsFromSupabase();
+    if (currentUser?.email) {
+      console.log("User is authenticated, fetching forms...");
+      fetchFormsFromSupabase();
+    } else {
+      console.log("User is not authenticated or email is missing");
+      setLoading(false);
+    }
   }, [currentUser?.id, currentUser?.email, setForms]);
   
-  // Filter forms owned by the current user
-  const userForms = forms.filter(form => form.ownerId === currentUser?.id);
+  // No need to filter by ownerId since we're already filtering by email in the query
+  const userForms = forms;
   
   // Filter by public/private status
   const publicForms = userForms.filter(form => !form.isPrivate);
