@@ -36,6 +36,36 @@ export type Database = {
         }
         Relationships: []
       }
+      formulario_construccion: {
+        Row: {
+          acceso: Json | null
+          configuracion: Json | null
+          created_at: string
+          descripcion: string | null
+          id: number
+          preguntas: Json | null
+          titulo: string | null
+        }
+        Insert: {
+          acceso?: Json | null
+          configuracion?: Json | null
+          created_at?: string
+          descripcion?: string | null
+          id?: number
+          preguntas?: Json | null
+          titulo?: string | null
+        }
+        Update: {
+          acceso?: Json | null
+          configuracion?: Json | null
+          created_at?: string
+          descripcion?: string | null
+          id?: number
+          preguntas?: Json | null
+          titulo?: string | null
+        }
+        Relationships: []
+      }
       usuario_administrador: {
         Row: {
           contrasena: string | null

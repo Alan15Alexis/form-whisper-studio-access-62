@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -86,7 +87,7 @@ export const submitFormResponseOperation = (
         
         toast({
           title: "Respuesta guardada",
-          description: "La respuesta fue guardada localmente, en Supabase y en la base de datos MySQL",
+          description: "La respuesta fue guardada correctamente",
         });
       } catch (error) {
         console.error('Error saving to MySQL:', error);

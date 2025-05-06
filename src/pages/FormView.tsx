@@ -11,6 +11,7 @@ import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import FormAccess from "@/components/form-view/FormAccess";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import FormSuccess from "@/components/form-view/FormSuccess";
 
 const FormView = () => {
   const { id, token } = useParams();
@@ -22,6 +23,7 @@ const FormView = () => {
   const [accessValidated, setAccessValidated] = useState(false);
   const [validationLoading, setValidationLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
   const navigate = useNavigate();
 
   // Get form by ID function
@@ -132,13 +134,21 @@ const FormView = () => {
         description: "Gracias por completar este formulario",
       });
       
-      // Redirect to assigned forms page for regular users
-      if (isAuthenticated && currentUser && currentUser.role !== "admin") {
-        navigate("/assigned-forms");
-      } else {
-        // Clear form responses if not redirecting
-        setFormResponses({});
-      }
+      setIsSubmitSuccess(true);
+
+      // Redirigir después de 2 segundos para mostrar el mensaje de éxito
+      setTimeout(() => {
+        // Redirect to assigned forms page for regular users
+        if (isAuthenticated && currentUser && currentUser.role !== "admin") {
+          navigate("/assigned-forms");
+        } else {
+          // Clear form responses if not redirecting
+          setFormResponses({});
+          setCurrentQuestionIndex(0);
+          setIsSubmitSuccess(false);
+        }
+      }, 2000);
+      
     } catch (error) {
       toast({
         title: "Error al enviar respuesta",
@@ -203,6 +213,19 @@ const FormView = () => {
             </Button>
           </div>
         </div>
+      </Layout>
+    );
+  }
+
+  // If submit success, show success page
+  if (isSubmitSuccess) {
+    return (
+      <Layout hideNav>
+        <FormSuccess 
+          formValues={formResponses} 
+          fields={form.fields}
+          showTotalScore={form.enableScoring}
+        />
       </Layout>
     );
   }
