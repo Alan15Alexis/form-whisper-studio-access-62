@@ -57,7 +57,7 @@ const DashboardAdmin = () => {
             createdAt: item.created_at || new Date().toISOString(),
             updatedAt: item.created_at || new Date().toISOString(),
             accessLink: uuidv4(), // Generate a unique access link
-            ownerId: currentUser?.id || 'unknown',
+            ownerId: currentUser?.id ? String(currentUser.id) : 'unknown', // Ensure ownerId is always a string
             enableScoring: item.configuracion?.enableScoring || false,
             formColor: item.configuracion?.formColor || undefined,
             allowViewOwnResponses: item.configuracion?.allowViewOwnResponses || false,
