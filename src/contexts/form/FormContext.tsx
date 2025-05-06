@@ -84,6 +84,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           allowEditOwnResponses: newForm.allowEditOwnResponses,
           httpConfig: newForm.httpConfig
         },
+        administrador: currentUser?.email, // Añadimos el correo del administrador aquí
         acceso: newForm.allowedUsers
       });
       console.log("Formulario guardado en Supabase correctamente");
@@ -126,6 +127,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 allowEditOwnResponses: updatedForm.allowEditOwnResponses,
                 httpConfig: updatedForm.httpConfig
               },
+              administrador: currentUser?.email, // Actualizamos el correo del administrador aquí
               acceso: updatedForm.allowedUsers
             })
             .eq('id', existingForm.data.id);
@@ -145,6 +147,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig
             },
+            administrador: currentUser?.email, // Añadimos el correo del administrador aquí
             acceso: updatedForm.allowedUsers
           });
           console.log("Formulario creado en Supabase (no existía previamente)");

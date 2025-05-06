@@ -39,6 +39,7 @@ export type Database = {
       formulario_construccion: {
         Row: {
           acceso: Json | null
+          administrador: string | null
           configuracion: Json | null
           created_at: string
           descripcion: string | null
@@ -48,6 +49,7 @@ export type Database = {
         }
         Insert: {
           acceso?: Json | null
+          administrador?: string | null
           configuracion?: Json | null
           created_at?: string
           descripcion?: string | null
@@ -57,6 +59,7 @@ export type Database = {
         }
         Update: {
           acceso?: Json | null
+          administrador?: string | null
           configuracion?: Json | null
           created_at?: string
           descripcion?: string | null

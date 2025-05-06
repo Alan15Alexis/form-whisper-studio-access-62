@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -138,15 +137,8 @@ const FormView = () => {
 
       // Redirigir después de 2 segundos para mostrar el mensaje de éxito
       setTimeout(() => {
-        // Redirect to assigned forms page for regular users
-        if (isAuthenticated && currentUser) {
-          navigate("/assigned-forms");
-        } else {
-          // Clear form responses if not redirecting
-          setFormResponses({});
-          setCurrentQuestionIndex(0);
-          setIsSubmitSuccess(false);
-        }
+        // Always redirect to assigned forms page
+        navigate("/assigned-forms");
       }, 2000);
       
     } catch (error) {

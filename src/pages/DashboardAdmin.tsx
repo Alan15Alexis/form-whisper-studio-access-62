@@ -31,10 +31,18 @@ const DashboardAdmin = () => {
       setLoading(true);
       try {
         console.log("Fetching forms from Supabase...");
-        const { data, error } = await supabase
+        // Add admin filter to only fetch forms created by this admin
+        const query = supabase
           .from('formulario_construccion')
           .select('*')
           .order('created_at', { ascending: false });
+          
+        // If user is logged in, filter by their email
+        if (currentUser?.email) {
+          query.eq('administrador', currentUser.email);
+        }
+        
+        const { data, error } = await query;
         
         if (error) {
           console.error('Error fetching forms:', error);
@@ -48,6 +56,8 @@ const DashboardAdmin = () => {
         
         if (data) {
           console.log("Forms fetched successfully:", data);
+          console.log("Current user:", currentUser);
+          
           // Transform Supabase data to match our Form interface
           const transformedForms: Form[] = data.map(item => ({
             id: uuidv4(), // Generate a unique ID for the client
@@ -84,7 +94,7 @@ const DashboardAdmin = () => {
     };
     
     fetchFormsFromSupabase();
-  }, [currentUser?.id, setForms]);
+  }, [currentUser?.id, currentUser?.email, setForms]);
   
   // Filter forms owned by the current user
   const userForms = forms.filter(form => form.ownerId === currentUser?.id);
