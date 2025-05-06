@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -138,7 +139,7 @@ const FormView = () => {
       // Redirigir después de 2 segundos para mostrar el mensaje de éxito
       setTimeout(() => {
         // Redirect to assigned forms page for regular users
-        if (isAuthenticated && currentUser && currentUser.role !== "admin") {
+        if (isAuthenticated && currentUser) {
           navigate("/assigned-forms");
         } else {
           // Clear form responses if not redirecting
@@ -206,9 +207,9 @@ const FormView = () => {
             <p className="text-gray-600 mb-6">
               El formulario que estás buscando no existe o ha sido eliminado.
             </p>
-            <Button variant="outline" onClick={() => navigate("/")}>
+            <Button variant="outline" onClick={() => navigate("/assigned-forms")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver al inicio
+              Volver a formularios asignados
             </Button>
           </div>
         </div>
@@ -248,7 +249,7 @@ const FormView = () => {
     <Layout hideNav>
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 flex justify-between items-center">
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button variant="outline" onClick={() => navigate("/assigned-forms")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>

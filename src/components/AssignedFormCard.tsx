@@ -1,11 +1,10 @@
 
-import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link } from "react-router-dom";
-import { CheckCircle2, CircleDot, FileText, SendHorizontal, Trash2 } from "lucide-react";
+import { ArrowRightIcon, CheckIcon, EyeIcon, XIcon } from "lucide-react";
 import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
 
@@ -16,114 +15,84 @@ interface AssignedFormCardProps {
 
 const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
   const { getFormResponses } = useForm();
-  const responses = getFormResponses(form.id);
-  const hasResponded = responses.length > 0;
-
-  const handleRemove = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onRemove) onRemove(form.id);
-  };
-
-  const canEdit = !!form.allowEditOwnResponses;
-  const canView = !!form.allowViewOwnResponses;
+  const hasResponded = getFormResponses(form.id).length > 0;
   
-  // Create a more prominent card style based on form color
   const cardStyle = form.formColor ? {
-    backgroundColor: `${form.formColor}05`, // Very light background color
+    backgroundColor: `${form.formColor}05`,
     borderLeft: `4px solid ${form.formColor}`,
     boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px ${form.formColor}20`
   } : {};
   
-  // Apply a subtle background color for the badge if form color is set
-  const badgeStyle = form.formColor ? {
-    backgroundColor: hasResponded ? form.formColor : `${form.formColor}15`,
-    borderColor: `${form.formColor}30`
+  const buttonStyle = form.formColor ? {
+    backgroundColor: form.formColor,
+    borderColor: form.formColor
   } : {};
 
   return (
     <Card 
-      className="overflow-hidden transition-all duration-300 hover:shadow-md flex flex-col h-full"
+      className="overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col h-full" 
       style={cardStyle}
     >
-      <CardHeader className="pb-3" style={form.formColor ? { borderBottom: `1px solid ${form.formColor}20` } : {}}>
+      <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl" style={{ color: form.formColor || 'inherit' }}>
-              {form.title}
-            </CardTitle>
-            <CardDescription className="text-sm text-muted-foreground mt-1">
-              Created {format(new Date(form.createdAt), 'MMM d, yyyy')}
-            </CardDescription>
-          </div>
-          <Badge 
-            variant={hasResponded ? "default" : "secondary"}
-            style={form.formColor ? badgeStyle : {}}
-          >
-            {hasResponded ? (
-              <><CheckCircle2 className="mr-1 h-3 w-3" /> Responded</>
-            ) : (
-              <><CircleDot className="mr-1 h-3 w-3" /> Pending</>
-            )}
-          </Badge>
+          <CardTitle className="text-xl" style={{ color: form.formColor || 'inherit' }}>
+            {form.title}
+          </CardTitle>
+          {hasResponded ? (
+            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+              <CheckIcon className="mr-1 h-3 w-3" />
+              Completado
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+              Pendiente
+            </Badge>
+          )}
         </div>
+        <CardDescription className="text-sm text-muted-foreground">
+          Asignado: {format(new Date(form.createdAt), 'dd/MM/yyyy')}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="text-sm flex-grow">
+      
+      <CardContent className="flex-grow">
         {form.description && (
-          <p className="text-gray-600 mb-3">{form.description}</p>
+          <p className="text-gray-600 mb-3 text-sm">{form.description}</p>
         )}
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <span>{form.fields.length} fields</span>
+        <div className="flex items-center space-x-2 text-xs text-gray-500">
+          <span>{form.fields.length} preguntas</span>
         </div>
       </CardContent>
-      <CardFooter 
-        className="pt-3 grid grid-cols-2 gap-2"
-        style={form.formColor ? { borderTop: `1px solid ${form.formColor}10` } : {}}
-      >
-        {(!hasResponded || canEdit) && (
-          <Button 
-            asChild 
-            variant={hasResponded ? "secondary" : "default"}
-            style={form.formColor ? {
-              backgroundColor: hasResponded ? `${form.formColor}15` : form.formColor,
-              borderColor: form.formColor,
-              color: hasResponded ? form.formColor : "#fff"
-            } : {}}
-          >
-            <Link to={`/forms/${form.id}`}>
-              <SendHorizontal className="mr-2 h-4 w-4" />
-              {hasResponded ? "Edit Response" : "Respond"}
-            </Link>
-          </Button>
-        )}
-        {canView && hasResponded && (
-          <Button 
-            asChild 
-            variant="outline"
-            style={form.formColor ? {
-              borderColor: `${form.formColor}40`,
-              color: form.formColor
-            } : {}}
-          >
-            <Link to={`/forms/${form.id}/responses`}>
-              <FileText className="mr-2 h-4 w-4" />
-              View Responses
-            </Link>
-          </Button>
-        )}
-        {onRemove && (
-          <Button
-            type="button"
-            variant="outline"
-            className="col-span-2 mt-1"
-            onClick={handleRemove}
-            style={form.formColor ? {
-              borderColor: `${form.formColor}40`,
-              color: form.formColor
-            } : {}}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Quitar de mi vista
-          </Button>
-        )}
+      
+      <CardFooter className="flex justify-between items-center pt-4 gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove && onRemove(form.id)}
+          className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+        >
+          <XIcon className="h-4 w-4 mr-1" />
+          Ocultar
+        </Button>
+          
+        <Button
+          asChild
+          style={hasResponded ? {} : buttonStyle}
+          variant={hasResponded ? "outline" : "default"}
+        >
+          <Link to={`/forms/${form.id}`} className="flex items-center">
+            {hasResponded ? (
+              <>
+                <EyeIcon className="mr-1 h-4 w-4" />
+                Ver respuesta
+              </>
+            ) : (
+              <>
+                <ArrowRightIcon className="mr-1 h-4 w-4" />
+                Empieza ahora mismo
+              </>
+            )}
+          </Link>
+        </Button>
       </CardFooter>
     </Card>
   );

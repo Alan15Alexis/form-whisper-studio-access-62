@@ -30,6 +30,7 @@ const DashboardAdmin = () => {
     const fetchFormsFromSupabase = async () => {
       setLoading(true);
       try {
+        console.log("Fetching forms from Supabase...");
         const { data, error } = await supabase
           .from('formulario_construccion')
           .select('*')
@@ -46,6 +47,7 @@ const DashboardAdmin = () => {
         }
         
         if (data) {
+          console.log("Forms fetched successfully:", data);
           // Transform Supabase data to match our Form interface
           const transformedForms: Form[] = data.map(item => ({
             id: uuidv4(), // Generate a unique ID for the client
@@ -65,6 +67,7 @@ const DashboardAdmin = () => {
             httpConfig: item.configuracion?.httpConfig || undefined,
           }));
           
+          console.log("Transformed forms:", transformedForms);
           // Update forms in context
           setForms(transformedForms);
         }
