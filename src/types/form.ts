@@ -99,6 +99,7 @@ export interface Form {
   accessLink: string;
   ownerId: string;
   showTotalScore?: boolean;
+  enableScoring?: boolean; // Adding the missing property
   welcomeMessage?: {
     text: string;
     imageUrl?: string;
