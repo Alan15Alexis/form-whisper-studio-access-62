@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
 import FormCard from "@/components/FormCard";
+import { supabase } from "@/integrations/supabase/client";
+import { Form } from "@/types/form";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "@/components/ui/use-toast";
 
 const DashboardAdmin = () => {
-  const { forms } = useForm();
+  const { forms, setForms } = useForm();
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     // Redirect to login if not authenticated
@@ -20,6 +25,64 @@ const DashboardAdmin = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Fetch forms from Supabase on component mount
+  useEffect(() => {
+    const fetchFormsFromSupabase = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('formulario_construccion')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching forms:', error);
+          toast({
+            title: "Error al cargar formularios",
+            description: "No se pudieron cargar los formularios desde la base de datos",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (data) {
+          // Transform Supabase data to match our Form interface
+          const transformedForms: Form[] = data.map(item => ({
+            id: uuidv4(), // Generate a unique ID for the client
+            title: item.titulo || 'Sin título',
+            description: item.descripcion || '',
+            fields: item.preguntas || [],
+            isPrivate: item.configuracion?.isPrivate || false,
+            allowedUsers: item.acceso || [],
+            createdAt: item.created_at || new Date().toISOString(),
+            updatedAt: item.created_at || new Date().toISOString(),
+            accessLink: uuidv4(), // Generate a unique access link
+            ownerId: currentUser?.id || 'unknown',
+            enableScoring: item.configuracion?.enableScoring || false,
+            formColor: item.configuracion?.formColor || undefined,
+            allowViewOwnResponses: item.configuracion?.allowViewOwnResponses || false,
+            allowEditOwnResponses: item.configuracion?.allowEditOwnResponses || false,
+            httpConfig: item.configuracion?.httpConfig || undefined,
+          }));
+          
+          // Update forms in context
+          setForms(transformedForms);
+        }
+      } catch (error) {
+        console.error('Error in fetchFormsFromSupabase:', error);
+        toast({
+          title: "Error al cargar formularios",
+          description: "Ocurrió un error inesperado al cargar los formularios",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchFormsFromSupabase();
+  }, [currentUser?.id, setForms]);
+  
   // Filter forms owned by the current user
   const userForms = forms.filter(form => form.ownerId === currentUser?.id);
   
@@ -40,58 +103,64 @@ const DashboardAdmin = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="all">Todos los formularios</TabsTrigger>
-          <TabsTrigger value="public">Formularios públicos</TabsTrigger>
-          <TabsTrigger value="private">Formularios privados</TabsTrigger>
-        </TabsList>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="all">Todos los formularios</TabsTrigger>
+            <TabsTrigger value="public">Formularios públicos</TabsTrigger>
+            <TabsTrigger value="private">Formularios privados</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="all">
-          {userForms.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userForms.map(form => (
-                <FormCard key={form.id} form={form} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 bg-gray-50 rounded-lg">
-              <p className="text-xl text-gray-500 mb-2">No tienes formularios creados</p>
-              <p className="text-gray-400">
-                Crea tu primer formulario para comenzar.
-              </p>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="public">
-          {publicForms.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {publicForms.map(form => (
-                <FormCard key={form.id} form={form} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 bg-gray-50 rounded-lg">
-              <p className="text-gray-500 mb-2">No tienes formularios públicos</p>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="private">
-          {privateForms.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {privateForms.map(form => (
-                <FormCard key={form.id} form={form} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 bg-gray-50 rounded-lg">
-              <p className="text-gray-500 mb-2">No tienes formularios privados</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="all">
+            {userForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {userForms.map(form => (
+                  <FormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <p className="text-xl text-gray-500 mb-2">No tienes formularios creados</p>
+                <p className="text-gray-400">
+                  Crea tu primer formulario para comenzar.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="public">
+            {publicForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {publicForms.map(form => (
+                  <FormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 mb-2">No tienes formularios públicos</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="private">
+            {privateForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {privateForms.map(form => (
+                  <FormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 mb-2">No tienes formularios privados</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </Layout>
   );
 };

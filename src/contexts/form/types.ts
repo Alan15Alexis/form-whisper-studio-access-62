@@ -16,4 +16,5 @@ export interface FormContextType {
   isUserAllowed: (formId: string, email: string) => boolean;
   generateAccessLink: (formId: string) => string;
   validateAccessToken: (formId: string, token: string) => boolean;
+  setForms: React.Dispatch<React.SetStateAction<Form[]>>;
 }

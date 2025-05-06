@@ -253,7 +253,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removeAllowedUser,
     isUserAllowed,
     generateAccessLink,
-    validateAccessToken
+    validateAccessToken,
+    setForms
   };
 
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;
