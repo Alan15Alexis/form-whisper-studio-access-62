@@ -241,7 +241,7 @@ const FormView = () => {
     <Layout hideNav>
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 flex justify-between items-center">
-          <Button variant="outline" onClick={() => navigate("/Dashboard-admin")}
+          <Button variant="outline" onClick={() => navigate("/assigned-forms")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
