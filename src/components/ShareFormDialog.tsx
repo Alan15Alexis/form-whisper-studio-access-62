@@ -7,21 +7,37 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Copy, Check, Link, QrCode } from 'lucide-react';
 import QRCodeGenerator from './QRCodeGenerator';
 import { toast } from '@/components/ui/use-toast';
+import { useForm } from '@/contexts/form';
 
 interface ShareFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  shareUrl: string;
+  formId: string;
   formTitle: string;
+  isPrivate?: boolean;
+  allowedUsers?: string[];
 }
 
-const ShareFormDialog = ({ open, onOpenChange, shareUrl, formTitle }: ShareFormDialogProps) => {
+const ShareFormDialog = ({ open, onOpenChange, formId, formTitle, isPrivate }: ShareFormDialogProps) => {
   const [copied, setCopied] = useState(false);
+  const { generateAccessLink } = useForm();
   
-  // This will extract just the base form URL without the access token
-  const displayUrl = shareUrl.split('/access/')[0];
+  // Generate the share URL from the form ID
+  const shareUrl = formId ? generateAccessLink(formId) : '';
+  
+  // Safely extract the base form URL without the access token
+  const displayUrl = shareUrl ? shareUrl.split('/access/')[0] : '';
 
   const handleCopy = async () => {
+    if (!shareUrl) {
+      toast({
+        title: 'Error',
+        description: 'No hay un enlace disponible para copiar',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       // Use the navigator.clipboard API with proper error handling
       if (!navigator.clipboard) {
