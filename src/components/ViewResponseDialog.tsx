@@ -14,17 +14,27 @@ interface ViewResponseDialogProps {
   fields: FormField[];
   open: boolean;
   onClose: () => void;
+  adminView?: boolean;
 }
 
 interface ResponseData {
   [key: string]: any;
 }
 
-const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose }: ViewResponseDialogProps) => {
+interface FormResponse {
+  id: number;
+  nombre_invitado: string;
+  created_at: string;
+  respuestas: ResponseData;
+}
+
+const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminView = false }: ViewResponseDialogProps) => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
+  const [allResponses, setAllResponses] = useState<FormResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selectedResponseIndex, setSelectedResponseIndex] = useState(0);
 
   useEffect(() => {
     const fetchResponse = async () => {
@@ -34,31 +44,53 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose }: ViewRe
       setError(null);
       
       try {
-        const userEmail = currentUser?.email || localStorage.getItem('userEmail');
-        
-        if (!userEmail) {
-          setError("No se pudo identificar al usuario");
-          setLoading(false);
-          return;
-        }
-        
-        // Fetch from formulario table where the form ID and user match
-        const { data, error } = await supabase
-          .from('formulario')
-          .select('respuestas')
-          .eq('nombre_formulario', formTitle)
-          .eq('nombre_invitado', userEmail)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data && data.length > 0 && data[0].respuestas) {
-          setResponseData(data[0].respuestas);
+        if (adminView) {
+          // Admin view - fetch all responses for this form
+          const { data, error } = await supabase
+            .from('formulario')
+            .select('*')
+            .eq('nombre_formulario', formTitle)
+            .order('created_at', { ascending: false });
+          
+          if (error) {
+            throw error;
+          }
+          
+          if (data && data.length > 0) {
+            setAllResponses(data);
+            setResponseData(data[0].respuestas);
+            setSelectedResponseIndex(0);
+          } else {
+            setError("No se encontraron respuestas para este formulario");
+          }
         } else {
-          setError("No se encontraron respuestas para este formulario");
+          // User view - fetch only their own response
+          const userEmail = currentUser?.email || localStorage.getItem('userEmail');
+          
+          if (!userEmail) {
+            setError("No se pudo identificar al usuario");
+            setLoading(false);
+            return;
+          }
+          
+          // Fetch from formulario table where the form ID and user match
+          const { data, error } = await supabase
+            .from('formulario')
+            .select('respuestas')
+            .eq('nombre_formulario', formTitle)
+            .eq('nombre_invitado', userEmail)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          
+          if (error) {
+            throw error;
+          }
+          
+          if (data && data.length > 0 && data[0].respuestas) {
+            setResponseData(data[0].respuestas);
+          } else {
+            setError("No se encontraron respuestas para este formulario");
+          }
         }
       } catch (err) {
         console.error("Error al cargar las respuestas:", err);
@@ -69,11 +101,16 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose }: ViewRe
     };
     
     fetchResponse();
-  }, [open, formId, formTitle, currentUser?.email]);
+  }, [open, formId, formTitle, currentUser?.email, adminView]);
 
   // Find a field label by matching the label text in the fields array
   const findFieldByLabel = (label: string): FormField | undefined => {
     return fields?.find(field => field.label === label);
+  };
+
+  const handleSelectResponse = (index: number) => {
+    setSelectedResponseIndex(index);
+    setResponseData(allResponses[index].respuestas);
   };
 
   return (
@@ -82,7 +119,9 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose }: ViewRe
         <DialogHeader>
           <DialogTitle>Respuestas del formulario: {formTitle}</DialogTitle>
           <DialogDescription>
-            Estas son las respuestas que enviaste para este formulario.
+            {adminView 
+              ? "Todas las respuestas recibidas para este formulario." 
+              : "Estas son las respuestas que enviaste para este formulario."}
           </DialogDescription>
         </DialogHeader>
         
@@ -101,24 +140,50 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose }: ViewRe
           )}
           
           {!loading && !error && responseData && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-1/2">Pregunta</TableHead>
-                  <TableHead className="w-1/2">Respuesta</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(responseData).map(([question, answer]) => (
-                  <TableRow key={question}>
-                    <TableCell className="font-medium">{question}</TableCell>
-                    <TableCell>
-                      {typeof answer === 'object' ? JSON.stringify(answer) : String(answer)}
-                    </TableCell>
+            <>
+              {adminView && allResponses.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-2">Seleccionar respuesta:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {allResponses.map((response, index) => (
+                      <Button 
+                        key={response.id}
+                        variant={selectedResponseIndex === index ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => handleSelectResponse(index)}
+                      >
+                        {response.nombre_invitado.split('@')[0]}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2">
+                    Mostrando respuesta de: <strong>{allResponses[selectedResponseIndex].nombre_invitado}</strong> 
+                    <span className="ml-2">
+                      ({new Date(allResponses[selectedResponseIndex].created_at).toLocaleString()})
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-1/2">Pregunta</TableHead>
+                    <TableHead className="w-1/2">Respuesta</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(responseData).map(([question, answer]) => (
+                    <TableRow key={question}>
+                      <TableCell className="font-medium">{question}</TableCell>
+                      <TableCell>
+                        {typeof answer === 'object' ? JSON.stringify(answer) : String(answer)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
           )}
         </div>
         
