@@ -169,6 +169,16 @@ const FormView = () => {
     }
   };
 
+  const handleBackNavigation = () => {
+    // If user is admin, navigate to dashboard-admin
+    if (isAuthenticated && currentUser?.role === "admin") {
+      navigate("/dashboard-admin");
+    } else {
+      // For regular users or unauthenticated users, navigate to assigned forms
+      navigate("/assigned-forms");
+    }
+  };
+
   if (validationLoading) {
     return (
       <Layout hideNav>
@@ -199,9 +209,9 @@ const FormView = () => {
             <p className="text-gray-600 mb-6">
               El formulario que estás buscando no existe o ha sido eliminado.
             </p>
-            <Button variant="outline" onClick={() => navigate("/assigned-forms")}>
+            <Button variant="outline" onClick={handleBackNavigation}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a formularios asignados
+              Volver
             </Button>
           </div>
         </div>
@@ -241,7 +251,7 @@ const FormView = () => {
     <Layout hideNav>
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 flex justify-between items-center">
-          <Button variant="outline" onClick={() => navigate("/assigned-forms")}>
+          <Button variant="outline" onClick={handleBackNavigation}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
