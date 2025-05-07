@@ -13,11 +13,12 @@ import { v4 as uuidv4 } from "uuid";
 
 const AssignedForms = () => {
   const { currentUser } = useAuth();
-  const { forms, isUserAllowed, getFormResponses, setForms } = useForm();
+  const { forms, isUserAllowed, getFormResponses, setForms, responses } = useForm();
   const [hiddenForms, setHiddenForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignedForms, setAssignedForms] = useState<Form[]>([]);
 
+  // Load hidden forms from localStorage
   useEffect(() => {
     if(currentUser?.id) {
       const stored = localStorage.getItem(`hiddenForms:${currentUser.id}`);
@@ -25,6 +26,7 @@ const AssignedForms = () => {
     }
   }, [currentUser?.id]);
 
+  // Fetch forms and update when responses change
   useEffect(() => {
     const fetchAssignedForms = async () => {
       setLoading(true);
@@ -58,7 +60,7 @@ const AssignedForms = () => {
           
           // Map Supabase data to our app's Form type
           const mappedForms: Form[] = filteredData.map(form => ({
-            id: uuidv4(),
+            id: form.id ? String(form.id) : uuidv4(),
             title: form.titulo || "Sin título",
             description: form.descripcion || "",
             fields: form.preguntas || [],
@@ -78,11 +80,11 @@ const AssignedForms = () => {
           setAssignedForms(mappedForms);
           
           // If the forms aren't already in the global state, add them
-          const formIdsMap = new Map(forms.map(f => [f.title, f]));
-          const newForms = mappedForms.filter(f => !formIdsMap.has(f.title));
+          const formIdsMap = new Map(forms.map(f => [f.id, f]));
+          const newForms = mappedForms.filter(f => !formIdsMap.has(f.id));
           
           if (newForms.length > 0) {
-            setForms([...forms, ...newForms]);
+            setForms(prevForms => [...prevForms, ...newForms]);
           }
         }
       } catch (error) {
@@ -98,7 +100,7 @@ const AssignedForms = () => {
     };
 
     fetchAssignedForms();
-  }, [currentUser?.email, setForms, forms]);
+  }, [currentUser?.email, setForms, forms, responses]); // Added responses as a dependency
 
   const hideForm = (formId: string) => {
     const updated = [...hiddenForms, formId];

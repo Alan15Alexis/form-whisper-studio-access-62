@@ -1,4 +1,3 @@
-
 import { Form, FormResponse } from '@/types/form';
 
 // Initial state for forms
@@ -57,9 +56,17 @@ export const getInitialForms = (): Form[] => {
 };
 
 // Initial state for responses
-export const getInitialResponses = (): FormResponse[] => {
-  const storedResponses = localStorage.getItem('formResponses');
-  return storedResponses ? JSON.parse(storedResponses) : [];
+export const getInitialResponses = (): any[] => {
+  try {
+    const storedResponses = localStorage.getItem('formResponses');
+    if (storedResponses) {
+      console.log('Loading responses from localStorage:', JSON.parse(storedResponses));
+      return JSON.parse(storedResponses);
+    }
+  } catch (error) {
+    console.error("Error loading form responses:", error);
+  }
+  return [];
 };
 
 // Initial state for access tokens

@@ -43,12 +43,14 @@ export const submitFormResponseOperation = (
     const formattedResponses: Record<string, any> = {};
     
     // Create a mapping between field IDs and their labels
-    form.fields.forEach(field => {
-      if (data[field.id] !== undefined) {
-        const label = field.label || `Pregunta ${field.id.substring(0, 5)}`;
-        formattedResponses[label] = data[field.id];
-      }
-    });
+    if (Array.isArray(form.fields)) {
+      form.fields.forEach(field => {
+        if (data[field.id] !== undefined) {
+          const label = field.label || `Pregunta ${field.id.substring(0, 5)}`;
+          formattedResponses[label] = data[field.id];
+        }
+      });
+    }
     
     const response: FormResponse = {
       id: uuidv4(),
@@ -59,7 +61,10 @@ export const submitFormResponseOperation = (
     };
     
     // Save response locally - this is crucial for showing the form as completed
-    setResponses(prev => [...prev, response]);
+    setResponses(prev => {
+      console.log('Setting responses:', [...prev, response]);
+      return [...prev, response];
+    });
     
     try {
       // Get admin email (form creator)
@@ -120,6 +125,11 @@ export const submitFormResponseOperation = (
       });
       // We don't throw an error here so the submission still counts as successful
     }
+    
+    // Make sure we persist the responses to localStorage
+    const updatedResponses = JSON.parse(localStorage.getItem('formResponses') || '[]');
+    updatedResponses.push(response);
+    localStorage.setItem('formResponses', JSON.stringify(updatedResponses));
     
     return response;
   };
