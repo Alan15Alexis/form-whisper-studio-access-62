@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "@/contexts/form";
-import { validateInvitedUser } from "@/integrations/supabase/client";
+import { authenticateInvitedUser, validateInvitedUser } from "@/integrations/supabase/client";
 
 const Index = () => {
   const {
@@ -57,15 +57,22 @@ const Index = () => {
           description: "Redirigiendo a formularios asignados..."
         });
 
-        // Authenticate the user with email only (no password check for invited users)
-        await login({
-          email,
-          password: "",
-          role: "user"
-        });
-
-        // Redirect directly to Assigned Forms page
-        navigate('/assigned-forms');
+        // Use authenticateInvitedUser instead of login to get the user data properly
+        const userData = await authenticateInvitedUser(email);
+        
+        if (userData) {
+          // Directly set the user in localStorage to bypass authentication issues
+          localStorage.setItem('currentUser', JSON.stringify(userData));
+          
+          // Redirect directly to Assigned Forms page
+          navigate('/assigned-forms');
+        } else {
+          toast({
+            title: "Error de autenticación",
+            description: "No se pudo iniciar sesión con el correo proporcionado",
+            variant: "destructive"
+          });
+        }
       } else {
         toast({
           title: "Acceso denegado",
