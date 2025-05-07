@@ -135,7 +135,8 @@ const FormView = () => {
     setIsSubmitting(true);
     
     try {
-      await submitFormResponse(id, formResponses);
+      // Pass the form from location to the submit function to ensure we have the form data
+      await submitFormResponse(id, formResponses, formFromLocation || form);
       toast({
         title: "Respuesta enviada correctamente",
         description: "Gracias por completar este formulario",

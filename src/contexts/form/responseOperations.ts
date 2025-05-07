@@ -11,7 +11,7 @@ export const submitFormResponseOperation = (
   currentUser: { email: string } | null | undefined,
   apiEndpoint: string
 ) => {
-  return async (formId: string, data: Record<string, any>): Promise<FormResponse> => {
+  return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
     // Validar que los datos no estén vacíos
     if (!validateFormResponses(data)) {
       toast({
@@ -22,9 +22,20 @@ export const submitFormResponseOperation = (
       throw new Error("Las respuestas del formulario no pueden estar vacías");
     }
     
-    const form = getForm(formId);
+    // First try to get the form from the location state if provided
+    let form = formFromLocation;
+    
+    // If not available in location, try to get it from the context
+    if (!form) {
+      form = getForm(formId);
+    }
     
     if (!form) {
+      toast({
+        title: "Error",
+        description: "No se encontró el formulario",
+        variant: "destructive",
+      });
       throw new Error("No se encontró el formulario");
     }
     
@@ -52,7 +63,7 @@ export const submitFormResponseOperation = (
     
     try {
       // Get admin email (form creator)
-      const adminEmail = form.createdBy || null;
+      const adminEmail = form.createdBy || form.ownerId || null;
       
       // Save to Supabase (usuario_invitado table)
       await supabase

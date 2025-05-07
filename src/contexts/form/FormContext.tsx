@@ -199,14 +199,18 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Response operations
-  const submitFormResponse = submitFormResponseOperation(
-    getForm,
-    setResponses,
-    currentUser ? {
-      email: currentUser.email
-    } : null,
-    MYSQL_API_ENDPOINT
-  );
+  const submitFormResponse = async (formId: string, data: Record<string, any>, formFromLocation: any = null) => {
+    const operation = submitFormResponseOperation(
+      getForm,
+      setResponses,
+      currentUser ? {
+        email: currentUser.email
+      } : null,
+      MYSQL_API_ENDPOINT
+    );
+    
+    return operation(formId, data, formFromLocation);
+  };
 
   const getFormResponses = getFormResponsesOperation(responses);
 
