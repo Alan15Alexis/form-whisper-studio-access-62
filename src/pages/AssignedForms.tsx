@@ -36,19 +36,28 @@ const AssignedForms = () => {
           return;
         }
         
-        // Fetch forms from Supabase where the user's email is in the acceso array
+        console.log(`Fetching forms for user: ${userEmail}`);
+        
+        // Fix the contains query by converting the email to JSON string
         const { data, error } = await supabase
           .from('formulario_construccion')
-          .select('*')
-          .contains('acceso', [userEmail]);
+          .select('*');
           
         if (error) {
           throw error;
         }
         
         if (data) {
+          // Filter the data client-side instead of using the contains operation
+          const filteredData = data.filter(form => {
+            // Check if acceso is an array and contains the user email
+            return Array.isArray(form.acceso) && form.acceso.includes(userEmail);
+          });
+          
+          console.log(`Found ${filteredData.length} forms for user ${userEmail}`);
+          
           // Map Supabase data to our app's Form type
-          const mappedForms: Form[] = data.map(form => ({
+          const mappedForms: Form[] = filteredData.map(form => ({
             id: uuidv4(),
             title: form.titulo || "Sin título",
             description: form.descripcion || "",
