@@ -28,6 +28,18 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
     borderColor: form.formColor
   } : {};
 
+  // Format date or use fallback
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy');
+    } catch (error) {
+      return 'Fecha no disponible';
+    }
+  };
+
+  // Get question count safely
+  const questionCount = Array.isArray(form.fields) ? form.fields.length : 0;
+
   return (
     <Card 
       className="overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col h-full" 
@@ -50,7 +62,7 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           )}
         </div>
         <CardDescription className="text-sm text-muted-foreground">
-          Asignado: {format(new Date(form.createdAt), 'dd/MM/yyyy')}
+          Asignado: {formatDate(form.createdAt)}
         </CardDescription>
       </CardHeader>
       
@@ -59,7 +71,7 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           <p className="text-gray-600 mb-3 text-sm">{form.description}</p>
         )}
         <div className="flex items-center space-x-2 text-xs text-gray-500">
-          <span>{form.fields.length} preguntas</span>
+          <span>{questionCount} {questionCount === 1 ? 'pregunta' : 'preguntas'}</span>
         </div>
       </CardContent>
       
@@ -88,7 +100,7 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
             ) : (
               <>
                 <ArrowRightIcon className="mr-1 h-4 w-4" />
-                Empieza ahora mismo
+                Empezar ahora
               </>
             )}
           </Link>

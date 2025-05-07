@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -63,6 +62,9 @@ const Index = () => {
         if (userData) {
           // Directly set the user in localStorage to bypass authentication issues
           localStorage.setItem('currentUser', JSON.stringify(userData));
+          
+          // Also store email separately for easier access
+          localStorage.setItem('userEmail', email);
           
           // Redirect directly to Assigned Forms page
           navigate('/assigned-forms');
