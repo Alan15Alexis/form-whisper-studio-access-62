@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRightIcon, CheckIcon, EyeIcon, XIcon } from "lucide-react";
 import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ interface AssignedFormCardProps {
 
 const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
   const { getFormResponses } = useForm();
+  const navigate = useNavigate();
   const hasResponded = getFormResponses(form.id).length > 0;
   
   const cardStyle = form.formColor ? {
@@ -39,6 +40,11 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
 
   // Get question count safely
   const questionCount = Array.isArray(form.fields) ? form.fields.length : 0;
+  
+  // Handle view form response
+  const handleViewResponse = () => {
+    navigate(`/forms/${form.id}`, { state: { formData: form, viewOnly: true } });
+  };
 
   return (
     <Card 
@@ -91,19 +97,17 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           style={hasResponded ? {} : buttonStyle}
           variant={hasResponded ? "outline" : "default"}
         >
-          <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
-            {hasResponded ? (
-              <>
-                <EyeIcon className="mr-1 h-4 w-4" />
-                Ver respuesta
-              </>
-            ) : (
-              <>
-                <ArrowRightIcon className="mr-1 h-4 w-4" />
-                Empezar ahora
-              </>
-            )}
-          </Link>
+          {hasResponded ? (
+            <div onClick={handleViewResponse} className="flex items-center cursor-pointer">
+              <EyeIcon className="mr-1 h-4 w-4" />
+              Ver respuesta
+            </div>
+          ) : (
+            <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
+              <ArrowRightIcon className="mr-1 h-4 w-4" />
+              Empezar ahora
+            </Link>
+          )}
         </Button>
       </CardFooter>
     </Card>

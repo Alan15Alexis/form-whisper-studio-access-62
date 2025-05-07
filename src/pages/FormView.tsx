@@ -147,7 +147,7 @@ const FormView = () => {
       // Redirigir después de 2 segundos para mostrar el mensaje de éxito
       setTimeout(() => {
         // Always redirect to assigned forms page
-        navigate("/assigned-forms");
+        navigate("/assigned-forms", { replace: true });
       }, 2000);
       
     } catch (error) {

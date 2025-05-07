@@ -58,7 +58,7 @@ export const submitFormResponseOperation = (
       submittedAt: new Date().toISOString(),
     };
     
-    // Save response locally
+    // Save response locally - this is crucial for showing the form as completed
     setResponses(prev => [...prev, response]);
     
     try {
@@ -102,19 +102,23 @@ export const submitFormResponseOperation = (
         });
       } catch (error) {
         console.error('Error saving to MySQL:', error);
+        // Even if MySQL fails, we've already saved to local state and Supabase
         toast({
-          title: "Error al guardar en MySQL",
-          description: "La respuesta fue guardada localmente y en Supabase, pero hubo un problema al guardarla en la base de datos MySQL",
-          variant: "destructive"
+          title: "Aviso",
+          description: "La respuesta fue guardada pero hubo un problema al sincronizar con la base de datos",
+          variant: "default"
         });
+        // We don't throw an error here so the submission still counts as successful
       }
     } catch (error) {
       console.error('Error saving to Supabase:', error);
+      // We still consider the form submitted since it's saved in local state
       toast({
-        title: "Error al guardar en Supabase",
-        description: "La respuesta fue guardada localmente, pero hubo un problema al guardarla en Supabase",
-        variant: "destructive"
+        title: "Aviso",
+        description: "La respuesta fue guardada localmente, pero hubo un problema al guardarla en la nube",
+        variant: "default"
       });
+      // We don't throw an error here so the submission still counts as successful
     }
     
     return response;
