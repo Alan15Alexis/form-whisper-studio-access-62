@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link, useNavigate } from "react-router-dom";
-import { Edit, Share, Trash, ClipboardCheck, MoreVertical, Eye } from "lucide-react";
+import { Edit, Share, Trash, ClipboardCheck, Eye } from "lucide-react";
 import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
 import ShareFormDialog from "./ShareFormDialog";
@@ -19,13 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface FormCardProps {
   form: Form;
@@ -105,39 +99,31 @@ const FormCard = ({ form }: FormCardProps) => {
         
         <CardFooter className="flex justify-between items-center pt-4">
           <div className="flex items-center space-x-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate(`/forms/${form.id}/edit`)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  <span>Editar</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)}>
-                  <Share className="mr-2 h-4 w-4" />
-                  <span>Compartir</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/forms/${form.id}/responses`)}>
-                  <ClipboardCheck className="mr-2 h-4 w-4" />
-                  <span>Ver análisis</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsViewResponsesOpen(true)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  <span>Ver respuestas</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash className="mr-2 h-4 w-4" />
-                  <span>Eliminar</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/forms/${form.id}/edit`)} title="Editar">
+              <Edit className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="ghost" size="icon" onClick={() => setIsShareDialogOpen(true)} title="Compartir">
+              <Share className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/forms/${form.id}/responses`)} title="Ver análisis">
+              <ClipboardCheck className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="ghost" size="icon" onClick={() => setIsViewResponsesOpen(true)} title="Ver respuestas">
+              <Eye className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="text-destructive"
+              title="Eliminar"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
           </div>
           
           <div className="flex space-x-2">
