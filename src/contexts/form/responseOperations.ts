@@ -56,11 +56,17 @@ export const submitFormResponseOperation = (
       id: uuidv4(),
       formId,
       responses: data, // Keep original format for internal usage
-      submittedBy: currentUser?.email,
+      submittedBy: currentUser?.email || localStorage.getItem('userEmail'),
       submittedAt: new Date().toISOString(),
     };
     
-    // Save response locally - this is crucial for showing the form as completed
+    // Make sure we persist the responses to localStorage FIRST to ensure local state is updated
+    // This is crucial for showing the form as completed even if database operations fail
+    const updatedResponses = JSON.parse(localStorage.getItem('formResponses') || '[]');
+    updatedResponses.push(response);
+    localStorage.setItem('formResponses', JSON.stringify(updatedResponses));
+    
+    // Update the state after localStorage has been updated
     setResponses(prev => {
       console.log('Setting responses:', [...prev, response]);
       return [...prev, response];
@@ -70,12 +76,12 @@ export const submitFormResponseOperation = (
       // Get admin email (form creator)
       const adminEmail = form.createdBy || form.ownerId || null;
       
-      // Save to Supabase (usuario_invitado table)
+      // Save to Supabase (formulario table)
       await supabase
         .from('formulario')
         .insert({
           nombre_formulario: form.title || 'Untitled Form',
-          nombre_invitado: currentUser?.email || 'anonymous',
+          nombre_invitado: currentUser?.email || localStorage.getItem('userEmail') || 'anonymous',
           nombre_administrador: adminEmail || null,
           respuestas: formattedResponses // Use formatted responses with labels
         });
@@ -86,7 +92,7 @@ export const submitFormResponseOperation = (
         const mysqlData = {
           form_id: formId,
           responses: JSON.stringify(formattedResponses), // Use formatted responses with labels
-          submitted_by: currentUser?.email || 'anonymous',
+          submitted_by: currentUser?.email || localStorage.getItem('userEmail') || 'anonymous',
           form_title: form.title || 'Untitled Form'
         };
         
@@ -125,11 +131,6 @@ export const submitFormResponseOperation = (
       });
       // We don't throw an error here so the submission still counts as successful
     }
-    
-    // Make sure we persist the responses to localStorage
-    const updatedResponses = JSON.parse(localStorage.getItem('formResponses') || '[]');
-    updatedResponses.push(response);
-    localStorage.setItem('formResponses', JSON.stringify(updatedResponses));
     
     return response;
   };
