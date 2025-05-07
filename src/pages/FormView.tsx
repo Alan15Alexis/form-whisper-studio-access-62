@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useForm } from "@/contexts/form";
@@ -14,8 +14,10 @@ import FormSuccess from "@/components/form-view/FormSuccess";
 
 const FormView = () => {
   const { id, token } = useParams();
-  const { forms, submitFormResponse, validateAccessToken, isUserAllowed } = useForm();
+  const { forms, submitFormResponse, validateAccessToken, isUserAllowed, getForm } = useForm();
   const { isAuthenticated, currentUser } = useAuth();
+  const location = useLocation();
+  const formFromLocation = location.state?.formData;
   const [form, setForm] = useState<FormType | null>(null);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,19 +27,25 @@ const FormView = () => {
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
   const navigate = useNavigate();
 
-  // Get form by ID function
-  const getFormById = (formId: string) => {
-    return forms.find(form => form.id === formId);
-  };
-
   // Validate access token if provided
   useEffect(() => {
     const validateAccess = async () => {
       if (id) {
-        const foundForm = getFormById(id);
+        // First check if we have the form from the location state
+        if (formFromLocation) {
+          console.log("Using form data from location state:", formFromLocation);
+          setForm(formFromLocation);
+          setAccessValidated(true);
+          setValidationLoading(false);
+          return;
+        }
+        
+        // Otherwise, try to get the form from the context
+        const foundForm = forms.find(form => form.id === id);
         
         // If form doesn't exist, end validation
         if (!foundForm) {
+          console.log("Form not found with ID:", id);
           setValidationLoading(false);
           return;
         }
@@ -96,7 +104,7 @@ const FormView = () => {
     };
     
     validateAccess();
-  }, [id, token, isAuthenticated, currentUser, forms, validateAccessToken, isUserAllowed]);
+  }, [id, token, isAuthenticated, currentUser, forms, validateAccessToken, isUserAllowed, formFromLocation]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormResponses(prev => ({

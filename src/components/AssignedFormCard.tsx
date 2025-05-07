@@ -91,7 +91,7 @@ const AssignedFormCard = ({ form, onRemove }: AssignedFormCardProps) => {
           style={hasResponded ? {} : buttonStyle}
           variant={hasResponded ? "outline" : "default"}
         >
-          <Link to={`/forms/${form.id}`} className="flex items-center">
+          <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
             {hasResponded ? (
               <>
                 <EyeIcon className="mr-1 h-4 w-4" />
