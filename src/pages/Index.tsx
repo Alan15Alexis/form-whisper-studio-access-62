@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,6 +11,7 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "@/contexts/form";
 import { validateInvitedUser } from "@/integrations/supabase/client";
+
 const Index = () => {
   const {
     isAuthenticated,
@@ -26,6 +28,7 @@ const Index = () => {
 
   // Default form to check against (first form in the list)
   const defaultFormId = forms.length > 0 ? forms[0].id : "1";
+
   const handleContinue = async () => {
     if (!email.trim() || !email.includes('@')) {
       toast({
@@ -35,6 +38,7 @@ const Index = () => {
       });
       return;
     }
+
     setIsValidating(true);
     try {
       // Check if user is in the invited users table - this is the primary validation
@@ -46,6 +50,7 @@ const Index = () => {
         isInvitedUser: isInvited,
         standardAccessCheck: isUserAllowed(defaultFormId, email)
       });
+
       if (isInvited) {
         toast({
           title: "Acceso concedido",
@@ -79,6 +84,7 @@ const Index = () => {
       setIsValidating(false);
     }
   };
+
   return <Layout hideNav>
       {/* Custom Header */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
@@ -131,4 +137,5 @@ const Index = () => {
       </div>
     </Layout>;
 };
+
 export default Index;
