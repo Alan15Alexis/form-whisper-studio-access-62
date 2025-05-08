@@ -58,113 +58,27 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Create form operations
   const getForm = getFormOperation(forms);
 
-  const createForm = async (formData: any) => {
+  const createForm = (formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
-    
-    // Crear el formulario usando la operación original
-    const newForm = await createFormOperation(
+    return createFormOperation(
       forms,
       setForms,
       setAccessTokens,
       setAllowedUsers,
       userId
     )(formData);
-    
-    // Guardar en Supabase
-    try {
-      await supabase.from('formulario_construccion').insert({
-        titulo: newForm.title,
-        descripcion: newForm.description,
-        preguntas: newForm.fields,
-        configuracion: {
-          isPrivate: newForm.isPrivate,
-          enableScoring: newForm.enableScoring,
-          formColor: newForm.formColor,
-          allowViewOwnResponses: newForm.allowViewOwnResponses,
-          allowEditOwnResponses: newForm.allowEditOwnResponses,
-          httpConfig: newForm.httpConfig
-        },
-        administrador: currentUser?.email, // Añadimos el correo del administrador aquí
-        acceso: newForm.allowedUsers
-      });
-      console.log("Formulario guardado en Supabase correctamente");
-    } catch (error) {
-      console.error("Error al guardar el formulario en Supabase:", error);
-    }
-    
-    return newForm;
   };
-
-  const updateForm = async (id: string, formData: any) => {
-    // Actualizar el formulario usando la operación original
-    const updatedForm = await updateFormOperation(
+  
+  const updateForm = (id: string, formData: any) => {
+    return updateFormOperation(
       forms,
       setForms,
       setAllowedUsers
     )(id, formData);
-    
-    if (updatedForm) {
-      // Actualizar en Supabase
-      try {
-        const existingForm = await supabase
-          .from('formulario_construccion')
-          .select('*')
-          .eq('titulo', updatedForm.title)
-          .maybeSingle();
-        
-        if (existingForm.data) {
-          await supabase
-            .from('formulario_construccion')
-            .update({
-              titulo: updatedForm.title,
-              descripcion: updatedForm.description,
-              preguntas: updatedForm.fields,
-              configuracion: {
-                isPrivate: updatedForm.isPrivate,
-                enableScoring: updatedForm.enableScoring,
-                formColor: updatedForm.formColor,
-                allowViewOwnResponses: updatedForm.allowViewOwnResponses,
-                allowEditOwnResponses: updatedForm.allowEditOwnResponses,
-                httpConfig: updatedForm.httpConfig
-              },
-              administrador: currentUser?.email, // Actualizamos el correo del administrador aquí
-              acceso: updatedForm.allowedUsers
-            })
-            .eq('id', existingForm.data.id);
-          
-          console.log("Formulario actualizado en Supabase correctamente");
-        } else {
-          // Si no existe, insertarlo
-          await supabase.from('formulario_construccion').insert({
-            titulo: updatedForm.title,
-            descripcion: updatedForm.description,
-            preguntas: updatedForm.fields,
-            configuracion: {
-              isPrivate: updatedForm.isPrivate,
-              enableScoring: updatedForm.enableScoring,
-              formColor: updatedForm.formColor,
-              allowViewOwnResponses: updatedForm.allowViewOwnResponses,
-              allowEditOwnResponses: updatedForm.allowEditOwnResponses,
-              httpConfig: updatedForm.httpConfig
-            },
-            administrador: currentUser?.email, // Añadimos el correo del administrador aquí
-            acceso: updatedForm.allowedUsers
-          });
-          console.log("Formulario creado en Supabase (no existía previamente)");
-        }
-      } catch (error) {
-        console.error("Error al actualizar el formulario en Supabase:", error);
-      }
-    }
-    
-    return updatedForm;
   };
-
-  const deleteForm = async (id: string) => {
-    const formToDelete = getForm(id);
-    
-    // Eliminar el formulario usando la operación original
-    const success = await deleteFormOperation(
+  
+  const deleteForm = (id: string) => {
+    return deleteFormOperation(
       forms,
       setForms,
       setAllowedUsers,
@@ -172,30 +86,6 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setResponses,
       responses
     )(id);
-    
-    if (success && formToDelete) {
-      // Eliminar de Supabase
-      try {
-        const existingForm = await supabase
-          .from('formulario_construccion')
-          .select('*')
-          .eq('titulo', formToDelete.title)
-          .maybeSingle();
-        
-        if (existingForm.data) {
-          await supabase
-            .from('formulario_construccion')
-            .delete()
-            .eq('id', existingForm.data.id);
-          
-          console.log("Formulario eliminado de Supabase correctamente");
-        }
-      } catch (error) {
-        console.error("Error al eliminar el formulario de Supabase:", error);
-      }
-    }
-    
-    return success;
   };
 
   // Response operations
