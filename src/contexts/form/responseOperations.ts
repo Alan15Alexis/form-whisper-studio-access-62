@@ -39,6 +39,18 @@ export const submitFormResponseOperation = (
       throw new Error("No se encontró el formulario");
     }
     
+    // Get user email - ensure we always have a valid user identifier
+    const userEmail = currentUser?.email || localStorage.getItem('userEmail');
+    
+    if (!userEmail) {
+      toast({
+        title: "Error", 
+        description: "No se pudo identificar al usuario",
+        variant: "destructive",
+      });
+      throw new Error("No se pudo identificar al usuario");
+    }
+    
     // Convert response data to use question labels instead of IDs
     const formattedResponses: Record<string, any> = {};
     
@@ -56,7 +68,7 @@ export const submitFormResponseOperation = (
       id: uuidv4(),
       formId,
       responses: data, // Keep original format for internal usage
-      submittedBy: currentUser?.email || localStorage.getItem('userEmail'),
+      submittedBy: userEmail,
       submittedAt: new Date().toISOString(),
     };
     
@@ -76,24 +88,26 @@ export const submitFormResponseOperation = (
       // Get admin email (form creator)
       const adminEmail = form.createdBy || form.ownerId || null;
       
-      // Save to Supabase (formulario table) - now including estatus as true
+      // Save to Supabase (formulario table) - explicitly including user email and status
       await supabase
         .from('formulario')
         .insert({
           nombre_formulario: form.title || 'Untitled Form',
-          nombre_invitado: currentUser?.email || localStorage.getItem('userEmail') || 'anonymous',
+          nombre_invitado: userEmail,  // Ensure we use the correct user email
           nombre_administrador: adminEmail || null,
-          respuestas: formattedResponses, // Use formatted responses with labels
+          respuestas: formattedResponses,
           estatus: true // Set the status to true for completed forms
         });
+
+      console.log(`Form response saved to Supabase for user ${userEmail} with status=true`);
 
       // Send to MySQL database through API
       try {
         // Prepare data for MySQL submission
         const mysqlData = {
           form_id: formId,
-          responses: JSON.stringify(formattedResponses), // Use formatted responses with labels
-          submitted_by: currentUser?.email || localStorage.getItem('userEmail') || 'anonymous',
+          responses: JSON.stringify(formattedResponses),
+          submitted_by: userEmail, // Ensure we use the correct user email
           form_title: form.title || 'Untitled Form',
           estatus: true // Add status field here too for MySQL
         };

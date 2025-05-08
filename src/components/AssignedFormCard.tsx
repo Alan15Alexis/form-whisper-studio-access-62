@@ -13,7 +13,7 @@ import ViewResponseDialog from "./ViewResponseDialog";
 interface AssignedFormCardProps {
   form: Form;
   onRemove?: (formId: string) => void;
-  isCompleted?: boolean; // New prop to track completion status from Supabase
+  isCompleted?: boolean; // Status from Supabase specific to current user
 }
 
 const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormCardProps) => {
@@ -21,7 +21,7 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
   const navigate = useNavigate();
   const [showResponseDialog, setShowResponseDialog] = useState(false);
   
-  // Check if form has local responses or if it's completed in the database
+  // Check if form has local responses or if it's completed in the database for this user
   const hasResponded = getFormResponses(form.id).length > 0 || isCompleted;
   
   const cardStyle = form.formColor ? {

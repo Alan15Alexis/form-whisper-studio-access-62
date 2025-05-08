@@ -41,7 +41,7 @@ const AssignedForms = () => {
         
         console.log(`Fetching forms for user: ${userEmail}`);
         
-        // Fix the contains query by converting the email to JSON string
+        // Filter the data client-side instead of using the contains operation
         const { data, error } = await supabase
           .from('formulario_construccion')
           .select('*');
@@ -51,9 +51,8 @@ const AssignedForms = () => {
         }
         
         if (data) {
-          // Filter the data client-side instead of using the contains operation
+          // Filter the data client-side to find forms assigned to this user
           const filteredData = data.filter(form => {
-            // Check if acceso is an array and contains the user email
             return Array.isArray(form.acceso) && form.acceso.includes(userEmail);
           });
           
@@ -88,7 +87,7 @@ const AssignedForms = () => {
             setForms(prevForms => [...prevForms, ...newForms]);
           }
           
-          // Now check the status of each form in the formulario table
+          // Now check the status of each form in the formulario table SPECIFICALLY FOR THIS USER
           await fetchFormStatus(mappedForms, userEmail);
         }
       } catch (error) {
@@ -104,15 +103,15 @@ const AssignedForms = () => {
     };
 
     fetchAssignedForms();
-  }, [currentUser?.email, setForms, forms, responses]); // Added responses as a dependency
+  }, [currentUser?.email, setForms, forms, responses]); 
 
-  // New function to fetch form statuses from the formulario table
+  // Updated function to fetch form status specifically for the current user
   const fetchFormStatus = async (forms: Form[], userEmail: string) => {
     try {
-      // Build a status map for all forms
+      // Build a status map for all forms for this specific user
       const statusMap: Record<string, boolean> = {};
 
-      // Get submissions from the 'formulario' table
+      // Get submissions from the 'formulario' table for this specific user
       const { data, error } = await supabase
         .from('formulario')
         .select('nombre_formulario, nombre_invitado, estatus')
@@ -122,22 +121,24 @@ const AssignedForms = () => {
         throw error;
       }
 
-      // Map form titles to their status
+      console.log(`Found ${data?.length || 0} form responses for user ${userEmail}`);
+
+      // Map form titles to their status for this specific user
       if (data) {
         forms.forEach(form => {
-          // Find if this form has a submission with status=true
+          // Find if this specific user has a submission with status=true for this form
           const submission = data.find(sub => 
             sub.nombre_formulario === form.title && 
             sub.nombre_invitado === userEmail && 
             sub.estatus === true
           );
           
-          // Set the status in our map
+          // Set the status in our map based on this user's submissions
           statusMap[form.id] = !!submission;
         });
       }
 
-      console.log("Form status map:", statusMap);
+      console.log("User-specific form status map:", statusMap);
       setFormStatus(statusMap);
     } catch (error) {
       console.error("Error fetching form status:", error);
@@ -155,7 +156,7 @@ const AssignedForms = () => {
   // Filter out hidden forms
   const visibleForms = assignedForms.filter(form => !hiddenForms.includes(form.id));
   
-  // Split forms into pending and completed based on the status map from Supabase
+  // Split forms into pending and completed based on the user-specific status map
   const pendingForms = visibleForms.filter(form => !formStatus[form.id]);
   const completedForms = visibleForms.filter(form => formStatus[form.id]);
 
