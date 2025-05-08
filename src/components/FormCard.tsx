@@ -52,6 +52,10 @@ const FormCard = ({ form }: FormCardProps) => {
     navigate(`/forms/${form.id}/edit`);
   };
 
+  const handlePreview = () => {
+    navigate(`/forms/${form.id}`);
+  };
+
   // Format date or use fallback
   const formatDate = (dateString: string) => {
     try {
@@ -99,20 +103,49 @@ const FormCard = ({ form }: FormCardProps) => {
         
         <CardFooter className="flex justify-between items-center pt-4">
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/forms/${form.id}/edit`)} title="Editar">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleEdit} 
+              title="Editar"
+            >
               <Edit className="h-4 w-4" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={() => setIsShareDialogOpen(true)} title="Compartir">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsShareDialogOpen(true)} 
+              title="Compartir"
+            >
               <Share className="h-4 w-4" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/forms/${form.id}/responses`)} title="Ver análisis">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(`/forms/${form.id}/responses`)} 
+              title="Ver análisis"
+            >
               <ClipboardCheck className="h-4 w-4" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={() => setIsViewResponsesOpen(true)} title="Ver respuestas">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsViewResponsesOpen(true)} 
+              title="Ver respuestas"
+            >
               <Eye className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handlePreview}
+              title="Vista previa"
+            >
+              <Eye className="h-4 w-4 text-green-600" />
             </Button>
             
             <Button 
