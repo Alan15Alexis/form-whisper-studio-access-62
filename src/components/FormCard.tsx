@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link, useNavigate } from "react-router-dom";
-import { Edit, Share, Trash, ClipboardCheck, Eye } from "lucide-react";
+import { BarChart, Edit, Share, Trash, Eye } from "lucide-react";
 import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
 import ShareFormDialog from "./ShareFormDialog";
@@ -106,15 +106,6 @@ const FormCard = ({ form }: FormCardProps) => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={handleEdit} 
-              title="Editar"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
               onClick={() => setIsShareDialogOpen(true)} 
               title="Compartir"
             >
@@ -124,19 +115,10 @@ const FormCard = ({ form }: FormCardProps) => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => navigate(`/forms/${form.id}/responses`)} 
-              title="Ver análisis"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
               onClick={() => setIsViewResponsesOpen(true)} 
               title="Ver respuestas"
             >
-              <Eye className="h-4 w-4" />
+              <BarChart className="h-4 w-4" />
             </Button>
             
             <Button 
