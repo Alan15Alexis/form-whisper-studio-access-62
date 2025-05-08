@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HttpConfig } from "@/types/form";
 import HttpConfigSettings from "./HttpConfigSettings";
 import { useAuth } from "@/contexts/AuthContext";
-import InvitedUsersManager from "./InvitedUsersManager";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -140,11 +139,6 @@ const FormSettings = ({
           </div>
         </div>
       </Card>
-
-      {/* Gestión de usuarios invitados - Solo visible para administradores */}
-      {isAdmin && isPrivate && formId && (
-        <InvitedUsersManager formId={formId} />
-      )}
       
       {/* Configuración HTTP - Solo visible para administradores */}
       <HttpConfigSettings 
