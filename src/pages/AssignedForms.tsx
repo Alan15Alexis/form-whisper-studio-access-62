@@ -87,8 +87,8 @@ const AssignedForms = () => {
             setForms(prevForms => [...prevForms, ...newForms]);
           }
           
-          // Now check the status of each form in the formulario table SPECIFICALLY FOR THIS USER
-          await fetchFormStatus(mappedForms, userEmail);
+          // Check the status of each form in the formulario table SPECIFICALLY FOR THIS USER
+          await fetchFormCompletionStatus(mappedForms, userEmail);
         }
       } catch (error) {
         console.error("Error fetching assigned forms:", error);
@@ -103,10 +103,10 @@ const AssignedForms = () => {
     };
 
     fetchAssignedForms();
-  }, [currentUser?.email, setForms, forms, responses]); 
+  }, [currentUser?.email, setForms, forms, responses]);
 
-  // Updated function to fetch form status specifically for the current user
-  const fetchFormStatus = async (forms: Form[], userEmail: string) => {
+  // Improved function to fetch form status specifically for the current user
+  const fetchFormCompletionStatus = async (forms: Form[], userEmail: string) => {
     try {
       // Build a status map for all forms for this specific user
       const statusMap: Record<string, boolean> = {};
@@ -121,7 +121,7 @@ const AssignedForms = () => {
         throw error;
       }
 
-      console.log(`Found ${data?.length || 0} form responses for user ${userEmail}`);
+      console.log(`Found ${data?.length || 0} form submissions for user ${userEmail}`);
 
       // Map form titles to their status for this specific user
       if (data) {
@@ -138,10 +138,10 @@ const AssignedForms = () => {
         });
       }
 
-      console.log("User-specific form status map:", statusMap);
+      console.log("User-specific form completion status map:", statusMap);
       setFormStatus(statusMap);
     } catch (error) {
-      console.error("Error fetching form status:", error);
+      console.error("Error fetching form completion status:", error);
     }
   };
 

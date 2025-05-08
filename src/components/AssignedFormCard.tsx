@@ -63,7 +63,7 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
             <CardTitle className="text-xl" style={{ color: form.formColor || 'inherit' }}>
               {form.title}
             </CardTitle>
-            {hasResponded ? (
+            {isCompleted ? (
               <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
                 <CheckIcon className="mr-1 h-3 w-3" />
                 Completado
@@ -100,12 +100,12 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
           </Button>
             
           <Button
-            style={hasResponded ? {} : buttonStyle}
-            variant={hasResponded ? "outline" : "default"}
-            onClick={hasResponded ? handleViewResponse : undefined}
-            asChild={!hasResponded}
+            style={isCompleted ? {} : buttonStyle}
+            variant={isCompleted ? "outline" : "default"}
+            onClick={isCompleted ? handleViewResponse : undefined}
+            asChild={!isCompleted}
           >
-            {hasResponded ? (
+            {isCompleted ? (
               <div className="flex items-center cursor-pointer">
                 <EyeIcon className="mr-1 h-4 w-4" />
                 Ver respuesta
