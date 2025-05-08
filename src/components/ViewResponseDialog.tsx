@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Filter } from "lucide-react";
+import { Loader2, Filter, Download, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FormField } from "@/types/form";
@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
 
 interface ViewResponseDialogProps {
   formId: string;
@@ -125,6 +126,60 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     setShowAllResponses(!showAllResponses);
   };
 
+  // Download responses as CSV
+  const downloadCSV = () => {
+    if (!allResponses || allResponses.length === 0) return;
+    
+    // Get all unique question keys from all responses
+    const allKeys = new Set<string>();
+    allResponses.forEach(response => {
+      if (response.respuestas) {
+        Object.keys(response.respuestas).forEach(key => {
+          allKeys.add(key);
+        });
+      }
+    });
+    
+    // Create CSV header row
+    const headers = ["Usuario", "Fecha", ...Array.from(allKeys)];
+    
+    // Create data rows
+    const rows = allResponses.map(response => {
+      const row: string[] = [
+        response.nombre_invitado,
+        format(new Date(response.created_at), 'yyyy-MM-dd HH:mm:ss')
+      ];
+      
+      // Add response data for each question
+      Array.from(allKeys).forEach(key => {
+        const value = response.respuestas?.[key] ?? '';
+        if (typeof value === 'object') {
+          row.push(JSON.stringify(value));
+        } else {
+          row.push(String(value));
+        }
+      });
+      
+      return row;
+    });
+    
+    // Format CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${formTitle.replace(/\s+/g, '_')}_respuestas.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Create aggregate data from all responses
   const getAggregatedData = () => {
     if (!allResponses || allResponses.length === 0) return {};
@@ -182,28 +237,41 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="text-sm font-medium">Seleccionar respuesta:</h4>
                     
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex gap-2">
-                          <Filter className="h-4 w-4" />
-                          <span>Filtrar</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onClick={handleToggleAllResponses} 
-                          className={showAllResponses ? "bg-muted" : ""}
-                        >
-                          Ver todas las respuestas
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleSelectResponse(selectedResponseIndex)}
-                          className={!showAllResponses ? "bg-muted" : ""}
-                        >
-                          Ver respuestas individuales
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex space-x-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex gap-2">
+                            <Filter className="h-4 w-4" />
+                            <span>Filtrar</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={handleToggleAllResponses} 
+                            className={showAllResponses ? "bg-muted" : ""}
+                          >
+                            Ver todas las respuestas
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleSelectResponse(selectedResponseIndex)}
+                            className={!showAllResponses ? "bg-muted" : ""}
+                          >
+                            Ver respuestas individuales
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      <Button 
+                        onClick={downloadCSV} 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex gap-2"
+                        disabled={allResponses.length === 0}
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>Descargar CSV</span>
+                      </Button>
+                    </div>
                   </div>
 
                   {!showAllResponses && (
