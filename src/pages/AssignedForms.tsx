@@ -17,6 +17,7 @@ const AssignedForms = () => {
   const [hiddenForms, setHiddenForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignedForms, setAssignedForms] = useState<Form[]>([]);
+  const [formStatus, setFormStatus] = useState<Record<string, boolean>>({});
 
   // Load hidden forms from localStorage
   useEffect(() => {
@@ -86,6 +87,9 @@ const AssignedForms = () => {
           if (newForms.length > 0) {
             setForms(prevForms => [...prevForms, ...newForms]);
           }
+          
+          // Now check the status of each form in the formulario table
+          await fetchFormStatus(mappedForms, userEmail);
         }
       } catch (error) {
         console.error("Error fetching assigned forms:", error);
@@ -102,6 +106,44 @@ const AssignedForms = () => {
     fetchAssignedForms();
   }, [currentUser?.email, setForms, forms, responses]); // Added responses as a dependency
 
+  // New function to fetch form statuses from the formulario table
+  const fetchFormStatus = async (forms: Form[], userEmail: string) => {
+    try {
+      // Build a status map for all forms
+      const statusMap: Record<string, boolean> = {};
+
+      // Get submissions from the 'formulario' table
+      const { data, error } = await supabase
+        .from('formulario')
+        .select('nombre_formulario, nombre_invitado, estatus')
+        .eq('nombre_invitado', userEmail);
+
+      if (error) {
+        throw error;
+      }
+
+      // Map form titles to their status
+      if (data) {
+        forms.forEach(form => {
+          // Find if this form has a submission with status=true
+          const submission = data.find(sub => 
+            sub.nombre_formulario === form.title && 
+            sub.nombre_invitado === userEmail && 
+            sub.estatus === true
+          );
+          
+          // Set the status in our map
+          statusMap[form.id] = !!submission;
+        });
+      }
+
+      console.log("Form status map:", statusMap);
+      setFormStatus(statusMap);
+    } catch (error) {
+      console.error("Error fetching form status:", error);
+    }
+  };
+
   const hideForm = (formId: string) => {
     const updated = [...hiddenForms, formId];
     setHiddenForms(updated);
@@ -113,9 +155,9 @@ const AssignedForms = () => {
   // Filter out hidden forms
   const visibleForms = assignedForms.filter(form => !hiddenForms.includes(form.id));
   
-  // Split forms into pending and completed
-  const pendingForms = visibleForms.filter(form => getFormResponses(form.id).length === 0);
-  const completedForms = visibleForms.filter(form => getFormResponses(form.id).length > 0);
+  // Split forms into pending and completed based on the status map from Supabase
+  const pendingForms = visibleForms.filter(form => !formStatus[form.id]);
+  const completedForms = visibleForms.filter(form => formStatus[form.id]);
 
   return (
     <Layout title="Formularios Asignados">
@@ -146,7 +188,12 @@ const AssignedForms = () => {
             {pendingForms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pendingForms.map(form => (
-                  <AssignedFormCard key={form.id} form={form} onRemove={hideForm} />
+                  <AssignedFormCard 
+                    key={form.id} 
+                    form={form} 
+                    onRemove={hideForm} 
+                    isCompleted={formStatus[form.id]} 
+                  />
                 ))}
               </div>
             ) : (
@@ -163,7 +210,12 @@ const AssignedForms = () => {
             {completedForms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {completedForms.map(form => (
-                  <AssignedFormCard key={form.id} form={form} onRemove={hideForm} />
+                  <AssignedFormCard 
+                    key={form.id} 
+                    form={form} 
+                    onRemove={hideForm} 
+                    isCompleted={formStatus[form.id]} 
+                  />
                 ))}
               </div>
             ) : (

@@ -12,6 +12,7 @@ export type Database = {
       formulario: {
         Row: {
           created_at: string
+          estatus: boolean | null
           id: number
           nombre_administrador: string | null
           nombre_formulario: string | null
@@ -20,6 +21,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          estatus?: boolean | null
           id?: number
           nombre_administrador?: string | null
           nombre_formulario?: string | null
@@ -28,6 +30,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          estatus?: boolean | null
           id?: number
           nombre_administrador?: string | null
           nombre_formulario?: string | null

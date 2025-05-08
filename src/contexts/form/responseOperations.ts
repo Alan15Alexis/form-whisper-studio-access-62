@@ -76,14 +76,15 @@ export const submitFormResponseOperation = (
       // Get admin email (form creator)
       const adminEmail = form.createdBy || form.ownerId || null;
       
-      // Save to Supabase (formulario table)
+      // Save to Supabase (formulario table) - now including estatus as true
       await supabase
         .from('formulario')
         .insert({
           nombre_formulario: form.title || 'Untitled Form',
           nombre_invitado: currentUser?.email || localStorage.getItem('userEmail') || 'anonymous',
           nombre_administrador: adminEmail || null,
-          respuestas: formattedResponses // Use formatted responses with labels
+          respuestas: formattedResponses, // Use formatted responses with labels
+          estatus: true // Set the status to true for completed forms
         });
 
       // Send to MySQL database through API
@@ -93,7 +94,8 @@ export const submitFormResponseOperation = (
           form_id: formId,
           responses: JSON.stringify(formattedResponses), // Use formatted responses with labels
           submitted_by: currentUser?.email || localStorage.getItem('userEmail') || 'anonymous',
-          form_title: form.title || 'Untitled Form'
+          form_title: form.title || 'Untitled Form',
+          estatus: true // Add status field here too for MySQL
         };
         
         // Send to MySQL API endpoint
