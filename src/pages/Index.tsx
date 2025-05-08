@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -66,8 +67,8 @@ const Index = () => {
           // Also store email separately for easier access
           localStorage.setItem('userEmail', email);
           
-          // Redirect directly to Assigned Forms page
-          navigate('/assigned-forms');
+          // Force immediate navigation to Assigned Forms page
+          window.location.href = '/assigned-forms';
         } else {
           toast({
             title: "Error de autenticación",

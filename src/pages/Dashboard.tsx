@@ -8,7 +8,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If not authenticated, redirect to login
+    // Check if we have a stored email from the homepage flow
+    const storedEmail = localStorage.getItem('userEmail');
+    
+    // If not authenticated but we have a stored email, go directly to assigned forms
+    if (!isAuthenticated && storedEmail) {
+      navigate("/assigned-forms");
+      return;
+    }
+    
+    // If not authenticated and no stored email, redirect to login
     if (!isAuthenticated) {
       navigate("/login");
       return;
