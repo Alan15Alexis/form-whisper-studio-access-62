@@ -228,7 +228,7 @@ const FormView = () => {
     );
   }
 
-  // If submit success, show success page
+  // If submit success, show success page with the score if enabled
   if (isSubmitSuccess) {
     return (
       <Layout hideNav>
