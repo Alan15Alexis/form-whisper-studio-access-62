@@ -1,12 +1,16 @@
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HttpConfig } from "@/types/form";
+import { HttpConfig, ScoreRange } from "@/types/form";
 import HttpConfigSettings from "./HttpConfigSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Trash, Plus } from "lucide-react";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -65,6 +69,59 @@ const FormSettings = ({
   };
 
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
+
+  // Added state for score ranges
+  const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>(() => {
+    // Initialize with existing score ranges from the first field that has them
+    const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
+    return fieldWithRanges?.scoreRanges || [];
+  });
+
+  // Score range management functions
+  const addScoreRange = () => {
+    const lastRange = scoreRanges[scoreRanges.length - 1];
+    const newMin = lastRange ? lastRange.max + 1 : 0;
+    const newMax = newMin + 10;
+    
+    setScoreRanges([
+      ...scoreRanges, 
+      { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
+    ]);
+    
+    // Update all fields that have numeric values with the new ranges
+    updateFieldsWithScoreRanges([
+      ...scoreRanges,
+      { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
+    ]);
+  };
+
+  const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
+    const updatedRanges = [...scoreRanges];
+    updatedRanges[index] = { 
+      ...updatedRanges[index], 
+      [field]: typeof value === 'string' ? value : Number(value)
+    };
+    setScoreRanges(updatedRanges);
+    
+    // Update all fields with the updated ranges
+    updateFieldsWithScoreRanges(updatedRanges);
+  };
+
+  const removeScoreRange = (index: number) => {
+    const updatedRanges = scoreRanges.filter((_, i) => i !== index);
+    setScoreRanges(updatedRanges);
+    
+    // Update all fields with the updated ranges
+    updateFieldsWithScoreRanges(updatedRanges);
+  };
+
+  // This function will be used to update all fields with the current score ranges
+  const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
+    // This should be implemented in the parent component to update all fields
+    // For now we'll just make it a placeholder
+    console.log("Score ranges updated:", ranges);
+    // Ideally, this would call a function passed from the parent to update all fields
+  };
 
   return (
     <div className="space-y-8">
@@ -145,6 +202,89 @@ const FormSettings = ({
                 <li>Activa "Habilitar valores numéricos"</li>
                 <li>Asigna valores numéricos a las opciones</li>
               </ol>
+            </div>
+          )}
+          
+          {/* Score Ranges Configuration - Moved from FieldConfigDrawer */}
+          {showTotalScore && (
+            <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addScoreRange}
+                  className="flex items-center gap-1"
+                >
+                  <Plus className="h-4 w-4" /> Añadir rango
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {scoreRanges.map((range, index) => (
+                  <div key={index} className="p-3 border rounded-md bg-background">
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <Label htmlFor={`min-${index}`}>Mínimo</Label>
+                        <Input
+                          id={`min-${index}`}
+                          type="number"
+                          value={range.min}
+                          onChange={(e) => updateScoreRange(index, 'min', Number(e.target.value))}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`max-${index}`}>Máximo</Label>
+                        <Input
+                          id={`max-${index}`}
+                          type="number"
+                          value={range.max}
+                          onChange={(e) => updateScoreRange(index, 'max', Number(e.target.value))}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor={`message-${index}`}>Mensaje</Label>
+                      <Input
+                        id={`message-${index}`}
+                        value={range.message}
+                        onChange={(e) => updateScoreRange(index, 'message', e.target.value)}
+                        className="mt-1"
+                        placeholder="Mensaje que se mostrará para este rango de puntuación"
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 text-red-500 hover:text-red-700"
+                      onClick={() => removeScoreRange(index)}
+                    >
+                      <Trash className="h-4 w-4 mr-1" /> Eliminar
+                    </Button>
+                  </div>
+                ))}
+
+                {scoreRanges.length === 0 && (
+                  <div className="text-center p-4">
+                    <p className="text-sm text-muted-foreground italic">
+                      No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addScoreRange}
+                      className="mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

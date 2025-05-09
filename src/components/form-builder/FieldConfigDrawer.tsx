@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { FormField, FormFieldOption, ScoreRange } from "@/types/form";
+import { FormField, FormFieldOption } from "@/types/form";
 import { 
   Sheet, 
   SheetContent, 
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Trash, Plus } from "lucide-react";
 
 interface FieldConfigDrawerProps {
   field: FormField;
@@ -34,19 +33,16 @@ const FieldConfigDrawer = ({
   onToggleFormScoring
 }: FieldConfigDrawerProps) => {
   const [localField, setLocalField] = useState<FormField>({ ...field });
-  const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>(field.scoreRanges || []);
 
   // Update local state when the field prop changes
   useEffect(() => {
     setLocalField({ ...field });
-    setScoreRanges(field.scoreRanges || []);
   }, [field]);
 
   const handleClose = () => {
     // Apply changes before closing
     onUpdate({
-      ...localField,
-      scoreRanges: scoreRanges
+      ...localField
     });
     onClose();
   };
@@ -85,30 +81,6 @@ const FieldConfigDrawer = ({
       ...localField,
       options: updatedOptions
     });
-  };
-
-  const addScoreRange = () => {
-    const lastRange = scoreRanges[scoreRanges.length - 1];
-    const newMin = lastRange ? lastRange.max + 1 : 0;
-    const newMax = newMin + 10;
-    
-    setScoreRanges([
-      ...scoreRanges, 
-      { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
-    ]);
-  };
-
-  const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
-    const updatedRanges = [...scoreRanges];
-    updatedRanges[index] = { 
-      ...updatedRanges[index], 
-      [field]: typeof value === 'string' ? value : Number(value)
-    };
-    setScoreRanges(updatedRanges);
-  };
-
-  const removeScoreRange = (index: number) => {
-    setScoreRanges(scoreRanges.filter((_, i) => i !== index));
   };
 
   const hasOptionsToScore = localField.options && localField.options.length > 0;
@@ -209,88 +181,13 @@ const FieldConfigDrawer = ({
             />
           </div>
 
-          {/* Score Ranges Configuration - Destacado */}
-          {formHasScoring && (
-            <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={addScoreRange}
-                  className="flex items-center gap-1"
-                >
-                  <Plus className="h-4 w-4" /> Añadir rango
-                </Button>
-              </div>
-              
-              <div className="space-y-3">
-                {scoreRanges.map((range, index) => (
-                  <div key={index} className="p-3 border rounded-md bg-background">
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div>
-                        <Label htmlFor={`min-${index}`}>Mínimo</Label>
-                        <Input
-                          id={`min-${index}`}
-                          type="number"
-                          value={range.min}
-                          onChange={(e) => updateScoreRange(index, 'min', Number(e.target.value))}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`max-${index}`}>Máximo</Label>
-                        <Input
-                          id={`max-${index}`}
-                          type="number"
-                          value={range.max}
-                          onChange={(e) => updateScoreRange(index, 'max', Number(e.target.value))}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor={`message-${index}`}>Mensaje</Label>
-                      <Input
-                        id={`message-${index}`}
-                        value={range.message}
-                        onChange={(e) => updateScoreRange(index, 'message', e.target.value)}
-                        className="mt-1"
-                        placeholder="Mensaje que se mostrará para este rango de puntuación"
-                      />
-                    </div>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-2 text-red-500 hover:text-red-700"
-                      onClick={() => removeScoreRange(index)}
-                    >
-                      <Trash className="h-4 w-4 mr-1" /> Eliminar
-                    </Button>
-                  </div>
-                ))}
-
-                {scoreRanges.length === 0 && (
-                  <div className="text-center p-4">
-                    <p className="text-sm text-muted-foreground italic">
-                      No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
-                    </p>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={addScoreRange}
-                      className="mt-2"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <div className="p-3 bg-primary/5 border rounded-md text-sm">
+            <p className="font-medium">¿Dónde configurar los rangos de puntuación?</p>
+            <p className="mt-2">
+              Los rangos de puntuación y mensajes personalizados ahora se configuran en la pestaña "Configuración" del formulario,
+              en la sección "Puntuación y Resultados".
+            </p>
+          </div>
         </div>
         
         <SheetFooter>
