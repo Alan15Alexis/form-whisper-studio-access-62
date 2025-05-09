@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { useForm } from "@/contexts/form";
-import { Form, FormField, HttpConfig } from "@/types/form";
+import { Form, FormField, HttpConfig, ScoreRange } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
 import { useDragAndDrop } from "./form-builder/useDragAndDrop";
@@ -82,6 +82,24 @@ export const useFormBuilder = (formId?: string) => {
 
   const handleToggleFormScoring = (enabled: boolean) => {
     setFormData(prev => ({ ...prev, showTotalScore: enabled }));
+    
+    if (enabled) {
+      let scoreRanges: ScoreRange[] = [];
+      const fieldWithRanges = formData.fields?.find(f => f.scoreRanges && f.scoreRanges.length > 0);
+      
+      if (fieldWithRanges?.scoreRanges) {
+        scoreRanges = fieldWithRanges.scoreRanges;
+      }
+      
+      const updatedFields = formData.fields?.map(field => {
+        if (field.hasNumericValues) {
+          return { ...field, scoreRanges };
+        }
+        return field;
+      });
+      
+      setFormData(prev => ({ ...prev, fields: updatedFields }));
+    }
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
@@ -105,10 +123,24 @@ export const useFormBuilder = (formId?: string) => {
       field.id === id ? { ...updatedField } : field
     ) || [];
     
-    setFormData(prev => ({
-      ...prev,
-      fields: updatedFields
-    }));
+    if (updatedField.scoreRanges && updatedField.scoreRanges.length > 0) {
+      const fieldsWithScoreRanges = updatedFields.map(field => {
+        if (field.hasNumericValues && field.id !== id) {
+          return { ...field, scoreRanges: updatedField.scoreRanges };
+        }
+        return field;
+      });
+      
+      setFormData(prev => ({
+        ...prev,
+        fields: fieldsWithScoreRanges
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        fields: updatedFields
+      }));
+    }
   };
 
   const removeField = (id: string) => {

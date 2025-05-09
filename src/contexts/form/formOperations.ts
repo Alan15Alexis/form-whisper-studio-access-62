@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { Form } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -34,6 +33,7 @@ export const createFormOperation = (
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
+      showTotalScore: formData.showTotalScore
     };
 
     setForms(prevForms => [...prevForms, newForm]);

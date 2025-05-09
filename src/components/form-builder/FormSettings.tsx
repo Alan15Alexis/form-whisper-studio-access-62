@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -72,10 +72,28 @@ const FormSettings = ({
 
   // Added state for score ranges
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>(() => {
-    // Initialize with existing score ranges from the first field that has them
-    const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
-    return fieldWithRanges?.scoreRanges || [];
+    // Initialize with existing score ranges from the form configuration
+    if (formFields && formFields.length > 0) {
+      const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
+      if (fieldWithRanges?.scoreRanges) {
+        return fieldWithRanges.scoreRanges;
+      }
+    }
+    return [];
   });
+
+  // Updated useEffect to sync score ranges with form state when toggling scoring
+  useEffect(() => {
+    if (!showTotalScore) {
+      return;
+    }
+    
+    // Get score ranges from any field that has them
+    const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
+    if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
+      setScoreRanges(fieldWithRanges.scoreRanges);
+    }
+  }, [showTotalScore, formFields]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -83,16 +101,15 @@ const FormSettings = ({
     const newMin = lastRange ? lastRange.max + 1 : 0;
     const newMax = newMin + 10;
     
-    setScoreRanges([
+    const newRanges = [
       ...scoreRanges, 
       { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
-    ]);
+    ];
+    
+    setScoreRanges(newRanges);
     
     // Update all fields that have numeric values with the new ranges
-    updateFieldsWithScoreRanges([
-      ...scoreRanges,
-      { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
-    ]);
+    updateFieldsWithScoreRanges(newRanges);
   };
 
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
@@ -115,12 +132,21 @@ const FormSettings = ({
     updateFieldsWithScoreRanges(updatedRanges);
   };
 
-  // This function will be used to update all fields with the current score ranges
+  // This function will update all fields with the current score ranges
   const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
-    // This should be implemented in the parent component to update all fields
-    // For now we'll just make it a placeholder
-    console.log("Score ranges updated:", ranges);
-    // Ideally, this would call a function passed from the parent to update all fields
+    // Update the scoreRanges for each field with numeric values
+    const updatedFields = formFields.map(field => {
+      if (field.hasNumericValues) {
+        return { ...field, scoreRanges: ranges };
+      }
+      return field;
+    });
+    
+    // Now update the form configuration with these updated fields
+    if (formId && onToggleFormScoring) {
+      // This will trigger the form to save with the updated ranges
+      onToggleFormScoring(showTotalScore);
+    }
   };
 
   return (
