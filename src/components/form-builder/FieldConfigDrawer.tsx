@@ -125,11 +125,16 @@ const FieldConfigDrawer = ({
         </SheetHeader>
         
         <div className="py-6 space-y-6">
-          {/* Numeric Values Configuration */}
+          {/* Foco en la sección de Numeric Values Configuration */}
           {(hasOptionsToScore || isYesNoField) && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="numeric-values">Habilitar valores numéricos</Label>
+                <div>
+                  <Label htmlFor="numeric-values" className="text-base font-medium">Habilitar valores numéricos</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Asigna puntuaciones numéricas a las opciones de este campo
+                  </p>
+                </div>
                 <Switch
                   id="numeric-values"
                   checked={!!localField.hasNumericValues}
@@ -188,26 +193,27 @@ const FieldConfigDrawer = ({
 
           <Separator />
           
-          {/* Form Scoring Toggle */}
+          {/* Form Scoring Toggle - Destacado */}
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="show-total-score">Mostrar puntuación total</Label>
+              <Label htmlFor="show-total-score" className="text-base font-medium">Mostrar puntuación total</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Suma los valores de todas las respuestas seleccionadas
+                Suma los valores de todas las respuestas seleccionadas y muestra el resultado al final
               </p>
             </div>
             <Switch
               id="show-total-score"
               checked={formHasScoring}
               onCheckedChange={onToggleFormScoring}
+              className="data-[state=checked]:bg-primary"
             />
           </div>
 
-          {/* Score Ranges Configuration */}
+          {/* Score Ranges Configuration - Destacado */}
           {formHasScoring && (
-            <div className="space-y-4">
+            <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
-                <Label>Rangos de puntuación y mensajes</Label>
+                <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -221,7 +227,7 @@ const FieldConfigDrawer = ({
               
               <div className="space-y-3">
                 {scoreRanges.map((range, index) => (
-                  <div key={index} className="p-3 border rounded-md">
+                  <div key={index} className="p-3 border rounded-md bg-background">
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
                         <Label htmlFor={`min-${index}`}>Mínimo</Label>
@@ -251,6 +257,7 @@ const FieldConfigDrawer = ({
                         value={range.message}
                         onChange={(e) => updateScoreRange(index, 'message', e.target.value)}
                         className="mt-1"
+                        placeholder="Mensaje que se mostrará para este rango de puntuación"
                       />
                     </div>
                     <Button 
@@ -266,9 +273,20 @@ const FieldConfigDrawer = ({
                 ))}
 
                 {scoreRanges.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">
-                    No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
-                  </p>
+                  <div className="text-center p-4">
+                    <p className="text-sm text-muted-foreground italic">
+                      No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addScoreRange}
+                      className="mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

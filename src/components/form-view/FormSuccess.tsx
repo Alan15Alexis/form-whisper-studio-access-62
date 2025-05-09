@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FormField } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 interface FormSuccessProps {
   formValues: Record<string, any>;
@@ -36,7 +37,9 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
               
               <div className="flex items-center justify-between">
                 <span className="text-lg">Puntuación Total:</span>
-                <span className="text-3xl font-bold text-primary">{currentScore}</span>
+                <Badge variant="outline" className="text-2xl font-bold px-4 py-2 bg-primary/10">
+                  {currentScore}
+                </Badge>
               </div>
               
               {scoreFeedback && (
@@ -49,8 +52,8 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
         </CardContent>
         
         <CardFooter className="flex justify-center pb-6">
-          <Button onClick={() => navigate("/")}>
-            Volver al inicio
+          <Button onClick={() => navigate("/assigned-forms")}>
+            Volver a mis formularios
           </Button>
         </CardFooter>
       </Card>

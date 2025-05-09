@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HttpConfig } from "@/types/form";
 import HttpConfigSettings from "./HttpConfigSettings";
 import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -32,7 +33,6 @@ interface FormSettingsProps {
   formId?: string;
 }
 
-// Cambia la declaración del componente para aceptar formFields
 const FormSettings = ({
   isPrivate,
   onPrivateChange,
@@ -60,9 +60,12 @@ const FormSettings = ({
 }`,
   };
 
+  const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
+
   return (
     <div className="space-y-8">
       <Card className="p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-medium mb-4">Configuración General</h3>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
             <Switch
@@ -105,7 +108,37 @@ const FormSettings = ({
               </SelectContent>
             </Select>
           </div>
+        </div>
+      </Card>
 
+      <Card className="p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-medium mb-4">Puntuación y Resultados</h3>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4 bg-primary/5 p-4 rounded-md">
+            <Switch
+              id="show-total-score"
+              checked={hasFieldsWithNumericValues}
+              disabled={true}
+              className="data-[state=checked]:bg-[#686df3]"
+            />
+            <div>
+              <Label htmlFor="show-total-score" className="text-lg font-medium">Valores numéricos</Label>
+              <p className="text-sm text-gray-500">
+                {hasFieldsWithNumericValues 
+                  ? "Hay campos con valores numéricos configurados." 
+                  : "No hay campos con valores numéricos. Configure valores en al menos un campo."}
+              </p>
+              <p className="text-xs text-primary italic mt-1">
+                Para activar, habilita valores numéricos en al menos un campo usando el botón de configuración.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+      
+      <Card className="p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-medium mb-4">Acceso a Respuestas</h3>
+        <div className="space-y-6">
           <div className="flex items-center space-x-4">
             <Switch
               id="allow-view-own-responses"
