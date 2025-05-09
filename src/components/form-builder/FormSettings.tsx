@@ -31,6 +31,8 @@ interface FormSettingsProps {
   onHttpConfigChange?: (config: HttpConfig) => void;
   formFields?: any[];
   formId?: string;
+  showTotalScore?: boolean;
+  onToggleFormScoring?: (enabled: boolean) => void;
 }
 
 const FormSettings = ({
@@ -45,7 +47,9 @@ const FormSettings = ({
   httpConfig,
   onHttpConfigChange,
   formFields = [],
-  formId = ""
+  formId = "",
+  showTotalScore = false,
+  onToggleFormScoring = () => {}
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -114,25 +118,35 @@ const FormSettings = ({
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Puntuación y Resultados</h3>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4 bg-primary/5 p-4 rounded-md">
+          <div className="flex items-center space-x-4">
             <Switch
               id="show-total-score"
-              checked={hasFieldsWithNumericValues}
-              disabled={true}
+              checked={showTotalScore}
+              onCheckedChange={onToggleFormScoring}
+              disabled={!hasFieldsWithNumericValues}
               className="data-[state=checked]:bg-[#686df3]"
             />
             <div>
-              <Label htmlFor="show-total-score" className="text-lg font-medium">Valores numéricos</Label>
+              <Label htmlFor="show-total-score" className="text-lg font-medium">Mostrar puntuación total</Label>
               <p className="text-sm text-gray-500">
                 {hasFieldsWithNumericValues 
-                  ? "Hay campos con valores numéricos configurados." 
-                  : "No hay campos con valores numéricos. Configure valores en al menos un campo."}
-              </p>
-              <p className="text-xs text-primary italic mt-1">
-                Para activar, habilita valores numéricos en al menos un campo usando el botón de configuración.
+                  ? "Muestra la puntuación total al finalizar el formulario" 
+                  : "Para activar, configura valores numéricos en al menos un campo"}
               </p>
             </div>
           </div>
+          
+          {!hasFieldsWithNumericValues && (
+            <div className="p-4 bg-primary/5 rounded-md text-sm">
+              <p className="font-medium">Para habilitar la puntuación total:</p>
+              <ol className="list-decimal ml-5 mt-2 space-y-1">
+                <li>Ve a la pestaña "Campos"</li>
+                <li>Selecciona un campo y haz clic en el ícono de configuración</li>
+                <li>Activa "Habilitar valores numéricos"</li>
+                <li>Asigna valores numéricos a las opciones</li>
+              </ol>
+            </div>
+          )}
         </div>
       </Card>
       

@@ -96,6 +96,8 @@ const FormBuilderTabs = ({
           onHttpConfigChange={onHttpConfigChange}
           formFields={formData.fields || []}
           formId={formId}
+          showTotalScore={formData.showTotalScore}
+          onToggleFormScoring={onToggleFormScoring}
         />
       </TabsContent>
       
