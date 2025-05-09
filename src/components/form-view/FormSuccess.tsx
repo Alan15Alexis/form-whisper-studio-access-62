@@ -16,9 +16,13 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
   const navigate = useNavigate();
   const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
   
-  const currentScore = showTotalScore ? calculateTotalScore(formValues, fields || []) : 0;
-  const scoreFeedback = showTotalScore ? getScoreFeedback(currentScore, fields || []) : null;
+  const currentScore = calculateTotalScore(formValues, fields || []);
+  const scoreFeedback = getScoreFeedback(currentScore, fields || []);
   const showScore = shouldShowScoreCard(fields || [], showTotalScore);
+
+  console.log("FormSuccess render:", { showTotalScore, currentScore, scoreFeedback, showScore });
+  console.log("Form values:", formValues);
+  console.log("Form fields:", fields);
 
   return (
     <div className="container max-w-3xl mx-auto py-8">

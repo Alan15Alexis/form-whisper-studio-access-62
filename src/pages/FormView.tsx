@@ -230,6 +230,8 @@ const FormView = () => {
 
   // If submit success, show success page with the score if enabled
   if (isSubmitSuccess) {
+    console.log("Showing success page with score:", form.showTotalScore);
+    console.log("Form scoring enabled:", form.enableScoring);
     return (
       <Layout hideNav>
         <FormSuccess 
