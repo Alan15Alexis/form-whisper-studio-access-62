@@ -9,7 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus } from "lucide-react";
+import { Trash, Plus, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -69,33 +70,29 @@ const FormSettings = ({
 
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
 
-  // Added state for score ranges
+  // Initialize score ranges from fields
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>(() => {
-    // Initialize with existing score ranges from the form configuration
+    // Initialize with existing score ranges from the form fields
     if (formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
       if (fieldWithRanges?.scoreRanges) {
         console.log("Initializing score ranges from fields:", fieldWithRanges.scoreRanges);
-        return fieldWithRanges.scoreRanges;
+        return [...fieldWithRanges.scoreRanges];
       }
     }
     return [];
   });
 
-  // Updated useEffect to sync score ranges with form state when toggling scoring
-  // or when formFields change
+  // Sync score ranges when fields change
   useEffect(() => {
-    if (!showTotalScore) {
-      return;
+    if (formFields && formFields.length > 0 && showTotalScore) {
+      const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
+      if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
+        console.log("Syncing score ranges from fields:", fieldWithRanges.scoreRanges);
+        setScoreRanges([...fieldWithRanges.scoreRanges]);
+      }
     }
-    
-    // Get score ranges from any field that has them
-    const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
-    if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
-      console.log("Updating score ranges from fields:", fieldWithRanges.scoreRanges);
-      setScoreRanges(fieldWithRanges.scoreRanges);
-    }
-  }, [showTotalScore, formFields]);
+  }, [formFields, showTotalScore]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -137,9 +134,11 @@ const FormSettings = ({
     console.log("Removed score range at index:", index);
   };
 
-  // This function will update all fields with the current score ranges
+  // This function will update all fields with the current score ranges and trigger the form update
   const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
-    // Update the scoreRanges for each field with numeric values
+    if (!onToggleFormScoring) return;
+    
+    // First make sure all field scoreRanges are updated in the parent component
     const updatedFields = formFields.map(field => {
       if (field.hasNumericValues) {
         return { ...field, scoreRanges: ranges };
@@ -147,9 +146,10 @@ const FormSettings = ({
       return field;
     });
     
-    // Now update the form configuration with these updated fields
-    if (formId && onToggleFormScoring) {
+    // Now trigger the form update with scoring enabled and updated ranges
+    if (formId) {
       // This will trigger the form to save with the updated ranges
+      // Note: We pass the current showTotalScore value to maintain its state
       onToggleFormScoring(showTotalScore);
       console.log("Updated score ranges in form configuration:", ranges);
     }
@@ -211,7 +211,15 @@ const FormSettings = ({
             <Switch
               id="show-total-score"
               checked={showTotalScore}
-              onCheckedChange={onToggleFormScoring}
+              onCheckedChange={(checked) => {
+                onToggleFormScoring(checked);
+                if (checked && scoreRanges.length === 0) {
+                  // If enabling scoring but no ranges, add a default range
+                  setTimeout(() => {
+                    addScoreRange();
+                  }, 100);
+                }
+              }}
               disabled={!hasFieldsWithNumericValues}
               className="data-[state=checked]:bg-[#686df3]"
             />
@@ -237,7 +245,7 @@ const FormSettings = ({
             </div>
           )}
           
-          {/* Score Ranges Configuration - Moved from FieldConfigDrawer */}
+          {/* Score Ranges Configuration */}
           {showTotalScore && (
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
@@ -252,6 +260,15 @@ const FormSettings = ({
                   <Plus className="h-4 w-4" /> Añadir rango
                 </Button>
               </div>
+              
+              {scoreRanges.length === 0 && showTotalScore && (
+                <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No hay rangos definidos. Los rangos permiten mostrar mensajes personalizados según la puntuación obtenida.
+                  </AlertDescription>
+                </Alert>
+              )}
               
               <div className="space-y-3">
                 {scoreRanges.map((range, index) => (

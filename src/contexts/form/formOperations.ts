@@ -34,7 +34,7 @@ export const createFormOperation = (
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
-      showTotalScore: formData.showTotalScore
+      showTotalScore: formData.showTotalScore || false
     };
 
     setForms(prevForms => [...prevForms, newForm]);
@@ -44,13 +44,22 @@ export const createFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
     }
     
-    // Get score ranges from fields if they exist
-    const scoreRanges = formData.fields?.find(field => field.scoreRanges && field.scoreRanges.length > 0)?.scoreRanges || [];
-    console.log("Score ranges to save to Supabase:", scoreRanges);
+    // Extract score ranges from fields with numeric values
+    let scoreRanges = [];
+    if (formData.showTotalScore) {
+      const fieldWithRanges = formData.fields?.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
+      
+      if (fieldWithRanges?.scoreRanges) {
+        scoreRanges = fieldWithRanges.scoreRanges;
+        console.log("Score ranges to save to Supabase:", scoreRanges);
+      }
+    }
     
     // Save form to Supabase database
     try {
-      await supabase.from('formulario_construccion').insert({
+      const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
         descripcion: newForm.description,
         preguntas: newForm.fields,
@@ -61,12 +70,14 @@ export const createFormOperation = (
           allowEditOwnResponses: newForm.allowEditOwnResponses,
           httpConfig: newForm.httpConfig,
           showTotalScore: newForm.showTotalScore,
-          scoreRanges: scoreRanges // Add score ranges to configuration
+          scoreRanges: scoreRanges // Store score ranges in the configuration
         },
         administrador: currentUserEmail || 'unknown@email.com',
         acceso: newForm.allowedUsers
-      });
-      console.log("Form created and saved to Supabase successfully with score ranges");
+      }).select();
+      
+      console.log("Form created in Supabase:", data);
+      console.log("Form created with score ranges:", scoreRanges);
     } catch (error) {
       console.error("Error saving form to Supabase:", error);
     }
@@ -118,9 +129,18 @@ export const updateFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: updatedForm.allowedUsers}));
     }
 
-    // Get score ranges from fields if they exist
-    const scoreRanges = formData.fields?.find(field => field.scoreRanges && field.scoreRanges.length > 0)?.scoreRanges || [];
-    console.log("Score ranges to update in Supabase:", scoreRanges);
+    // Extract score ranges from fields for database storage
+    let scoreRanges = [];
+    if (updatedForm.showTotalScore) {
+      const fieldWithRanges = updatedForm.fields?.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
+      
+      if (fieldWithRanges?.scoreRanges) {
+        scoreRanges = fieldWithRanges.scoreRanges;
+        console.log("Score ranges to update in Supabase:", scoreRanges);
+      }
+    }
     
     // Update the form in Supabase
     try {
@@ -146,7 +166,7 @@ export const updateFormOperation = (
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig,
               showTotalScore: updatedForm.showTotalScore,
-              scoreRanges: scoreRanges // Update score ranges in configuration
+              scoreRanges: scoreRanges // Store score ranges in the configuration
             },
             acceso: updatedForm.allowedUsers
           })
@@ -155,7 +175,7 @@ export const updateFormOperation = (
         if (error) {
           console.error("Error updating form in Supabase:", error);
         } else {
-          console.log("Form updated in Supabase successfully with score ranges");
+          console.log("Form updated in Supabase successfully with score ranges:", scoreRanges);
         }
       } else {
         // Form doesn't exist, insert it
@@ -172,7 +192,7 @@ export const updateFormOperation = (
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig,
               showTotalScore: updatedForm.showTotalScore,
-              scoreRanges: scoreRanges // Add score ranges to configuration
+              scoreRanges: scoreRanges // Store score ranges in the configuration
             },
             administrador: updatedForm.ownerId,
             acceso: updatedForm.allowedUsers
@@ -181,7 +201,7 @@ export const updateFormOperation = (
         if (error) {
           console.error("Error creating form in Supabase:", error);
         } else {
-          console.log("Form created in Supabase successfully with score ranges");
+          console.log("Form created in Supabase successfully with score ranges:", scoreRanges);
         }
       }
     } catch (error) {
