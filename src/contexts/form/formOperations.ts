@@ -10,6 +10,7 @@ export const createFormOperation = (
   setAccessTokens: React.Dispatch<React.SetStateAction<Record<string, string>>>,
   setAllowedUsers: React.Dispatch<React.SetStateAction<Record<string, string[]>>>,
   currentUserId: string | undefined,
+  currentUserEmail: string | undefined, // Add email parameter
 ) => {
   return async (formData: Partial<Form>): Promise<Form> => {
     // Simulate API call
@@ -56,7 +57,7 @@ export const createFormOperation = (
           httpConfig: newForm.httpConfig,
           showTotalScore: newForm.showTotalScore
         },
-        administrador: currentUserId,
+        administrador: currentUserEmail || 'unknown@email.com', // Use email instead of ID
         acceso: newForm.allowedUsers
       });
       console.log("Form created and saved to Supabase successfully");

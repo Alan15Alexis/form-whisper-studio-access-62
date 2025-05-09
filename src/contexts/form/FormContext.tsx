@@ -60,12 +60,14 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createForm = (formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
+    const userEmail = currentUser?.email; // Get the user's email
     return createFormOperation(
       forms,
       setForms,
       setAccessTokens,
       setAllowedUsers,
-      userId
+      userId,
+      userEmail // Pass the email to the createFormOperation
     )(formData);
   };
   
