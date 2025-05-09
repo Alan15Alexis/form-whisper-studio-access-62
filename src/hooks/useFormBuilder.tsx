@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -7,7 +6,7 @@ import { Form, FormField, HttpConfig } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
 import { useDragAndDrop } from "./form-builder/useDragAndDrop";
-import { addInvitedUser } from "@/integrations/supabase/client";
+import { addInvitedUser, checkInvitedUserExists } from "@/integrations/supabase/client";
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
@@ -141,27 +140,28 @@ export const useFormBuilder = (formId?: string) => {
       return;
     }
 
-    // Check if already in the list
-    if (formData.allowedUsers?.includes(allowedUserEmail)) {
+    // Check if already in the form's allowed users list
+    if (formData.allowedUsers?.includes(allowedUserEmail.toLowerCase())) {
       toast({
         title: 'Already added',
-        description: 'This email is already in the allowed users list',
+        description: 'This email is already in this form\'s allowed users list',
         variant: 'destructive'
       });
       return;
     }
 
     try {
-      // Add to the list
-      const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail];
+      // Add to the form's allowed users list
+      const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail.toLowerCase()];
       setFormData(prev => ({ 
         ...prev, 
         allowedUsers: updatedAllowedUsers 
       }));
       
-      // Add to Supabase usuario_invitado table
+      // Add to Supabase usuario_invitado table if not already exists
+      // The updated addInvitedUser function will handle checking if the user already exists
       const nombre = allowedUserName.trim() || 'Usuario Invitado';
-      await addInvitedUser(nombre, allowedUserEmail);
+      await addInvitedUser(nombre, allowedUserEmail.toLowerCase());
       
       // Clear inputs
       setAllowedUserEmail('');

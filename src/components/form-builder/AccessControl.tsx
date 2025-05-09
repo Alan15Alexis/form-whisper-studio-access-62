@@ -24,6 +24,9 @@ const AccessControl = ({
   allowedUserName = "",
   onAllowedUserNameChange = () => {}
 }: AccessControlProps) => {
+  // Convert all emails to lowercase for display consistency
+  const normalizedAllowedUsers = allowedUsers.map(email => email.toLowerCase());
+  
   return (
     <Card className="p-6">
       <div className="space-y-6">
@@ -83,10 +86,10 @@ const AccessControl = ({
             </Button>
           </div>
           
-          {allowedUsers && allowedUsers.length > 0 ? (
+          {normalizedAllowedUsers && normalizedAllowedUsers.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700 mb-2">Usuarios con acceso ({allowedUsers.length})</p>
-              {allowedUsers.map(email => (
+              <p className="text-sm font-medium text-gray-700 mb-2">Usuarios con acceso ({normalizedAllowedUsers.length})</p>
+              {normalizedAllowedUsers.map(email => (
                 <div 
                   key={email} 
                   className="flex justify-between items-center p-3 bg-gray-50 rounded-md border"

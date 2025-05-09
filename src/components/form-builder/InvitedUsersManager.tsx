@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HelpCircle, UserPlus, Mail, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { fetchInvitedUsers, addInvitedUser, removeInvitedUser } from "@/integrations/supabase/client";
+import { fetchInvitedUsers, addInvitedUser, removeInvitedUser, checkInvitedUserExists } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 interface InvitedUsersManagerProps {
@@ -68,31 +67,45 @@ const InvitedUsersManager = ({ formId }: InvitedUsersManagerProps) => {
       return;
     }
 
-    // Check if the email is already in the list
+    const lowerCaseEmail = userEmail.toLowerCase();
+
+    // Check if the email is already in the list in memory
     const emailExists = invitedUsers.some(
-      (user) => user.correo.toLowerCase() === userEmail.toLowerCase()
+      (user) => user.correo.toLowerCase() === lowerCaseEmail
     );
 
     if (emailExists) {
       toast({
-        title: "Error",
-        description: "Este correo electrónico ya está en la lista",
-        variant: "destructive",
+        title: "Usuario ya existe",
+        description: "Este usuario ya está registrado como invitado",
       });
+      setUserName("");
+      setUserEmail("");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const newUser = await addInvitedUser(userName, userEmail.toLowerCase());
+      // The updated addInvitedUser function will handle checking if the user already exists
+      const newUser = await addInvitedUser(userName, lowerCaseEmail);
+      
       if (newUser) {
-        setInvitedUsers([...invitedUsers, newUser]);
+        // Check if this user is already in our local state
+        const userAlreadyInList = invitedUsers.some(user => 
+          user.id === newUser.id || user.correo.toLowerCase() === lowerCaseEmail
+        );
+        
+        if (!userAlreadyInList) {
+          setInvitedUsers([...invitedUsers, newUser]);
+        }
+        
         setUserName("");
         setUserEmail("");
+        
         toast({
           title: "Usuario invitado añadido",
-          description: `${userName} (${userEmail}) ha sido añadido a la lista de usuarios invitados`,
+          description: `${userName} (${lowerCaseEmail}) ha sido añadido a la lista de usuarios invitados`,
         });
       }
     } catch (error) {

@@ -95,18 +95,21 @@ export type Database = {
       }
       usuario_invitado: {
         Row: {
+          administrador_agrego: string | null
           correo: string | null
           created_at: string
           id: number
           nombre: string | null
         }
         Insert: {
+          administrador_agrego?: string | null
           correo?: string | null
           created_at?: string
           id?: number
           nombre?: string | null
         }
         Update: {
+          administrador_agrego?: string | null
           correo?: string | null
           created_at?: string
           id?: number

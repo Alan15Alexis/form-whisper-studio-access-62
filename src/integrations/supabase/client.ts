@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://tsajriavcmbwgnlsonmq.supabase.co';
@@ -138,15 +137,54 @@ export const fetchInvitedUsers = async () => {
   }
 };
 
-// Utility function to add an invited user
+// New function to check if an invited user already exists by email
+export const checkInvitedUserExists = async (email: string): Promise<boolean | { exists: boolean; userData: any }> => {
+  try {
+    console.info(`Checking if invited user exists: ${email}`);
+    
+    const { data, error } = await supabase
+      .from('usuario_invitado')
+      .select('*')
+      .eq('correo', email.toLowerCase())
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking invited user:', error);
+      return false;
+    }
+    
+    const exists = !!data;
+    console.info(`User ${email} exists: ${exists}`);
+    
+    if (exists) {
+      return { exists, userData: data };
+    }
+    
+    return exists;
+  } catch (error) {
+    console.error('Error checking invited user:', error);
+    return false;
+  }
+};
+
+// Utility function to add an invited user with check for existing users
 export const addInvitedUser = async (name: string, email: string) => {
   try {
     console.info('Registering user:', { nombre: name, correo: email });
     
+    // First check if the user already exists
+    const existingUser = await checkInvitedUserExists(email);
+    
+    if (existingUser && typeof existingUser !== 'boolean' && existingUser.exists) {
+      console.info('User already exists, returning existing user:', existingUser.userData);
+      return existingUser.userData;
+    }
+    
+    // If user doesn't exist, create a new one
     const { data, error } = await supabase
       .from('usuario_invitado')
       .insert([
-        { nombre: name, correo: email }
+        { nombre: name, correo: email.toLowerCase() }
       ])
       .select()
       .single();
