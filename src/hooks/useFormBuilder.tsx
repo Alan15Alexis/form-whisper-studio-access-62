@@ -57,6 +57,7 @@ export const useFormBuilder = (formId?: string) => {
       const form = getForm(formId);
       if (form) {
         setFormData(form);
+        console.log("Loaded form data with score ranges:", form.fields?.filter(f => f.scoreRanges?.length > 0));
       } else {
         toast({
           title: 'Form not found',
@@ -99,6 +100,9 @@ export const useFormBuilder = (formId?: string) => {
       });
       
       setFormData(prev => ({ ...prev, fields: updatedFields }));
+      
+      // Log the score ranges for debugging
+      console.log("Synced score ranges across fields:", scoreRanges);
     }
   };
 
@@ -124,6 +128,7 @@ export const useFormBuilder = (formId?: string) => {
     ) || [];
     
     if (updatedField.scoreRanges && updatedField.scoreRanges.length > 0) {
+      // When updating a field with score ranges, sync these ranges to all fields with numeric values
       const fieldsWithScoreRanges = updatedFields.map(field => {
         if (field.hasNumericValues && field.id !== id) {
           return { ...field, scoreRanges: updatedField.scoreRanges };
@@ -135,6 +140,9 @@ export const useFormBuilder = (formId?: string) => {
         ...prev,
         fields: fieldsWithScoreRanges
       }));
+      
+      // Log the score ranges for debugging
+      console.log("Updated score ranges for all fields:", updatedField.scoreRanges);
     } else {
       setFormData(prev => ({
         ...prev,
@@ -258,17 +266,23 @@ export const useFormBuilder = (formId?: string) => {
     setIsSaving(true);
 
     try {
+      // Log the form data before saving to check score ranges
+      console.log("Form data before saving:", {
+        showTotalScore: formData.showTotalScore,
+        fieldsWithScoreRanges: formData.fields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0)
+      });
+      
       if (isEditMode && formId) {
         await updateForm(formId, formData);
         toast({
           title: 'Form updated',
-          description: 'Your form has been updated successfully',
+          description: 'Your form has been updated successfully with score ranges',
         });
       } else {
         const newForm = await createForm(formData);
         toast({
           title: 'Form created',
-          description: 'Your form has been created successfully',
+          description: 'Your form has been created successfully with score ranges',
         });
         navigate(`/forms/${newForm.id}/edit`);
       }

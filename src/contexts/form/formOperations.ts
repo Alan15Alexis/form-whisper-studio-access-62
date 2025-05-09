@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { Form } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -9,7 +10,7 @@ export const createFormOperation = (
   setAccessTokens: React.Dispatch<React.SetStateAction<Record<string, string>>>,
   setAllowedUsers: React.Dispatch<React.SetStateAction<Record<string, string[]>>>,
   currentUserId: string | undefined,
-  currentUserEmail: string | undefined, // Add email parameter
+  currentUserEmail: string | undefined,
 ) => {
   return async (formData: Partial<Form>): Promise<Form> => {
     // Simulate API call
@@ -43,6 +44,10 @@ export const createFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
     }
     
+    // Get score ranges from fields if they exist
+    const scoreRanges = formData.fields?.find(field => field.scoreRanges && field.scoreRanges.length > 0)?.scoreRanges || [];
+    console.log("Score ranges to save to Supabase:", scoreRanges);
+    
     // Save form to Supabase database
     try {
       await supabase.from('formulario_construccion').insert({
@@ -55,12 +60,13 @@ export const createFormOperation = (
           allowViewOwnResponses: newForm.allowViewOwnResponses,
           allowEditOwnResponses: newForm.allowEditOwnResponses,
           httpConfig: newForm.httpConfig,
-          showTotalScore: newForm.showTotalScore
+          showTotalScore: newForm.showTotalScore,
+          scoreRanges: scoreRanges // Add score ranges to configuration
         },
-        administrador: currentUserEmail || 'unknown@email.com', // Use email instead of ID
+        administrador: currentUserEmail || 'unknown@email.com',
         acceso: newForm.allowedUsers
       });
-      console.log("Form created and saved to Supabase successfully");
+      console.log("Form created and saved to Supabase successfully with score ranges");
     } catch (error) {
       console.error("Error saving form to Supabase:", error);
     }
@@ -112,6 +118,10 @@ export const updateFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: updatedForm.allowedUsers}));
     }
 
+    // Get score ranges from fields if they exist
+    const scoreRanges = formData.fields?.find(field => field.scoreRanges && field.scoreRanges.length > 0)?.scoreRanges || [];
+    console.log("Score ranges to update in Supabase:", scoreRanges);
+    
     // Update the form in Supabase
     try {
       // First check if the form exists in Supabase by title
@@ -135,7 +145,8 @@ export const updateFormOperation = (
               allowViewOwnResponses: updatedForm.allowViewOwnResponses,
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig,
-              showTotalScore: updatedForm.showTotalScore
+              showTotalScore: updatedForm.showTotalScore,
+              scoreRanges: scoreRanges // Update score ranges in configuration
             },
             acceso: updatedForm.allowedUsers
           })
@@ -144,7 +155,7 @@ export const updateFormOperation = (
         if (error) {
           console.error("Error updating form in Supabase:", error);
         } else {
-          console.log("Form updated in Supabase successfully");
+          console.log("Form updated in Supabase successfully with score ranges");
         }
       } else {
         // Form doesn't exist, insert it
@@ -160,7 +171,8 @@ export const updateFormOperation = (
               allowViewOwnResponses: updatedForm.allowViewOwnResponses,
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig,
-              showTotalScore: updatedForm.showTotalScore
+              showTotalScore: updatedForm.showTotalScore,
+              scoreRanges: scoreRanges // Add score ranges to configuration
             },
             administrador: updatedForm.ownerId,
             acceso: updatedForm.allowedUsers
@@ -169,7 +181,7 @@ export const updateFormOperation = (
         if (error) {
           console.error("Error creating form in Supabase:", error);
         } else {
-          console.log("Form created in Supabase successfully");
+          console.log("Form created in Supabase successfully with score ranges");
         }
       }
     } catch (error) {

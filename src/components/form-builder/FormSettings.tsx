@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -76,6 +75,7 @@ const FormSettings = ({
     if (formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
       if (fieldWithRanges?.scoreRanges) {
+        console.log("Initializing score ranges from fields:", fieldWithRanges.scoreRanges);
         return fieldWithRanges.scoreRanges;
       }
     }
@@ -83,6 +83,7 @@ const FormSettings = ({
   });
 
   // Updated useEffect to sync score ranges with form state when toggling scoring
+  // or when formFields change
   useEffect(() => {
     if (!showTotalScore) {
       return;
@@ -91,6 +92,7 @@ const FormSettings = ({
     // Get score ranges from any field that has them
     const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
     if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
+      console.log("Updating score ranges from fields:", fieldWithRanges.scoreRanges);
       setScoreRanges(fieldWithRanges.scoreRanges);
     }
   }, [showTotalScore, formFields]);
@@ -110,6 +112,7 @@ const FormSettings = ({
     
     // Update all fields that have numeric values with the new ranges
     updateFieldsWithScoreRanges(newRanges);
+    console.log("Added new score range:", newRanges[newRanges.length - 1]);
   };
 
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
@@ -122,6 +125,7 @@ const FormSettings = ({
     
     // Update all fields with the updated ranges
     updateFieldsWithScoreRanges(updatedRanges);
+    console.log("Updated score range:", { index, field, value });
   };
 
   const removeScoreRange = (index: number) => {
@@ -130,6 +134,7 @@ const FormSettings = ({
     
     // Update all fields with the updated ranges
     updateFieldsWithScoreRanges(updatedRanges);
+    console.log("Removed score range at index:", index);
   };
 
   // This function will update all fields with the current score ranges
@@ -146,6 +151,7 @@ const FormSettings = ({
     if (formId && onToggleFormScoring) {
       // This will trigger the form to save with the updated ranges
       onToggleFormScoring(showTotalScore);
+      console.log("Updated score ranges in form configuration:", ranges);
     }
   };
 

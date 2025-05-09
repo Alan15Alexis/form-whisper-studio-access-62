@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -38,6 +37,70 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessTokens, setAccessTokens] = useState(getInitialAccessTokens());
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
 
+  // Load forms from Supabase on initial render
+  React.useEffect(() => {
+    const loadFormsFromSupabase = async () => {
+      try {
+        const { data: formsData, error } = await supabase
+          .from('formulario_construccion')
+          .select('*');
+        
+        if (error) {
+          console.error("Error loading forms from Supabase:", error);
+          return;
+        }
+        
+        if (formsData && formsData.length > 0) {
+          // Convert Supabase data format to our form format
+          const loadedForms = formsData.map(formData => {
+            // Extract score ranges from configuration if they exist
+            const scoreRanges = formData.configuracion?.scoreRanges || [];
+            console.log("Loaded score ranges from Supabase:", scoreRanges);
+            
+            // If we have score ranges, add them to all fields with numeric values
+            const fieldsWithScoreRanges = formData.preguntas?.map(field => {
+              if (field.hasNumericValues && scoreRanges.length > 0) {
+                return { ...field, scoreRanges };
+              }
+              return field;
+            }) || [];
+            
+            return {
+              id: formData.id.toString(),
+              title: formData.titulo || 'Untitled Form',
+              description: formData.descripcion || '',
+              fields: fieldsWithScoreRanges,
+              isPrivate: formData.configuracion?.isPrivate || false,
+              allowedUsers: formData.acceso || [],
+              createdAt: formData.created_at,
+              updatedAt: formData.created_at,
+              accessLink: uuidv4(), // Generate new access link
+              ownerId: formData.administrador || 'unknown',
+              formColor: formData.configuracion?.formColor || '#3b82f6',
+              allowViewOwnResponses: formData.configuracion?.allowViewOwnResponses || false,
+              allowEditOwnResponses: formData.configuracion?.allowEditOwnResponses || false,
+              httpConfig: formData.configuracion?.httpConfig,
+              showTotalScore: formData.configuracion?.showTotalScore || false
+            };
+          });
+          
+          // Merge with existing forms from localStorage
+          setForms(prevForms => {
+            // Filter out forms that are already in Supabase to avoid duplicates
+            const localOnlyForms = prevForms.filter(localForm => 
+              !loadedForms.some(supabaseForm => supabaseForm.title === localForm.title)
+            );
+            return [...localOnlyForms, ...loadedForms];
+          });
+        }
+      } catch (error) {
+        console.error("Error loading forms from Supabase:", error);
+      }
+    };
+    
+    loadFormsFromSupabase();
+  }, []);
+  
   // Persist state to localStorage whenever it changes
   useMemo(() => {
     localStorage.setItem('forms', JSON.stringify(forms));
@@ -60,14 +123,14 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createForm = (formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
-    const userEmail = currentUser?.email; // Get the user's email
+    const userEmail = currentUser?.email;
     return createFormOperation(
       forms,
       setForms,
       setAccessTokens,
       setAllowedUsers,
       userId,
-      userEmail // Pass the email to the createFormOperation
+      userEmail
     )(formData);
   };
   
