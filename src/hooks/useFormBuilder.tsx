@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -18,7 +19,8 @@ export const useFormBuilder = (formId?: string) => {
     description: '',
     fields: [],
     isPrivate: false,
-    allowedUsers: []
+    allowedUsers: [],
+    showTotalScore: false
   });
 
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
@@ -57,7 +59,9 @@ export const useFormBuilder = (formId?: string) => {
       const form = getForm(formId);
       if (form) {
         setFormData(form);
-        console.log("Loaded form data with score ranges:", form.fields?.filter(f => f.scoreRanges?.length > 0));
+        console.log("Loaded form data:", form);
+        console.log("Form has showTotalScore:", form.showTotalScore);
+        console.log("Fields with score ranges:", form.fields?.filter(f => f.scoreRanges?.length > 0));
       } else {
         toast({
           title: 'Form not found',
@@ -82,12 +86,17 @@ export const useFormBuilder = (formId?: string) => {
   };
 
   const handleToggleFormScoring = (enabled: boolean) => {
+    console.log("Toggling form scoring to:", enabled);
+    
     // Get current score ranges (if any)
     let scoreRanges: ScoreRange[] = [];
+    
+    // Find a field with existing score ranges
     const fieldWithRanges = formData.fields?.find(f => f.scoreRanges && f.scoreRanges.length > 0);
     
     if (fieldWithRanges?.scoreRanges) {
       scoreRanges = [...fieldWithRanges.scoreRanges];
+      console.log("Using existing score ranges:", scoreRanges);
     }
     
     // Update form data with scoring enabled/disabled
@@ -107,8 +116,6 @@ export const useFormBuilder = (formId?: string) => {
         fields: updatedFields 
       };
     });
-    
-    console.log("Toggled form scoring:", enabled, "with ranges:", scoreRanges);
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
@@ -289,19 +296,20 @@ export const useFormBuilder = (formId?: string) => {
             return field;
           });
         }
+        console.log("Saving form with score ranges:", scoreRanges);
       }
       
       if (isEditMode && formId) {
         await updateForm(formId, formDataToSave);
         toast({
           title: 'Form updated',
-          description: 'Your form has been updated successfully with score ranges',
+          description: 'Your form has been updated successfully',
         });
       } else {
         const newForm = await createForm(formDataToSave);
         toast({
           title: 'Form created',
-          description: 'Your form has been created successfully with score ranges',
+          description: 'Your form has been created successfully',
         });
         navigate(`/forms/${newForm.id}/edit`);
       }

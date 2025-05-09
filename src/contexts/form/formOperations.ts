@@ -44,20 +44,28 @@ export const createFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
     }
     
-    // Extract score ranges from fields with numeric values
+    // Process all fields with score ranges
     let scoreRanges = [];
-    if (formData.showTotalScore) {
-      const fieldWithRanges = formData.fields?.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
-      );
+    let fieldsWithValues = false;
+    
+    if (formData.fields) {
+      // Check if any field has numeric values
+      fieldsWithValues = formData.fields.some(field => field.hasNumericValues);
       
-      if (fieldWithRanges?.scoreRanges) {
-        scoreRanges = fieldWithRanges.scoreRanges;
-        console.log("Score ranges to save to Supabase:", scoreRanges);
+      // Find a field with score ranges to store them
+      if (formData.showTotalScore) {
+        const fieldWithRanges = formData.fields.find(field => 
+          field.scoreRanges && field.scoreRanges.length > 0
+        );
+        
+        if (fieldWithRanges?.scoreRanges) {
+          scoreRanges = fieldWithRanges.scoreRanges;
+          console.log("Score ranges to save to Supabase:", scoreRanges);
+        }
       }
     }
     
-    // Save form to Supabase database
+    // Save form to Supabase database with detailed configuration
     try {
       const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
@@ -70,14 +78,19 @@ export const createFormOperation = (
           allowEditOwnResponses: newForm.allowEditOwnResponses,
           httpConfig: newForm.httpConfig,
           showTotalScore: newForm.showTotalScore,
-          scoreRanges: scoreRanges // Store score ranges in the configuration
+          scoreRanges: scoreRanges, // Store score ranges in the configuration
+          hasFieldsWithNumericValues: fieldsWithValues
         },
         administrador: currentUserEmail || 'unknown@email.com',
         acceso: newForm.allowedUsers
       }).select();
       
-      console.log("Form created in Supabase:", data);
-      console.log("Form created with score ranges:", scoreRanges);
+      if (error) {
+        console.error("Error saving form to Supabase:", error);
+      } else {
+        console.log("Form created in Supabase:", data);
+        console.log("Form created with score ranges:", scoreRanges);
+      }
     } catch (error) {
       console.error("Error saving form to Supabase:", error);
     }
@@ -129,16 +142,24 @@ export const updateFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: updatedForm.allowedUsers}));
     }
 
-    // Extract score ranges from fields for database storage
+    // Process all fields and extract score ranges and check for numeric values
     let scoreRanges = [];
-    if (updatedForm.showTotalScore) {
-      const fieldWithRanges = updatedForm.fields?.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
-      );
+    let fieldsWithValues = false;
+    
+    if (updatedForm.fields) {
+      // Check if any field has numeric values
+      fieldsWithValues = updatedForm.fields.some(field => field.hasNumericValues);
       
-      if (fieldWithRanges?.scoreRanges) {
-        scoreRanges = fieldWithRanges.scoreRanges;
-        console.log("Score ranges to update in Supabase:", scoreRanges);
+      // Find a field with score ranges to store them
+      if (updatedForm.showTotalScore) {
+        const fieldWithRanges = updatedForm.fields.find(field => 
+          field.scoreRanges && field.scoreRanges.length > 0
+        );
+        
+        if (fieldWithRanges?.scoreRanges) {
+          scoreRanges = fieldWithRanges.scoreRanges;
+          console.log("Score ranges to update in Supabase:", scoreRanges);
+        }
       }
     }
     
@@ -166,7 +187,8 @@ export const updateFormOperation = (
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig,
               showTotalScore: updatedForm.showTotalScore,
-              scoreRanges: scoreRanges // Store score ranges in the configuration
+              scoreRanges: scoreRanges, // Store score ranges in the configuration
+              hasFieldsWithNumericValues: fieldsWithValues
             },
             acceso: updatedForm.allowedUsers
           })
@@ -192,7 +214,8 @@ export const updateFormOperation = (
               allowEditOwnResponses: updatedForm.allowEditOwnResponses,
               httpConfig: updatedForm.httpConfig,
               showTotalScore: updatedForm.showTotalScore,
-              scoreRanges: scoreRanges // Store score ranges in the configuration
+              scoreRanges: scoreRanges, // Store score ranges in the configuration
+              hasFieldsWithNumericValues: fieldsWithValues
             },
             administrador: updatedForm.ownerId,
             acceso: updatedForm.allowedUsers

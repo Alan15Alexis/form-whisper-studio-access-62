@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -53,12 +54,14 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (formsData && formsData.length > 0) {
           // Convert Supabase data format to our form format
           const loadedForms = formsData.map(formData => {
-            // Extract score ranges from configuration if they exist
+            // Extract score ranges and settings from configuration if they exist
             const scoreRanges = formData.configuracion?.scoreRanges || [];
-            console.log("Loaded score ranges from Supabase:", scoreRanges);
+            const hasNumericValues = formData.configuracion?.hasFieldsWithNumericValues || false;
             
-            // If we have score ranges, add them to all fields with numeric values
-            const fieldsWithScoreRanges = formData.preguntas?.map(field => {
+            console.log(`Loaded form "${formData.titulo}" with score ranges:`, scoreRanges);
+            
+            // Apply score ranges to all fields with numeric values
+            const processedFields = formData.preguntas?.map(field => {
               if (field.hasNumericValues && scoreRanges.length > 0) {
                 return { ...field, scoreRanges };
               }
@@ -69,7 +72,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: formData.id.toString(),
               title: formData.titulo || 'Untitled Form',
               description: formData.descripcion || '',
-              fields: fieldsWithScoreRanges,
+              fields: processedFields,
               isPrivate: formData.configuracion?.isPrivate || false,
               allowedUsers: formData.acceso || [],
               createdAt: formData.created_at,
