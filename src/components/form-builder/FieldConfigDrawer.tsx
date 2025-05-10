@@ -48,10 +48,7 @@ const FieldConfigDrawer = ({
   };
 
   const handleToggleNumericValues = (enabled: boolean) => {
-    setLocalField({
-      ...localField,
-      hasNumericValues: enabled
-    });
+    const updatedField = { ...localField, hasNumericValues: enabled };
 
     // If we're enabling numeric values for the first time, initialize them
     if (enabled && localField.options && !localField.options.some(opt => opt.numericValue !== undefined)) {
@@ -60,11 +57,17 @@ const FieldConfigDrawer = ({
         numericValue: index + 1
       }));
 
-      setLocalField({
-        ...localField,
-        hasNumericValues: enabled,
-        options: updatedOptions
-      });
+      updatedField.options = updatedOptions;
+    }
+
+    // Update local field state
+    setLocalField(updatedField);
+    
+    // If enabling numeric values and scoring is not enabled yet, suggest enabling scoring
+    // but don't enable it automatically
+    if (enabled && !formHasScoring) {
+      // Show a message suggesting to enable scoring in the form settings
+      console.log("Numeric values enabled but form scoring is off - user should enable it manually");
     }
   };
 
@@ -83,6 +86,7 @@ const FieldConfigDrawer = ({
     });
   };
 
+  // Check if this field type has options that can be scored
   const hasOptionsToScore = localField.options && localField.options.length > 0;
   const isYesNoField = localField.type === 'yesno';
 
@@ -97,7 +101,7 @@ const FieldConfigDrawer = ({
         </SheetHeader>
         
         <div className="py-6 space-y-6">
-          {/* Foco en la sección de Numeric Values Configuration */}
+          {/* Numeric Values Configuration */}
           {(hasOptionsToScore || isYesNoField) && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -165,8 +169,6 @@ const FieldConfigDrawer = ({
 
           <Separator />
           
-          {/* Removed the Form Scoring Toggle section */}
-
           <div className="p-3 bg-primary/5 border rounded-md text-sm">
             <p className="font-medium">¿Dónde configurar los rangos de puntuación?</p>
             <p className="mt-2">

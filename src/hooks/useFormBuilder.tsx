@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -85,29 +84,21 @@ export const useFormBuilder = (formId?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   };
 
+  // Fixed: Improved toggle form scoring function to prevent auto-saving without explicit ranges
   const handleToggleFormScoring = (enabled: boolean) => {
     console.log("Toggle form scoring called with:", enabled);
     
-    // Get current score ranges (if any)
-    let scoreRanges: ScoreRange[] = [];
-    
-    // Find a field with existing score ranges
-    const fieldWithRanges = formData.fields?.find(f => 
-        f.scoreRanges && f.scoreRanges.length > 0
-    );
-    
-    if (fieldWithRanges?.scoreRanges) {
-      scoreRanges = [...fieldWithRanges.scoreRanges];
-      console.log("Using existing score ranges:", JSON.stringify(scoreRanges));
-    }
-    
-    // Update form data with scoring enabled/disabled
     setFormData(prev => {
       // Create a copy of fields to update
       const updatedFields = prev.fields?.map(field => {
-        if (field.hasNumericValues) {
-          // For fields with numeric values, update score ranges accordingly
-          return enabled ? { ...field, scoreRanges } : { ...field, scoreRanges: [] };
+        if (field.hasNumericValues && enabled) {
+          // For fields with numeric values, keep existing score ranges if any
+          return { ...field };
+        } 
+        else if (!enabled) {
+          // If disabling scoring, remove score ranges
+          const { scoreRanges, ...fieldWithoutRanges } = field;
+          return fieldWithoutRanges;
         }
         return field;
       });
@@ -119,12 +110,8 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // If we're in edit mode, save the form to update the database immediately
-    if (isEditMode && formId) {
-      setTimeout(() => {
-        handleSubmit();
-      }, 200);
-    }
+    // If we're in edit mode, don't auto-save immediately
+    // User needs to explicitly save by clicking the Save button
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {

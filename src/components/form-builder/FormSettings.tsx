@@ -78,7 +78,6 @@ const FormSettings = ({
     if (formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
       if (fieldWithRanges?.scoreRanges) {
-        console.log("Initializing score ranges from fields:", JSON.stringify(fieldWithRanges.scoreRanges));
         return [...fieldWithRanges.scoreRanges];
       }
     }
@@ -86,10 +85,10 @@ const FormSettings = ({
     return [];
   });
 
-  // IMPORTANT: Track when the scoring toggle changes locally to ensure it doesn't get disabled
+  // Track when the scoring toggle changes locally
   const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(showTotalScore || false);
   
-  // Sync local state with prop
+  // Fix: Better sync local state with prop and ensure we're not auto-enabling
   useEffect(() => {
     setIsScoringEnabled(showTotalScore || false);
   }, [showTotalScore]);
@@ -99,17 +98,15 @@ const FormSettings = ({
     console.log("FormSettings - Current score ranges:", scoreRanges);
     console.log("FormSettings - isScoringEnabled:", isScoringEnabled);
     console.log("FormSettings - showTotalScore prop:", showTotalScore);
-    console.log("FormSettings - Form fields with ranges:", formFields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0));
-  }, [scoreRanges, formFields, isScoringEnabled, showTotalScore]);
+  }, [scoreRanges, isScoringEnabled, showTotalScore]);
 
-  // Sync score ranges when fields change
+  // Only sync score ranges when fields change and scoring is already enabled
   useEffect(() => {
     if (formFields && formFields.length > 0 && showTotalScore) {
       const fieldWithRanges = formFields.find(field => 
         field.scoreRanges && field.scoreRanges.length > 0
       );
       if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
-        console.log("Syncing score ranges from fields:", JSON.stringify(fieldWithRanges.scoreRanges));
         setScoreRanges([...fieldWithRanges.scoreRanges]);
       }
     }
@@ -128,7 +125,7 @@ const FormSettings = ({
     
     setScoreRanges(newRanges);
     
-    // Update all fields that have numeric values with the new ranges
+    // Update all fields with the new ranges
     updateFieldsWithScoreRanges(newRanges);
     console.log("Added new score range:", newRanges[newRanges.length - 1]);
     
@@ -140,6 +137,8 @@ const FormSettings = ({
   };
 
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
+    if (!scoreRanges[index]) return;
+    
     const updatedRanges = [...scoreRanges];
     updatedRanges[index] = { 
       ...updatedRanges[index], 
@@ -167,40 +166,43 @@ const FormSettings = ({
     });
   };
 
-  // This function will update all fields with the current score ranges and trigger the form update
+  // Fix: This function now checks if scoring is enabled before updating
   const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
     if (!onToggleFormScoring || !formId) return;
     
-    // Ensure scoring is enabled - use the local state
-    if (!isScoringEnabled) {
-      setIsScoringEnabled(true);
-      onToggleFormScoring(true);
+    // Only call onToggleFormScoring if scoring is already enabled
+    if (isScoringEnabled) {
+      // Use setTimeout to ensure state updates have completed
+      setTimeout(() => {
+        onToggleFormScoring(true);
+        console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
+      }, 100);
     }
-    
-    // Force a re-render to update the form with the new ranges
-    // This will trigger the form to update with the new ranges via useFormBuilder's handleToggleFormScoring
-    setTimeout(() => {
-      onToggleFormScoring(true);
-      console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
-    }, 100);
   };
 
   // Handle toggle of scoring feature - maintain local state
   const handleToggleScoringFeature = (enabled: boolean) => {
     console.log("Toggle scoring feature called with:", enabled);
     setIsScoringEnabled(enabled);
-    onToggleFormScoring(enabled);
     
+    // Fix: Only add a default range if enabling scoring and there are no ranges yet
     if (enabled && scoreRanges.length === 0) {
-      // Si se activa la puntuación pero no hay rangos, añadir uno por defecto
+      // First update the local state and call the parent
+      onToggleFormScoring(enabled);
+      
+      // Then after a delay, add the first range
       setTimeout(() => {
         addScoreRange();
-      }, 100);
+      }, 250);
+    } else {
+      // Just update the toggle state without auto-adding ranges
+      onToggleFormScoring(enabled);
     }
   };
 
   return (
     <div className="space-y-8">
+      {/* General Settings Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Configuración General</h3>
         <div className="space-y-6">
@@ -248,6 +250,7 @@ const FormSettings = ({
         </div>
       </Card>
 
+      {/* Scoring Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Puntuación y Resultados</h3>
         <div className="space-y-6">
@@ -375,6 +378,7 @@ const FormSettings = ({
         </div>
       </Card>
       
+      {/* Access to Responses Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Acceso a Respuestas</h3>
         <div className="space-y-6">
@@ -412,7 +416,7 @@ const FormSettings = ({
         </div>
       </Card>
       
-      {/* Configuración HTTP - Solo visible para administradores */}
+      {/* HTTP Configuration */}
       <HttpConfigSettings 
         config={httpConfig || defaultHttpConfig}
         onConfigChange={config => onHttpConfigChange && onHttpConfigChange(config)}
