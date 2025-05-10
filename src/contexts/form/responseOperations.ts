@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -88,7 +89,10 @@ export const submitFormResponseOperation = (
               })
               .catch(err => {
                 console.error(`Upload failed for field ${field.id}:`, err);
-                throw err;
+                // Continue with form submission even if file upload fails
+                // But add a message in the response about the failure
+                processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+                return null;
               });
             
             uploadPromises.push(uploadPromise);
@@ -104,7 +108,9 @@ export const submitFormResponseOperation = (
               })
               .catch(err => {
                 console.error(`Upload failed for field ${field.id}:`, err);
-                throw err;
+                // Continue with form submission even if file upload fails
+                processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+                return null;
               });
             
             uploadPromises.push(uploadPromise);
@@ -129,16 +135,27 @@ export const submitFormResponseOperation = (
     if (uploadPromises.length > 0) {
       console.log(`Waiting for ${uploadPromises.length} uploads to complete...`);
       try {
-        await Promise.all(uploadPromises);
-        console.log('All file uploads completed successfully');
+        const results = await Promise.allSettled(uploadPromises);
+        console.log('All file uploads completed:', results);
+        
+        // Check if any uploads failed
+        const failedUploads = results.filter(result => result.status === 'rejected').length;
+        if (failedUploads > 0) {
+          console.warn(`${failedUploads} file uploads failed, but continuing with form submission`);
+          toast({
+            title: "Advertencia",
+            description: `Algunos archivos no pudieron ser subidos (${failedUploads}), pero el formulario se enviará de todos modos`,
+            variant: "default",
+          });
+        }
       } catch (error) {
-        console.error('Error uploading files:', error);
+        console.error('Error handling file uploads:', error);
         toast({
-          title: "Error",
-          description: "Hubo un problema al subir los archivos",
-          variant: "destructive",
+          title: "Advertencia",
+          description: "Hubo problemas al subir algunos archivos, pero intentaremos enviar el formulario de todos modos",
+          variant: "default",
         });
-        throw error; // Stop the submission if files failed to upload
+        // Continue with form submission despite upload errors
       }
     } else {
       console.log('No files to upload');
@@ -282,22 +299,54 @@ const processFileUpload = async (fileData: string | File, fieldId: string, userE
     console.log(`Generated file path: respuestas-formulario/${filename}`);
     
     // Upload the file to Supabase Storage
-    const { data, error } = await uploadToSupabaseStorage(fileData, filename);
+    let uploadResult;
     
-    if (error) {
-      console.error(`Storage upload error:`, error);
-      throw error;
+    // For base64 data (images, drawings, signatures)
+    if (typeof fileData === 'string' && fileData.startsWith('data:')) {
+      // Convert base64 to blob
+      const res = await fetch(fileData);
+      const blob = await res.blob();
+      
+      console.log(`Converted base64 to blob: ${blob.type}, size: ${blob.size}`);
+      
+      // Upload to Supabase Storage - Using upsert to handle RLS policy
+      uploadResult = await supabase.storage
+        .from('respuestas-formulario')
+        .upload(filename, blob, {
+          contentType: blob.type,
+          upsert: true
+        });
+    } 
+    // For File objects (file uploads)
+    else if (fileData instanceof File) {
+      console.log(`Uploading File object: ${fileData.name}, type: ${fileData.type}, size: ${fileData.size}`);
+      
+      // Upload to Supabase Storage - Using upsert to handle RLS policy
+      uploadResult = await supabase.storage
+        .from('respuestas-formulario')
+        .upload(filename, fileData, {
+          contentType: fileData.type,
+          upsert: true
+        });
+    } else {
+      throw new Error('Unsupported file data format');
     }
     
-    if (!data) {
+    if (uploadResult.error) {
+      console.error(`Storage upload error:`, uploadResult.error);
+      throw uploadResult.error;
+    }
+    
+    if (!uploadResult.data) {
       console.error(`No data returned from storage upload`);
       throw new Error('No data returned from storage upload');
     }
     
     // Return the public URL
-    const fileUrl = getPublicUrl('respuestas-formulario', filename);
-    console.log(`File uploaded successfully: ${fileUrl}`);
+    const { data } = supabase.storage.from('respuestas-formulario').getPublicUrl(filename);
+    const fileUrl = data.publicUrl;
     
+    console.log(`File uploaded successfully: ${fileUrl}`);
     return fileUrl;
   } catch (error) {
     console.error('Error in processFileUpload:', error);
@@ -328,56 +377,9 @@ const getFileExtension = (fileData: string | File): string => {
   return '.bin'; // Default extension
 };
 
-// Helper function to upload to Supabase storage
-const uploadToSupabaseStorage = async (fileData: string | File, filename: string) => {
-  try {
-    console.log(`Uploading to Supabase storage: ${filename}`);
-    
-    // For base64 data (images, drawings, signatures)
-    if (typeof fileData === 'string' && fileData.startsWith('data:')) {
-      // Convert base64 to blob
-      const res = await fetch(fileData);
-      const blob = await res.blob();
-      
-      console.log(`Converted base64 to blob: ${blob.type}, size: ${blob.size}`);
-      
-      // Upload to Supabase Storage
-      return await supabase.storage
-        .from('respuestas-formulario')
-        .upload(filename, blob, {
-          contentType: blob.type,
-          upsert: true
-        });
-    } 
-    // For File objects (file uploads)
-    else if (fileData instanceof File) {
-      console.log(`Uploading File object: ${fileData.name}, type: ${fileData.type}, size: ${fileData.size}`);
-      
-      // Upload to Supabase Storage
-      return await supabase.storage
-        .from('respuestas-formulario')
-        .upload(filename, fileData, {
-          contentType: fileData.type,
-          upsert: true
-        });
-    }
-    
-    throw new Error('Unsupported file data format');
-  } catch (error) {
-    console.error('Error in uploadToSupabaseStorage:', error);
-    throw error;
-  }
-};
-
-// Helper function to get the public URL of an uploaded file
-const getPublicUrl = (bucket: string, path: string): string => {
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  console.log(`Generated public URL for ${bucket}/${path}:`, data.publicUrl);
-  return data.publicUrl;
-};
-
 export const getFormResponsesOperation = (responses: FormResponse[]) => {
   return (formId: string): FormResponse[] => {
     return responses.filter(response => response.formId === formId);
   };
 };
+
