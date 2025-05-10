@@ -34,6 +34,12 @@ const FormBuilder = () => {
     handleHttpConfigChange
   } = useFormBuilder(id);
 
+  // Log the form data for debugging
+  console.log("FormBuilder - Current form data:", {
+    showTotalScore: formData.showTotalScore,
+    fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0)
+  });
+
   return (
     <Layout>
       <div className="container py-8">

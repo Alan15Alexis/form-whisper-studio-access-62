@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -109,33 +110,30 @@ export const useFormBuilder = (formId?: string) => {
         fields: updatedFields 
       };
     });
-    
-    // No auto-save here anymore - user must click "Guardar rangos" button
   };
 
   // Enhanced function to explicitly save score ranges
   const handleSaveScoreRanges = (scoreRanges: ScoreRange[]) => {
     console.log("Saving score ranges:", JSON.stringify(scoreRanges));
     
-    // Ensure scoring is enabled
-    if (!formData.showTotalScore) {
-      setFormData(prev => ({ ...prev, showTotalScore: true }));
-    }
-    
     // Update all fields with numeric values to include these score ranges
     setFormData(prev => {
+      // First ensure showTotalScore is set to true
+      const updatedFormData = { ...prev, showTotalScore: true };
+      
+      // Then update fields with numeric values
       const updatedFields = prev.fields?.map(field => {
         if (field.hasNumericValues) {
-          return { ...field, scoreRanges };
+          console.log(`Adding score ranges to field ${field.id}`);
+          return { ...field, scoreRanges: [...scoreRanges] };
         }
         return field;
       });
       
-      // Update form data with the new fields
+      // Return updated form data with modified fields
       return {
-        ...prev,
-        fields: updatedFields,
-        showTotalScore: true // Ensure this is set to true
+        ...updatedFormData,
+        fields: updatedFields
       };
     });
     
@@ -306,12 +304,15 @@ export const useFormBuilder = (formId?: string) => {
       });
       
       if (isEditMode && formId) {
-        // Ensure we retain the showTotalScore flag when updating
-        console.log("Updating form with showTotalScore:", formData.showTotalScore);
-        await updateForm(formId, {
+        // Create a complete form data object with all required properties
+        const completeFormData = {
           ...formData,
-          showTotalScore: formData.showTotalScore
-        });
+          showTotalScore: formData.showTotalScore === true // Make sure it's a boolean
+        };
+        
+        console.log("Updating form with showTotalScore:", completeFormData.showTotalScore);
+        
+        await updateForm(formId, completeFormData);
         
         if (!skipValidation) {
           toast({

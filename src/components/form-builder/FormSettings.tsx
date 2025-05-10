@@ -80,6 +80,7 @@ const FormSettings = ({
     if (formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
       if (fieldWithRanges?.scoreRanges) {
+        console.log("Initializing score ranges from fields:", fieldWithRanges.scoreRanges);
         return [...fieldWithRanges.scoreRanges];
       }
     }
@@ -94,7 +95,7 @@ const FormSettings = ({
   // Track if there are unsaved scoring toggle changes
   const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
   
-  // Fix: Better sync local state with prop and ensure we're not auto-enabling
+  // Better sync local state with prop and ensure we're not auto-enabling
   useEffect(() => {
     console.log("showTotalScore prop changed to:", showTotalScore);
     setIsScoringEnabled(showTotalScore || false);
@@ -103,16 +104,18 @@ const FormSettings = ({
 
   // Only sync score ranges when fields change and scoring is already enabled
   useEffect(() => {
-    if (formFields && formFields.length > 0 && showTotalScore) {
+    if (formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => 
         field.scoreRanges && field.scoreRanges.length > 0
       );
+      
       if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
+        console.log("Updating score ranges from fields:", fieldWithRanges.scoreRanges);
         setScoreRanges([...fieldWithRanges.scoreRanges]);
         setHasUnsavedRanges(false); // Reset unsaved changes flag after loading from props
       }
     }
-  }, [formFields, showTotalScore]);
+  }, [formFields]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -163,12 +166,30 @@ const FormSettings = ({
     
     // Apply the toggle change if it's unsaved
     if (hasUnsavedToggle) {
+      console.log("Applying toggle change:", isScoringEnabled);
       onToggleFormScoring(isScoringEnabled);
     }
     
     // Call the prop function to save the ranges
     if (isScoringEnabled) {
+      console.log("Saving score ranges:", scoreRanges);
       onSaveScoreRanges(scoreRanges);
+    } else {
+      // If scoring is disabled, we still need to apply the change
+      console.log("Scoring disabled, applying toggle change");
+      onToggleFormScoring(false);
+      
+      // Save the form explicitly to update the showTotalScore value
+      // We use a setTimeout to ensure the state updates are processed
+      setTimeout(() => {
+        const formElement = document.querySelector('form[data-form-builder]');
+        if (formElement) {
+          const saveButton = formElement.querySelector('button[type="submit"]');
+          if (saveButton) {
+            (saveButton as HTMLButtonElement).click();
+          }
+        }
+      }, 300);
     }
     
     // Update the flag
