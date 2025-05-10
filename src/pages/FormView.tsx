@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -11,10 +12,12 @@ import FormQuestion from "@/components/form-view/FormQuestion";
 import FormProgressBar from "@/components/form-view/FormProgressBar";
 import FormNotFound from "@/components/form-view/FormNotFound";
 import FormHeader from "@/components/form-view/FormHeader";
+import { useForm } from "@/contexts/form";
 
 const FormView = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { isUserAllowed } = useForm();
   
   // Use custom hooks for form validation and responses
   const { form, accessValidated, validationLoading, setAccessValidated } = useFormValidation();
@@ -59,7 +62,7 @@ const FormView = () => {
       <Layout hideNav>
         <FormAccess 
           onAccessGranted={handleAccessGranted} 
-          isUserAllowed={(email) => isUserAllowed(form.id, email)}
+          isUserAllowed={isUserAllowed}
         />
       </Layout>
     );
