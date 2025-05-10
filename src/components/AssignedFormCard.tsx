@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -124,79 +123,75 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
           </div>
         </CardContent>
         
-        <CardFooter className="flex flex-wrap justify-between items-center pt-4 gap-2">
-          {isCompleted ? (
-            <div className="flex flex-wrap gap-2 justify-end w-full">
-              {/* Hide button */}
+        <CardFooter className="pt-4">
+          {/* Updated to horizontal layout with only icons */}
+          <div className="flex items-center justify-end space-x-2 w-full">
+            {/* Hide button */}
+            {onRemove && (
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={() => onRemove && onRemove(form.id)}
-                className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                size="icon"
+                onClick={() => onRemove(form.id)}
+                className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
                 title="Ocultar"
               >
                 <XIcon className="h-4 w-4" />
-                <span className="sr-only md:not-sr-only md:ml-2">Ocultar</span>
+                <span className="sr-only">Ocultar</span>
               </Button>
-              
-              {/* Completed button */}
-              <Button 
-                variant="outline" 
-                onClick={handleViewCompletionInfo}
-                size="sm"
-                title="Completado"
-              >
-                <CheckIcon className="h-4 w-4" />
-                <span className="sr-only md:not-sr-only md:ml-2">Completado</span>
-              </Button>
-              
-              {/* Only show view button if allowed */}
-              {canViewOwnResponses && (
+            )}
+            
+            {isCompleted ? (
+              <>
+                {/* Completion info button */}
                 <Button 
                   variant="outline" 
-                  onClick={handleViewResponse}
-                  size="sm"
-                  title="Ver respuestas"
+                  onClick={handleViewCompletionInfo}
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Completado"
                 >
-                  <EyeIcon className="h-4 w-4" />
-                  <span className="sr-only md:not-sr-only md:ml-2">Ver respuestas</span>
+                  <CheckIcon className="h-4 w-4" />
+                  <span className="sr-only">Completado</span>
                 </Button>
-              )}
-              
-              {/* Only show edit button if allowed */}
-              {canEditOwnResponses && (
-                <Button 
-                  style={buttonStyle}
-                  onClick={handleEditResponse}
-                  size="sm"
-                  title="Editar respuestas"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  <span className="sr-only md:not-sr-only md:ml-2">Editar respuestas</span>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemove && onRemove(form.id)}
-                className="text-gray-500 hover:text-red-600 hover:bg-red-50"
-                title="Ocultar"
-              >
-                <XIcon className="h-4 w-4" />
-                <span className="sr-only md:not-sr-only md:ml-2">Ocultar</span>
-              </Button>
-              
-              <Button style={buttonStyle} asChild size="sm">
-                <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
+                
+                {/* View responses button - only if allowed */}
+                {canViewOwnResponses && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleViewResponse}
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Ver respuestas"
+                  >
+                    <EyeIcon className="h-4 w-4" />
+                    <span className="sr-only">Ver respuestas</span>
+                  </Button>
+                )}
+                
+                {/* Edit responses button - only if allowed */}
+                {canEditOwnResponses && (
+                  <Button 
+                    style={buttonStyle}
+                    onClick={handleEditResponse}
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Editar respuestas"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    <span className="sr-only">Editar respuestas</span>
+                  </Button>
+                )}
+              </>
+            ) : (
+              /* Start button for not completed forms */
+              <Button style={buttonStyle} asChild size="icon" className="h-8 w-8" title="Empezar ahora">
+                <Link to={`/forms/${form.id}`} state={{ formData: form }}>
                   <ArrowRightIcon className="h-4 w-4" />
-                  <span className="sr-only md:not-sr-only md:ml-2">Empezar ahora</span>
+                  <span className="sr-only">Empezar ahora</span>
                 </Link>
               </Button>
-            </>
-          )}
+            )}
+          </div>
         </CardFooter>
       </Card>
 
