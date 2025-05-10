@@ -111,12 +111,12 @@ export const useFormBuilder = (formId?: string) => {
     });
   };
 
-  // New function to explicitly save score ranges
+  // Enhanced function to explicitly save score ranges
   const handleSaveScoreRanges = (scoreRanges: ScoreRange[]) => {
     console.log("Saving score ranges:", JSON.stringify(scoreRanges));
     
+    // Ensure scoring is enabled
     if (!formData.showTotalScore) {
-      // Make sure scoring is enabled
       setFormData(prev => ({ ...prev, showTotalScore: true }));
     }
     
@@ -136,12 +136,16 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // If we're in edit mode, save the form right away
-    if (isEditMode && formId) {
-      setTimeout(() => {
-        handleSubmit();
-      }, 200);
-    }
+    // Save the form with updated score ranges
+    setTimeout(() => {
+      handleSubmit(true);
+    }, 200);
+    
+    // Show success message
+    toast({
+      title: 'Rangos de puntuación guardados',
+      description: 'Los rangos de puntuación y mensajes han sido guardados correctamente',
+    });
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
@@ -254,33 +258,36 @@ export const useFormBuilder = (formId?: string) => {
     });
   };
 
-  const handleSubmit = async () => {
-    if (!formData.title || formData.title.trim() === '') {
-      toast({
-        title: 'Title required',
-        description: 'Please provide a title for your form',
-        variant: 'destructive'
-      });
-      return;
-    }
+  const handleSubmit = async (skipValidation = false) => {
+    // Skip validation if explicitly requested (e.g., when saving score ranges)
+    if (!skipValidation) {
+      if (!formData.title || formData.title.trim() === '') {
+        toast({
+          title: 'Title required',
+          description: 'Please provide a title for your form',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-    if (!formData.fields || formData.fields.length === 0) {
-      toast({
-        title: 'Fields required',
-        description: 'Please add at least one field to your form',
-        variant: 'destructive'
-      });
-      return;
-    }
+      if (!formData.fields || formData.fields.length === 0) {
+        toast({
+          title: 'Fields required',
+          description: 'Please add at least one field to your form',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-    // If private, ensure there's at least one allowed user
-    if (formData.isPrivate && (!formData.allowedUsers || formData.allowedUsers.length === 0)) {
-      toast({
-        title: 'Allowed users required',
-        description: 'Please add at least one allowed user for a private form',
-        variant: 'destructive'
-      });
-      return;
+      // If private, ensure there's at least one allowed user
+      if (formData.isPrivate && (!formData.allowedUsers || formData.allowedUsers.length === 0)) {
+        toast({
+          title: 'Allowed users required',
+          description: 'Please add at least one allowed user for a private form',
+          variant: 'destructive'
+        });
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -299,10 +306,13 @@ export const useFormBuilder = (formId?: string) => {
         // Ensure we retain the showTotalScore flag when updating
         console.log("Updating form with showTotalScore:", formData.showTotalScore);
         await updateForm(formId, formData);
-        toast({
-          title: 'Form updated',
-          description: 'Your form has been updated successfully',
-        });
+        
+        if (!skipValidation) {
+          toast({
+            title: 'Form updated',
+            description: 'Your form has been updated successfully',
+          });
+        }
       } else {
         const newForm = await createForm(formData);
         toast({

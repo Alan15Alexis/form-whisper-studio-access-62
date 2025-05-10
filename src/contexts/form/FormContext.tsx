@@ -65,7 +65,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Apply score ranges to all fields with numeric values
             const processedFields = formData.preguntas?.map(field => {
               if (field.hasNumericValues && scoreRanges.length > 0 && showTotalScore) {
-                return { ...field, scoreRanges };
+                return { ...field, scoreRanges: scoreRanges };
               }
               return field;
             }) || [];
