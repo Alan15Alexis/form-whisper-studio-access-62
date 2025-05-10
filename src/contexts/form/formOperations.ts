@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { Form, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -18,6 +19,29 @@ export const createFormOperation = (
     const id = uuidv4();
     const accessToken = uuidv4();
     
+    // Extract score ranges
+    let scoreRanges: ScoreRange[] = [];
+    
+    // Get score ranges from the most reliable source
+    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = [...formData.scoreConfig.ranges];
+      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
+    } else if (formData.scoreRanges && formData.scoreRanges.length > 0) {
+      scoreRanges = [...formData.scoreRanges];
+      console.log("Using score ranges from direct scoreRanges:", JSON.stringify(scoreRanges));
+    } else if (formData.fields) {
+      // Look for a field with score ranges as a fallback
+      const fieldWithRanges = formData.fields.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
+      
+      if (fieldWithRanges?.scoreRanges) {
+        scoreRanges = [...fieldWithRanges.scoreRanges];
+        console.log("Using score ranges from fields:", JSON.stringify(scoreRanges));
+      }
+    }
+
+    // Create the new form with all score properties properly set
     const newForm: Form = {
       id,
       title: formData.title || 'Untitled Form',
@@ -33,8 +57,12 @@ export const createFormOperation = (
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
-      showTotalScore: formData.showTotalScore || false, // Ensure this is explicitly set
-      scoreConfig: formData.scoreConfig // Include scoreConfig if provided
+      showTotalScore: formData.showTotalScore || false, // Set the show total score flag
+      scoreConfig: {
+        enabled: formData.showTotalScore || false,
+        ranges: scoreRanges
+      },
+      scoreRanges: scoreRanges // Also set direct scoreRanges for backward compatibility
     };
 
     setForms(prevForms => [...prevForms, newForm]);
@@ -44,29 +72,8 @@ export const createFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
     }
     
-    // Get score ranges from scoreConfig if available, otherwise try from fields
-    let scoreRanges: ScoreRange[] = [];
-    let fieldsWithValues = false;
-    
-    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      scoreRanges = formData.scoreConfig.ranges;
-      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
-    } else if (formData.fields) {
-      // Check if any field has numeric values
-      fieldsWithValues = formData.fields.some(field => field.hasNumericValues);
-      
-      // Find a field with score ranges to store them
-      if (formData.showTotalScore) {
-        const fieldWithRanges = formData.fields.find(field => 
-          field.scoreRanges && field.scoreRanges.length > 0
-        );
-        
-        if (fieldWithRanges?.scoreRanges) {
-          scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Score ranges from fields:", JSON.stringify(scoreRanges));
-        }
-      }
-    }
+    // Check if any field has numeric values
+    const fieldsWithValues = formData.fields?.some(field => field.hasNumericValues) || false;
     
     // Save form to Supabase database with detailed configuration
     try {
@@ -78,7 +85,7 @@ export const createFormOperation = (
         allowEditOwnResponses: newForm.allowEditOwnResponses,
         httpConfig: newForm.httpConfig,
         showTotalScore: newForm.showTotalScore, 
-        scoreRanges: scoreRanges, // Explicitly store score ranges
+        scoreRanges: scoreRanges, // Explicitly store score ranges in the config
         hasFieldsWithNumericValues: fieldsWithValues
       };
       
@@ -146,12 +153,55 @@ export const updateFormOperation = (
       return null;
     }
 
-    // Create the updated form
+    // Extract score ranges from the most reliable source
+    let scoreRanges: ScoreRange[] = [];
+    
+    // Get score ranges from the most reliable source
+    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = [...formData.scoreConfig.ranges];
+      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
+    } else if (formData.scoreRanges && formData.scoreRanges.length > 0) {
+      scoreRanges = [...formData.scoreRanges];
+      console.log("Using score ranges from direct scoreRanges:", JSON.stringify(scoreRanges));
+    } else if (formData.fields) {
+      // Look for a field with score ranges as a fallback
+      const fieldWithRanges = formData.fields.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
+      
+      if (fieldWithRanges?.scoreRanges) {
+        scoreRanges = [...fieldWithRanges.scoreRanges];
+        console.log("Using score ranges from fields:", JSON.stringify(scoreRanges));
+      }
+    }
+    
+    // Check if any field has numeric values
+    const fieldsWithValues = formData.fields?.some(field => field.hasNumericValues) || 
+                            forms[formIndex].fields.some(field => field.hasNumericValues);
+
+    // Create the updated form with proper score configuration
     const updatedForm = {
       ...forms[formIndex],
       ...formData,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      // Ensure score configuration is properly set
+      showTotalScore: formData.showTotalScore ?? forms[formIndex].showTotalScore,
+      scoreConfig: {
+        enabled: formData.showTotalScore ?? forms[formIndex].showTotalScore,
+        ranges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreConfig?.ranges || [])
+      },
+      scoreRanges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreRanges || [])
     };
+
+    // Update fields with score ranges if scoring is enabled
+    if (updatedForm.showTotalScore && scoreRanges.length > 0) {
+      updatedForm.fields = updatedForm.fields.map(field => {
+        if (field.hasNumericValues) {
+          return { ...field, scoreRanges: [...scoreRanges] };
+        }
+        return field;
+      });
+    }
 
     // Update forms array
     const updatedForms = [...forms];
@@ -163,30 +213,6 @@ export const updateFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: updatedForm.allowedUsers}));
     }
 
-    // Get score ranges from scoreConfig if available, otherwise try from fields
-    let scoreRanges: ScoreRange[] = [];
-    let fieldsWithValues = false;
-    
-    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      scoreRanges = formData.scoreConfig.ranges;
-      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
-    } else if (updatedForm.fields) {
-      // Check if any field has numeric values
-      fieldsWithValues = updatedForm.fields.some(field => field.hasNumericValues);
-      
-      // Find a field with score ranges to store them
-      if (updatedForm.showTotalScore) {
-        const fieldWithRanges = updatedForm.fields.find(field => 
-          field.scoreRanges && field.scoreRanges.length > 0
-        );
-        
-        if (fieldWithRanges?.scoreRanges) {
-          scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Score ranges from fields:", JSON.stringify(scoreRanges));
-        }
-      }
-    }
-    
     // Prepare the configuration object with explicit score ranges
     const configObject = {
       isPrivate: updatedForm.isPrivate,
@@ -200,6 +226,8 @@ export const updateFormOperation = (
     };
 
     console.log("Saving configuration to Supabase:", configObject);
+    console.log("Form has showTotalScore:", updatedForm.showTotalScore);
+    console.log("Form has scoreRanges:", JSON.stringify(scoreRanges));
     
     // Update the form in Supabase
     try {

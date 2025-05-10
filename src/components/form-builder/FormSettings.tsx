@@ -82,6 +82,7 @@ const FormSettings = ({
   // Init state from props or fields
   useEffect(() => {
     console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
+    console.log("Current showTotalScore value:", showTotalScore);
     
     // First priority: use externally provided score ranges if available
     if (externalScoreRanges && externalScoreRanges.length > 0) {
@@ -116,10 +117,10 @@ const FormSettings = ({
   // Track if there are unsaved scoring toggle changes
   const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
   
-  // Better sync local state with prop
+  // Better sync local state with props
   useEffect(() => {
     console.log("showTotalScore prop changed to:", showTotalScore);
-    setIsScoringEnabled(showTotalScore || false);
+    setIsScoringEnabled(!!showTotalScore);
     setHasUnsavedToggle(false); // Reset when props change
   }, [showTotalScore]);
 

@@ -29,7 +29,7 @@ interface FormBuilderTabsProps {
   formId?: string;
   allowedUserName?: string;
   setAllowedUserName?: (name: string) => void;
-  externalScoreRanges?: ScoreRange[]; // New prop to receive score ranges
+  externalScoreRanges?: ScoreRange[]; // Prop to receive score ranges
 }
 
 const FormBuilderTabs = ({
@@ -53,8 +53,12 @@ const FormBuilderTabs = ({
   formId,
   allowedUserName = "",
   setAllowedUserName = () => {},
-  externalScoreRanges = [] // Default to empty array
+  externalScoreRanges = []
 }: FormBuilderTabsProps) => {
+  // Log the incoming data to debug
+  console.log("FormBuilderTabs - formData showTotalScore:", formData.showTotalScore);
+  console.log("FormBuilderTabs - External score ranges:", externalScoreRanges);
+
   return (
     <Tabs defaultValue="fields" className="w-full mt-6">
       <TabsList className="mb-8">

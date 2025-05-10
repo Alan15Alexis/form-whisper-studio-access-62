@@ -38,6 +38,8 @@ const FormBuilder = () => {
   // Log the form data for debugging
   console.log("FormBuilder - Current form data:", {
     showTotalScore: formData.showTotalScore,
+    scoreConfig: formData.scoreConfig,
+    directScoreRanges: formData.scoreRanges,
     fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
     scoreRanges: scoreRanges // Log the scoreRanges from the hook
   });

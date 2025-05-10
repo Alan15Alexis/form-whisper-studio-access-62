@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { useForm } from "@/contexts/form"; // Import with original name
+import { useForm } from "@/contexts/form"; // Keep the original import name
 import { Form, FormField, HttpConfig, ScoreRange } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
@@ -20,7 +20,11 @@ export const useFormBuilder = (formId?: string) => {
     fields: [],
     isPrivate: false,
     allowedUsers: [],
-    showTotalScore: false
+    showTotalScore: false,
+    scoreConfig: {
+      enabled: false,
+      ranges: []
+    }
   });
 
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
@@ -64,19 +68,17 @@ export const useFormBuilder = (formId?: string) => {
         console.log("Loaded form data:", form);
         console.log("Form has showTotalScore:", form.showTotalScore);
         
-        // Extract score ranges from either the scoreConfig or from fields
+        // Extract score ranges from the form's scoreConfig
         if (form.scoreConfig && form.scoreConfig.ranges && form.scoreConfig.ranges.length > 0) {
           console.log("Loading score ranges from scoreConfig:", form.scoreConfig.ranges);
           setScoreRanges(form.scoreConfig.ranges);
+        } else if (form.scoreRanges && form.scoreRanges.length > 0) {
+          // Backward compatibility: check for direct scoreRanges property
+          console.log("Loading score ranges from direct scoreRanges property:", form.scoreRanges);
+          setScoreRanges(form.scoreRanges);
         } else {
-          const fieldWithRanges = form.fields?.find(f => f.scoreRanges?.length > 0);
-          if (fieldWithRanges && fieldWithRanges.scoreRanges) {
-            console.log("Loading score ranges from fields:", fieldWithRanges.scoreRanges);
-            setScoreRanges(fieldWithRanges.scoreRanges);
-          } else {
-            // Default empty array if no ranges found
-            setScoreRanges([]);
-          }
+          // Default empty array if no ranges found
+          setScoreRanges([]);
         }
         
         console.log("Fields with score ranges:", form.fields?.filter(f => f.scoreRanges?.length > 0));
@@ -127,12 +129,18 @@ export const useFormBuilder = (formId?: string) => {
         showTotalScore: enabled,
         fields: updatedFields,
         // Also update scoreConfig for consistency
-        scoreConfig: enabled ? {
-          enabled: true,
-          ranges: scoreRanges
-        } : undefined
+        scoreConfig: {
+          enabled: enabled,
+          ranges: enabled ? scoreRanges : []
+        },
+        scoreRanges: enabled ? [...scoreRanges] : [] // Also update the direct scoreRanges property
       };
     });
+    
+    // Save changes immediately when toggling scoring
+    setTimeout(() => {
+      handleSubmit(true);
+    }, 200);
   };
 
   // Enhanced function to explicitly save score ranges
@@ -151,8 +159,10 @@ export const useFormBuilder = (formId?: string) => {
         // Update scoreConfig to ensure it's saved to the database
         scoreConfig: {
           enabled: true,
-          ranges: newScoreRanges
-        }
+          ranges: [...newScoreRanges]
+        },
+        // Also set the direct scoreRanges property
+        scoreRanges: [...newScoreRanges]
       };
       
       // Then update fields with numeric values
@@ -323,17 +333,18 @@ export const useFormBuilder = (formId?: string) => {
 
     try {
       // Ensure the scoreConfig is properly set with the current state
-      const formToSave = {
+      const formToSave: Partial<Form> = {
         ...formData,
-        scoreConfig: formData.showTotalScore ? {
-          enabled: true,
+        scoreConfig: {
+          enabled: !!formData.showTotalScore,
           ranges: scoreRanges
-        } : undefined
+        },
+        scoreRanges: [...scoreRanges] // Also save direct scoreRanges property for backward compatibility
       };
       
+      console.log("Saving form with showTotalScore:", formToSave.showTotalScore);
       console.log("Saving form with scoreConfig:", formToSave.scoreConfig);
-      console.log("Form showTotalScore:", formToSave.showTotalScore);
-      console.log("Score ranges being saved:", JSON.stringify(scoreRanges));
+      console.log("Saving form with direct scoreRanges:", formToSave.scoreRanges);
       
       // Apply score ranges to fields that have numeric values
       if (formToSave.showTotalScore && scoreRanges.length > 0) {
@@ -348,9 +359,6 @@ export const useFormBuilder = (formId?: string) => {
       }
       
       if (isEditMode && formId) {
-        console.log("Updating form with showTotalScore:", formToSave.showTotalScore);
-        console.log("Updating form with scoreRanges:", JSON.stringify(scoreRanges));
-        
         await updateForm(formId, formToSave);
         
         if (!skipValidation) {
