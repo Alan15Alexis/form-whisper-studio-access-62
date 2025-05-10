@@ -80,7 +80,7 @@ const FormBuilderTabs = ({
               formData={formData}
               updateField={updateField}
               removeField={removeField}
-              formShowTotalScore={formData.showTotalScore}
+              formShowTotalScore={formData.showTotalScore === true}
               onToggleFormScoring={onToggleFormScoring}
             />
           </div>
@@ -104,7 +104,7 @@ const FormBuilderTabs = ({
           onHttpConfigChange={onHttpConfigChange}
           formFields={formData.fields || []}
           formId={formId}
-          showTotalScore={formData.showTotalScore}
+          showTotalScore={formData.showTotalScore === true}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
           externalScoreRanges={externalScoreRanges} // Pass score ranges to FormSettings

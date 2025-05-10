@@ -24,7 +24,8 @@ export const useFormBuilder = (formId?: string) => {
     scoreConfig: {
       enabled: false,
       ranges: []
-    }
+    },
+    scoreRanges: [] // Initialize the property
   });
 
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
@@ -181,7 +182,7 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // Save the form with updated score ranges - this is the ONLY place we save when modifying scores
+    // Save the form with updated score ranges
     setTimeout(() => {
       handleSubmit(true);
     }, 200);
@@ -335,11 +336,13 @@ export const useFormBuilder = (formId?: string) => {
       // Ensure the scoreConfig is properly set with the current state
       const formToSave: Partial<Form> = {
         ...formData,
+        // Explicitly set the showTotalScore as a boolean
+        showTotalScore: formData.showTotalScore === true,
         scoreConfig: {
-          enabled: !!formData.showTotalScore,
+          enabled: formData.showTotalScore === true,
           ranges: scoreRanges
         },
-        scoreRanges: [...scoreRanges] // Also save direct scoreRanges property for backward compatibility
+        scoreRanges: [...scoreRanges] // Also save direct scoreRanges property
       };
       
       console.log("Saving form with showTotalScore:", formToSave.showTotalScore);

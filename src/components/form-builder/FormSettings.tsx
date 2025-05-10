@@ -79,6 +79,16 @@ const FormSettings = ({
   // Initialize score ranges from props or existing fields
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
   
+  // Track when the scoring toggle changes locally
+  const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(!!showTotalScore);
+  // Track if there are unsaved changes to score ranges
+  const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
+  // Track if there are unsaved scoring toggle changes
+  const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
+
+  console.log("FormSettings - showTotalScore prop:", showTotalScore);
+  console.log("FormSettings - external score ranges:", externalScoreRanges);
+  
   // Init state from props or fields
   useEffect(() => {
     console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
@@ -109,13 +119,6 @@ const FormSettings = ({
       setScoreRanges([{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }]);
     }
   }, [externalScoreRanges, formFields, showTotalScore]);
-
-  // Track when the scoring toggle changes locally
-  const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(showTotalScore || false);
-  // Track if there are unsaved changes to score ranges
-  const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
-  // Track if there are unsaved scoring toggle changes
-  const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
   
   // Better sync local state with props
   useEffect(() => {
@@ -186,25 +189,27 @@ const FormSettings = ({
   const saveScoreRanges = () => {
     if (!onSaveScoreRanges) return;
     
+    console.log("Saving score ranges with toggle state:", isScoringEnabled);
+    console.log("Ranges to save:", scoreRanges);
+    
     // Apply the toggle change first if it's unsaved
     if (hasUnsavedToggle) {
-      console.log("Applying toggle change:", isScoringEnabled);
+      console.log("Applying toggle change to:", isScoringEnabled);
       onToggleFormScoring(isScoringEnabled);
+      setHasUnsavedToggle(false);
     }
     
     // Only if scoring is enabled, save the ranges too
     if (isScoringEnabled) {
-      console.log("Saving score ranges:", scoreRanges);
       onSaveScoreRanges(scoreRanges);
     } else {
       // If scoring is disabled, we still need to save the toggle state
-      console.log("Scoring disabled, applying toggle change");
+      console.log("Scoring disabled, applying toggle change to false");
       onToggleFormScoring(false);
     }
     
     // Update the flags
     setHasUnsavedRanges(false);
-    setHasUnsavedToggle(false);
     
     toast({
       title: "Cambios guardados",
@@ -301,7 +306,7 @@ const FormSettings = ({
             <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Tienes cambios sin guardar en la configuración de puntuación. Haz clic en "Guardar rangos" para aplicar los cambios.
+                Tienes cambios sin guardar en la configuración de puntuación. Haz clic en "Guardar cambios" para aplicar los cambios.
               </AlertDescription>
             </Alert>
           )}

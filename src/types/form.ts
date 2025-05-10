@@ -106,6 +106,7 @@ export interface Form {
   showTotalScore?: boolean;
   enableScoring?: boolean; // Adding the missing property
   scoreConfig?: ScoreConfig; // Added specific score configuration
+  scoreRanges?: ScoreRange[]; // Explicitly adding scoreRanges to the Form interface
   welcomeMessage?: {
     text: string;
     imageUrl?: string;
