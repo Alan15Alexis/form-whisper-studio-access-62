@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Filter, Download, FileSpreadsheet } from "lucide-react";
+import { Loader2, Filter, Download, FileSpreadsheet, ExternalLink, FileIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FormField } from "@/types/form";
@@ -111,7 +111,7 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     fetchResponse();
   }, [open, formId, formTitle, currentUser?.email, adminView]);
 
-  // Find a field label by matching the label text in the fields array
+  // Find a field by matching the label text in the fields array
   const findFieldByLabel = (label: string): FormField | undefined => {
     return fields?.find(field => field.label === label);
   };
@@ -124,6 +124,32 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
 
   const handleToggleAllResponses = () => {
     setShowAllResponses(!showAllResponses);
+  };
+
+  // Helper function to check if value is a file URL
+  const isFileUrl = (value: any): boolean => {
+    return typeof value === 'string' && 
+          (value.startsWith('http://') || 
+           value.startsWith('https://') || 
+           value.includes('respuestas-formulario'));
+  };
+  
+  // Helper function to get the file name from URL
+  const getFileNameFromUrl = (url: string): string => {
+    try {
+      const urlParts = url.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      // Decode and clean up the filename (remove any query parameters)
+      return decodeURIComponent(filename.split('?')[0]) || 'Archivo';
+    } catch (e) {
+      return 'Archivo';
+    }
+  };
+  
+  // Helper function to check if a URL is an image
+  const isImageUrl = (url: string): boolean => {
+    // Check if URL ends with typical image extensions
+    return /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(url.toLowerCase());
   };
 
   // Download responses as CSV
@@ -178,6 +204,49 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Function to render file preview
+  const renderFilePreview = (fileUrl: string, fieldLabel: string) => {
+    // Check if it's an image by extension
+    const isImage = isImageUrl(fileUrl);
+    
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border">
+        {isImage ? (
+          <img 
+            src={fileUrl} 
+            alt={fieldLabel || "Imagen"} 
+            className="h-16 w-16 object-cover rounded"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement?.prepend(document.createElement('div'));
+              const div = e.currentTarget.parentElement?.firstChild as HTMLDivElement;
+              if (div) {
+                div.className = "h-16 w-16 bg-gray-200 rounded flex items-center justify-center";
+                div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
+              }
+            }}
+          />
+        ) : (
+          <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
+            <FileIcon className="h-8 w-8 text-gray-500" />
+          </div>
+        )}
+        <div className="flex-1">
+          <p className="text-sm font-medium">{fieldLabel}</p>
+          <p className="text-xs text-gray-500">{getFileNameFromUrl(fileUrl)}</p>
+        </div>
+        <a 
+          href={fileUrl}
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline text-sm flex items-center"
+        >
+          <ExternalLink className="h-4 w-4 mr-1" /> Ver
+        </a>
+      </div>
+    );
   };
 
   // Create aggregate data from all responses
@@ -325,7 +394,13 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                           <div className="space-y-2">
                             {answersList.map((item, idx) => (
                               <div key={idx} className="border-b pb-2 last:border-b-0 last:pb-0">
-                                <div className="text-sm">{typeof item.answer === 'object' ? JSON.stringify(item.answer) : String(item.answer)}</div>
+                                <div className="text-sm">
+                                  {isFileUrl(item.answer) ? (
+                                    renderFilePreview(item.answer, question)
+                                  ) : (
+                                    typeof item.answer === 'object' ? JSON.stringify(item.answer) : String(item.answer)
+                                  )}
+                                </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   {item.user} • {new Date(item.date).toLocaleString()}
                                 </div>
@@ -341,7 +416,11 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                       <TableRow key={question}>
                         <TableCell className="font-medium">{question}</TableCell>
                         <TableCell>
-                          {typeof answer === 'object' ? JSON.stringify(answer) : String(answer)}
+                          {isFileUrl(answer) ? (
+                            renderFilePreview(answer, question)
+                          ) : (
+                            typeof answer === 'object' ? JSON.stringify(answer) : String(answer)
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
