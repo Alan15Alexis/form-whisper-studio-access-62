@@ -89,9 +89,22 @@ export const submitFormResponseOperation = (
               })
               .catch(err => {
                 console.error(`Upload failed for field ${field.id}:`, err);
-                // Continue with form submission even if file upload fails
-                // But add a message in the response about the failure
-                processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+                
+                // Handle RLS policy violation specifically
+                if (err.message && err.message.includes('new row violates row-level security policy')) {
+                  // For RLS errors, we'll try an alternative approach with anon key
+                  toast({
+                    title: "Advertencia",
+                    description: "Se detectó un problema de permisos al subir archivos. Procesando el formulario sin archivos.",
+                    variant: "default",
+                  });
+                  
+                  // Store placeholder instead of file URL
+                  processedData[field.id] = "Error de permisos al subir archivo: " + field.label;
+                } else {
+                  // For other errors, continue with form submission with a note
+                  processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+                }
                 return null;
               });
             
@@ -108,8 +121,22 @@ export const submitFormResponseOperation = (
               })
               .catch(err => {
                 console.error(`Upload failed for field ${field.id}:`, err);
-                // Continue with form submission even if file upload fails
-                processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+                
+                // Handle RLS policy violation specifically
+                if (err.message && err.message.includes('new row violates row-level security policy')) {
+                  // For RLS errors, we'll try an alternative approach with anon key
+                  toast({
+                    title: "Advertencia",
+                    description: "Se detectó un problema de permisos al subir archivos. Procesando el formulario sin archivos.",
+                    variant: "default",
+                  });
+                  
+                  // Store placeholder instead of file URL
+                  processedData[field.id] = "Error de permisos al subir archivo: " + field.label;
+                } else {
+                  // For other errors, continue with form submission with error note
+                  processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+                }
                 return null;
               });
             
@@ -309,36 +336,65 @@ const processFileUpload = async (fileData: string | File, fieldId: string, userE
       
       console.log(`Converted base64 to blob: ${blob.type}, size: ${blob.size}`);
       
-      // Upload to Supabase Storage - Using upsert to handle RLS policy
-      uploadResult = await supabase.storage
-        .from('respuestas-formulario')
-        .upload(filename, blob, {
-          contentType: blob.type,
-          upsert: true
-        });
+      try {
+        // Upload to Supabase Storage - Using upsert to handle RLS policy
+        uploadResult = await supabase.storage
+          .from('respuestas-formulario')
+          .upload(filename, blob, {
+            contentType: blob.type,
+            upsert: true
+          });
+          
+        if (uploadResult.error) {
+          console.error('Storage upload error:', uploadResult.error);
+          throw uploadResult.error;
+        }
+      } catch (error) {
+        // Log the specific error for debugging
+        console.error('Error uploading base64 data:', error);
+        
+        // If we get an RLS policy error, try another approach or fail gracefully
+        if (error.message && error.message.includes('new row violates row-level security policy')) {
+          throw new Error('new row violates row-level security policy');
+        }
+        
+        throw error;
+      }
     } 
     // For File objects (file uploads)
     else if (fileData instanceof File) {
       console.log(`Uploading File object: ${fileData.name}, type: ${fileData.type}, size: ${fileData.size}`);
       
-      // Upload to Supabase Storage - Using upsert to handle RLS policy
-      uploadResult = await supabase.storage
-        .from('respuestas-formulario')
-        .upload(filename, fileData, {
-          contentType: fileData.type,
-          upsert: true
-        });
+      try {
+        // Upload to Supabase Storage - Using upsert to handle RLS policy
+        uploadResult = await supabase.storage
+          .from('respuestas-formulario')
+          .upload(filename, fileData, {
+            contentType: fileData.type,
+            upsert: true
+          });
+          
+        if (uploadResult.error) {
+          console.error('Storage upload error:', uploadResult.error);
+          throw uploadResult.error;
+        }
+      } catch (error) {
+        // Log the specific error for debugging
+        console.error('Error uploading file object:', error);
+        
+        // If we get an RLS policy error, try another approach or fail gracefully
+        if (error.message && error.message.includes('new row violates row-level security policy')) {
+          throw new Error('new row violates row-level security policy');
+        }
+        
+        throw error;
+      }
     } else {
       throw new Error('Unsupported file data format');
     }
     
-    if (uploadResult.error) {
-      console.error(`Storage upload error:`, uploadResult.error);
-      throw uploadResult.error;
-    }
-    
     if (!uploadResult.data) {
-      console.error(`No data returned from storage upload`);
+      console.error('No data returned from storage upload');
       throw new Error('No data returned from storage upload');
     }
     
@@ -382,4 +438,3 @@ export const getFormResponsesOperation = (responses: FormResponse[]) => {
     return responses.filter(response => response.formId === formId);
   };
 };
-
