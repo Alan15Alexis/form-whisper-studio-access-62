@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -117,6 +118,17 @@ const FormView = () => {
     e.preventDefault();
     
     if (!form || !id) return;
+    
+    // Check if the current user is an admin in preview mode
+    // Admins cannot submit responses in preview mode, show a toast instead
+    if (isAuthenticated && currentUser?.role === "admin") {
+      toast({
+        title: "Vista previa",
+        description: "Esto es solo una vista previa, no se puede responder formulario desde esta vista",
+        variant: "default",
+      });
+      return;
+    }
     
     // Check if all required fields are filled
     const missingFields = form.fields
@@ -257,6 +269,9 @@ const FormView = () => {
     backgroundColor: form.formColor,
     borderColor: form.formColor
   } : {};
+  
+  // Check if user is an admin in preview mode
+  const isAdminPreview = isAuthenticated && currentUser?.role === "admin";
 
   return (
     <Layout hideNav>
@@ -278,6 +293,11 @@ const FormView = () => {
               className="text-2xl font-bold"
             >
               {form.title}
+              {isAdminPreview && (
+                <span className="ml-2 text-sm bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                  Vista previa
+                </span>
+              )}
             </CardTitle>
             {form.description && (
               <CardDescription className="text-gray-600">
@@ -314,7 +334,7 @@ const FormView = () => {
                   style={buttonStyle}
                 >
                   <Send className="mr-2 h-4 w-4" />
-                  {isSubmitting ? "Enviando..." : "Enviar respuesta"}
+                  {isSubmitting ? "Enviando..." : isAdminPreview ? "Vista previa" : "Enviar respuesta"}
                 </Button>
               ) : (
                 <Button
