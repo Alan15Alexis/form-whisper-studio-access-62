@@ -44,7 +44,7 @@ export const createFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
     }
     
-    // Process all fields with score ranges
+    // Extract score ranges from fields for storage
     let scoreRanges = [];
     let fieldsWithValues = false;
     
@@ -89,6 +89,7 @@ export const createFormOperation = (
         console.error("Error saving form to Supabase:", error);
       } else {
         console.log("Form created in Supabase:", data);
+        console.log("Form created with showTotalScore:", newForm.showTotalScore);
         console.log("Form created with score ranges:", scoreRanges);
       }
     } catch (error) {
@@ -142,7 +143,7 @@ export const updateFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: updatedForm.allowedUsers}));
     }
 
-    // Process all fields and extract score ranges and check for numeric values
+    // Extract all score ranges and check for numeric values
     let scoreRanges = [];
     let fieldsWithValues = false;
     
@@ -197,7 +198,9 @@ export const updateFormOperation = (
         if (error) {
           console.error("Error updating form in Supabase:", error);
         } else {
-          console.log("Form updated in Supabase successfully with score ranges:", scoreRanges);
+          console.log("Form updated in Supabase successfully");
+          console.log("Form updated with showTotalScore:", updatedForm.showTotalScore);
+          console.log("Form updated with score ranges:", scoreRanges);
         }
       } else {
         // Form doesn't exist, insert it
@@ -224,7 +227,9 @@ export const updateFormOperation = (
         if (error) {
           console.error("Error creating form in Supabase:", error);
         } else {
-          console.log("Form created in Supabase successfully with score ranges:", scoreRanges);
+          console.log("Form created in Supabase successfully");
+          console.log("Form created with showTotalScore:", updatedForm.showTotalScore);
+          console.log("Form created with score ranges:", scoreRanges);
         }
       }
     } catch (error) {

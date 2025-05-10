@@ -57,8 +57,10 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Extract score ranges and settings from configuration if they exist
             const scoreRanges = formData.configuracion?.scoreRanges || [];
             const hasNumericValues = formData.configuracion?.hasFieldsWithNumericValues || false;
+            const showTotalScore = formData.configuracion?.showTotalScore || false;
             
             console.log(`Loaded form "${formData.titulo}" with score ranges:`, scoreRanges);
+            console.log(`Form "${formData.titulo}" showTotalScore setting:`, showTotalScore);
             
             // Apply score ranges to all fields with numeric values
             const processedFields = formData.preguntas?.map(field => {
@@ -83,7 +85,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               allowViewOwnResponses: formData.configuracion?.allowViewOwnResponses || false,
               allowEditOwnResponses: formData.configuracion?.allowEditOwnResponses || false,
               httpConfig: formData.configuracion?.httpConfig,
-              showTotalScore: formData.configuracion?.showTotalScore || false
+              showTotalScore: showTotalScore
             };
           });
           
