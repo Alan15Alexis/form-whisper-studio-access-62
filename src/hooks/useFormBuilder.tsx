@@ -86,13 +86,15 @@ export const useFormBuilder = (formId?: string) => {
   };
 
   const handleToggleFormScoring = (enabled: boolean) => {
-    console.log("Toggling form scoring to:", enabled);
+    console.log("Toggle form scoring called with:", enabled);
     
     // Get current score ranges (if any)
     let scoreRanges: ScoreRange[] = [];
     
     // Find a field with existing score ranges
-    const fieldWithRanges = formData.fields?.find(f => f.scoreRanges && f.scoreRanges.length > 0);
+    const fieldWithRanges = formData.fields?.find(f => 
+        f.scoreRanges && f.scoreRanges.length > 0
+    );
     
     if (fieldWithRanges?.scoreRanges) {
       scoreRanges = [...fieldWithRanges.scoreRanges];
@@ -304,19 +306,25 @@ export const useFormBuilder = (formId?: string) => {
       // Ensure score ranges consistency for all numeric fields
       const formDataToSave = { ...formData };
       if (formDataToSave.showTotalScore) {
+        // Find score ranges to use
         const scoreRanges = formDataToSave.fields?.find(f => f.scoreRanges && f.scoreRanges.length > 0)?.scoreRanges || [];
+        
         if (scoreRanges.length > 0) {
+          // Apply score ranges to all fields with numeric values
           formDataToSave.fields = formDataToSave.fields?.map(field => {
             if (field.hasNumericValues) {
               return { ...field, scoreRanges };
             }
             return field;
           });
+          
+          console.log("Saving form with score ranges:", JSON.stringify(scoreRanges));
         }
-        console.log("Saving form with score ranges:", JSON.stringify(scoreRanges));
       }
       
       if (isEditMode && formId) {
+        // Ensure we retain the showTotalScore flag when updating
+        console.log("Updating form with showTotalScore:", formDataToSave.showTotalScore);
         await updateForm(formId, formDataToSave);
         toast({
           title: 'Form updated',

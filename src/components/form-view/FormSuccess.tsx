@@ -23,26 +23,16 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
   const showScore = shouldShowScoreCard(fields || [], showTotalScore);
 
   console.log("FormSuccess render:", { showTotalScore, currentScore, scoreFeedback, showScore });
-  console.log("Form values:", formValues);
-  console.log("Form fields:", fields);
-  console.log("Score feedback:", scoreFeedback);
   
-  // Debug score ranges in fields
+  // Debug scores and feedback in more detail
   useEffect(() => {
-    if (fields?.some(f => f.scoreRanges?.length > 0)) {
-      console.log("Fields with score ranges found:", 
-        fields.filter(f => f.scoreRanges?.length > 0).map(f => ({
-          id: f.id,
-          type: f.type,
-          scoreRangesCount: f.scoreRanges?.length || 0,
-          scoreRanges: f.scoreRanges
-        }))
-      );
-    } else {
-      console.log("No fields with score ranges found");
-    }
-  }, [fields]);
-
+    console.log("Form values:", formValues);
+    console.log("Form fields:", fields);
+    console.log("Score feedback:", scoreFeedback);
+    console.log("Show total score flag:", showTotalScore);
+    console.log("Fields with numeric values:", fields?.filter(f => f.hasNumericValues));
+  }, [formValues, fields, scoreFeedback, showTotalScore]);
+  
   return (
     <div className="container max-w-3xl mx-auto py-8">
       <Card className="shadow-md">

@@ -93,7 +93,7 @@ export function useFormScoring() {
     // Verify that at least one field has numeric values
     const hasNumericFields = fields.some(f => f.hasNumericValues);
     console.log("Has fields with numeric values:", hasNumericFields);
-    return hasNumericFields;
+    return hasNumericFields && showTotalScore === true;
   };
 
   return {

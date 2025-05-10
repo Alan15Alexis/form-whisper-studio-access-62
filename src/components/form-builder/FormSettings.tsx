@@ -86,11 +86,21 @@ const FormSettings = ({
     return [];
   });
 
+  // IMPORTANT: Track when the scoring toggle changes locally to ensure it doesn't get disabled
+  const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(showTotalScore || false);
+  
+  // Sync local state with prop
+  useEffect(() => {
+    setIsScoringEnabled(showTotalScore || false);
+  }, [showTotalScore]);
+
   // Debug
   useEffect(() => {
     console.log("FormSettings - Current score ranges:", scoreRanges);
+    console.log("FormSettings - isScoringEnabled:", isScoringEnabled);
+    console.log("FormSettings - showTotalScore prop:", showTotalScore);
     console.log("FormSettings - Form fields with ranges:", formFields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0));
-  }, [scoreRanges, formFields]);
+  }, [scoreRanges, formFields, isScoringEnabled, showTotalScore]);
 
   // Sync score ranges when fields change
   useEffect(() => {
@@ -161,8 +171,9 @@ const FormSettings = ({
   const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
     if (!onToggleFormScoring || !formId) return;
     
-    // Ensure scoring is enabled
-    if (!showTotalScore) {
+    // Ensure scoring is enabled - use the local state
+    if (!isScoringEnabled) {
+      setIsScoringEnabled(true);
       onToggleFormScoring(true);
     }
     
@@ -172,6 +183,20 @@ const FormSettings = ({
       onToggleFormScoring(true);
       console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
     }, 100);
+  };
+
+  // Handle toggle of scoring feature - maintain local state
+  const handleToggleScoringFeature = (enabled: boolean) => {
+    console.log("Toggle scoring feature called with:", enabled);
+    setIsScoringEnabled(enabled);
+    onToggleFormScoring(enabled);
+    
+    if (enabled && scoreRanges.length === 0) {
+      // Si se activa la puntuación pero no hay rangos, añadir uno por defecto
+      setTimeout(() => {
+        addScoreRange();
+      }, 100);
+    }
   };
 
   return (
@@ -229,16 +254,8 @@ const FormSettings = ({
           <div className="flex items-center space-x-4">
             <Switch
               id="show-total-score"
-              checked={showTotalScore}
-              onCheckedChange={(checked) => {
-                onToggleFormScoring(checked);
-                if (checked && scoreRanges.length === 0) {
-                  // Si se activa la puntuación pero no hay rangos, añadir uno por defecto
-                  setTimeout(() => {
-                    addScoreRange();
-                  }, 100);
-                }
-              }}
+              checked={isScoringEnabled}
+              onCheckedChange={handleToggleScoringFeature}
               disabled={!hasFieldsWithNumericValues}
               className="data-[state=checked]:bg-[#686df3]"
             />
@@ -264,8 +281,8 @@ const FormSettings = ({
             </div>
           )}
           
-          {/* Score Ranges Configuration - Solo mostrar cuando showTotalScore está activo */}
-          {showTotalScore && (
+          {/* Score Ranges Configuration - Solo mostrar cuando isScoringEnabled está activo */}
+          {isScoringEnabled && (
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
