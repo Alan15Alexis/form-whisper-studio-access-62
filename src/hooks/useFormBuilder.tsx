@@ -116,6 +116,11 @@ export const useFormBuilder = (formId?: string) => {
         fields: updatedFields 
       };
     });
+    
+    // If we're in edit mode, save the form to update the database immediately
+    if (isEditMode && formId) {
+      handleSubmit();
+    }
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
@@ -155,6 +160,11 @@ export const useFormBuilder = (formId?: string) => {
       
       // Log the score ranges for debugging
       console.log("Updated score ranges for all fields:", JSON.stringify(updatedField.scoreRanges));
+      
+      // Save the form if in edit mode
+      if (isEditMode && formId) {
+        handleSubmit();
+      }
     } else {
       setFormData(prev => ({
         ...prev,

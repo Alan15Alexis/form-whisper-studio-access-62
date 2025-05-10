@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash, Plus, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "@/components/ui/use-toast";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -83,6 +85,12 @@ const FormSettings = ({
     return [];
   });
 
+  // Debug
+  useEffect(() => {
+    console.log("FormSettings - Current score ranges:", scoreRanges);
+    console.log("FormSettings - Form fields with ranges:", formFields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0));
+  }, [scoreRanges, formFields]);
+
   // Sync score ranges when fields change
   useEffect(() => {
     if (formFields && formFields.length > 0 && showTotalScore) {
@@ -112,6 +120,12 @@ const FormSettings = ({
     // Update all fields that have numeric values with the new ranges
     updateFieldsWithScoreRanges(newRanges);
     console.log("Added new score range:", newRanges[newRanges.length - 1]);
+    
+    // Show confirmation toast
+    toast({
+      title: "Rango añadido",
+      description: `Se añadió un nuevo rango de puntuación: ${newMin}-${newMax}`,
+    });
   };
 
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
@@ -134,25 +148,22 @@ const FormSettings = ({
     // Update all fields with the updated ranges
     updateFieldsWithScoreRanges(updatedRanges);
     console.log("Removed score range at index:", index);
+    
+    // Show confirmation toast
+    toast({
+      title: "Rango eliminado",
+      description: "El rango de puntuación ha sido eliminado",
+    });
   };
 
   // This function will update all fields with the current score ranges and trigger the form update
   const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
     if (!onToggleFormScoring) return;
     
-    // First make sure all field scoreRanges are updated in the parent component
-    const updatedFields = formFields.map(field => {
-      if (field.hasNumericValues) {
-        return { ...field, scoreRanges: ranges };
-      }
-      return field;
-    });
-    
-    // Now trigger the form update with scoring enabled and updated ranges
+    // Ensure the parent component knows about the updated ranges
     if (formId) {
-      // This will trigger the form to save with the updated ranges
-      // Note: We pass the current showTotalScore value to maintain its state
-      onToggleFormScoring(showTotalScore);
+      // This will trigger the form to update with the new ranges
+      onToggleFormScoring(true);
       console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
     }
   };

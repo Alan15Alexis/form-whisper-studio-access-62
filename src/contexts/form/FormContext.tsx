@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -63,7 +64,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Apply score ranges to all fields with numeric values
             const processedFields = formData.preguntas?.map(field => {
-              if (field.hasNumericValues && scoreRanges.length > 0) {
+              if (field.hasNumericValues && scoreRanges.length > 0 && showTotalScore) {
                 return { ...field, scoreRanges };
               }
               return field;

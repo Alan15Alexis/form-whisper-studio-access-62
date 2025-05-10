@@ -5,6 +5,8 @@ import { FormField } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
 
 interface FormSuccessProps {
   formValues: Record<string, any>;
@@ -24,6 +26,22 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
   console.log("Form values:", formValues);
   console.log("Form fields:", fields);
   console.log("Score feedback:", scoreFeedback);
+  
+  // Debug score ranges in fields
+  useEffect(() => {
+    if (fields?.some(f => f.scoreRanges?.length > 0)) {
+      console.log("Fields with score ranges found:", 
+        fields.filter(f => f.scoreRanges?.length > 0).map(f => ({
+          id: f.id,
+          type: f.type,
+          scoreRangesCount: f.scoreRanges?.length || 0,
+          scoreRanges: f.scoreRanges
+        }))
+      );
+    } else {
+      console.log("No fields with score ranges found");
+    }
+  }, [fields]);
 
   return (
     <div className="container max-w-3xl mx-auto py-8">

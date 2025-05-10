@@ -70,7 +70,7 @@ export const createFormOperation = (
       const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
         descripcion: newForm.description,
-        preguntas: newForm.fields,
+        preguntas: formData.showTotalScore ? ensureScoreRangesInAllFields(formData.fields || [], scoreRanges) : formData.fields,
         configuracion: {
           isPrivate: newForm.isPrivate,
           formColor: newForm.formColor,
@@ -105,6 +105,18 @@ export const createFormOperation = (
     return newForm;
   };
 };
+
+// Helper function to ensure all fields with numeric values have the specified score ranges
+function ensureScoreRangesInAllFields(fields, scoreRanges) {
+  if (!fields || !scoreRanges || scoreRanges.length === 0) return fields;
+  
+  return fields.map(field => {
+    if (field.hasNumericValues) {
+      return { ...field, scoreRanges: [...scoreRanges] };
+    }
+    return field;
+  });
+}
 
 export const updateFormOperation = (
   forms: Form[],
@@ -164,6 +176,11 @@ export const updateFormOperation = (
       }
     }
     
+    // Ensure all fields with numeric values have the score ranges
+    const fieldsToSave = updatedForm.showTotalScore 
+      ? ensureScoreRangesInAllFields(updatedForm.fields || [], scoreRanges) 
+      : updatedForm.fields;
+    
     // Update the form in Supabase
     try {
       // First check if the form exists in Supabase by title
@@ -180,7 +197,7 @@ export const updateFormOperation = (
           .update({
             titulo: updatedForm.title,
             descripcion: updatedForm.description,
-            preguntas: updatedForm.fields,
+            preguntas: fieldsToSave,
             configuracion: {
               isPrivate: updatedForm.isPrivate,
               formColor: updatedForm.formColor,
@@ -209,7 +226,7 @@ export const updateFormOperation = (
           .insert({
             titulo: updatedForm.title,
             descripcion: updatedForm.description,
-            preguntas: updatedForm.fields,
+            preguntas: fieldsToSave,
             configuracion: {
               isPrivate: updatedForm.isPrivate,
               formColor: updatedForm.formColor,

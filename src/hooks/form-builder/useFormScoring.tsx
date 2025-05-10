@@ -61,22 +61,21 @@ export function useFormScoring() {
     
     console.log("Getting feedback for score:", score);
     
-    // Recopilar todos los rangos de puntuación de todos los campos
-    const allRanges: ScoreRange[] = [];
-    fields.forEach(field => {
-      if (field.scoreRanges && field.scoreRanges.length > 0) {
-        allRanges.push(...field.scoreRanges);
-        console.log(`Added ${field.scoreRanges.length} ranges from field ${field.id}`);
-      }
-    });
+    // Find a field with score ranges
+    const fieldWithRanges = fields.find(field => 
+      field.scoreRanges && field.scoreRanges.length > 0
+    );
     
-    console.log("All score ranges:", allRanges);
+    if (!fieldWithRanges || !fieldWithRanges.scoreRanges) {
+      console.log("No score ranges found in any field");
+      return null;
+    }
     
-    // Si no hay rangos definidos, devuelve null
-    if (allRanges.length === 0) return null;
+    const scoreRanges = fieldWithRanges.scoreRanges;
+    console.log("Using score ranges:", JSON.stringify(scoreRanges));
     
-    // Buscar un rango que coincida con la puntuación actual
-    const matchingRange = allRanges.find(range => 
+    // Find a range that matches the current score
+    const matchingRange = scoreRanges.find(range => 
       score >= range.min && score <= range.max
     );
     
@@ -91,7 +90,7 @@ export function useFormScoring() {
       return false;
     }
     
-    // Verificar que al menos un campo tenga valores numéricos
+    // Verify that at least one field has numeric values
     const hasNumericFields = fields.some(f => f.hasNumericValues);
     console.log("Has fields with numeric values:", hasNumericFields);
     return hasNumericFields;
