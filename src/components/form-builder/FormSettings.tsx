@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle } from "lucide-react";
+import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 
@@ -87,18 +87,13 @@ const FormSettings = ({
 
   // Track when the scoring toggle changes locally
   const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(showTotalScore || false);
+  // Track if there are unsaved changes to score ranges
+  const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
   
   // Fix: Better sync local state with prop and ensure we're not auto-enabling
   useEffect(() => {
     setIsScoringEnabled(showTotalScore || false);
   }, [showTotalScore]);
-
-  // Debug
-  useEffect(() => {
-    console.log("FormSettings - Current score ranges:", scoreRanges);
-    console.log("FormSettings - isScoringEnabled:", isScoringEnabled);
-    console.log("FormSettings - showTotalScore prop:", showTotalScore);
-  }, [scoreRanges, isScoringEnabled, showTotalScore]);
 
   // Only sync score ranges when fields change and scoring is already enabled
   useEffect(() => {
@@ -108,6 +103,7 @@ const FormSettings = ({
       );
       if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
         setScoreRanges([...fieldWithRanges.scoreRanges]);
+        setHasUnsavedRanges(false); // Reset unsaved changes flag after loading from props
       }
     }
   }, [formFields, showTotalScore]);
@@ -124,12 +120,8 @@ const FormSettings = ({
     ];
     
     setScoreRanges(newRanges);
+    setHasUnsavedRanges(true);
     
-    // Update all fields with the new ranges
-    updateFieldsWithScoreRanges(newRanges);
-    console.log("Added new score range:", newRanges[newRanges.length - 1]);
-    
-    // Show confirmation toast
     toast({
       title: "Rango añadido",
       description: `Se añadió un nuevo rango de puntuación: ${newMin}-${newMax}`,
@@ -145,39 +137,36 @@ const FormSettings = ({
       [field]: typeof value === 'string' ? value : Number(value)
     };
     setScoreRanges(updatedRanges);
-    
-    // Update all fields with the updated ranges
-    updateFieldsWithScoreRanges(updatedRanges);
-    console.log("Updated score range:", { index, field, value });
+    setHasUnsavedRanges(true);
   };
 
   const removeScoreRange = (index: number) => {
     const updatedRanges = scoreRanges.filter((_, i) => i !== index);
     setScoreRanges(updatedRanges);
+    setHasUnsavedRanges(true);
     
-    // Update all fields with the updated ranges
-    updateFieldsWithScoreRanges(updatedRanges);
-    console.log("Removed score range at index:", index);
-    
-    // Show confirmation toast
     toast({
       title: "Rango eliminado",
       description: "El rango de puntuación ha sido eliminado",
     });
   };
 
-  // Fix: This function now checks if scoring is enabled before updating
-  const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
-    if (!onToggleFormScoring || !formId) return;
+  // Save score ranges explicitly when the save button is clicked
+  const saveScoreRanges = () => {
+    if (!onToggleFormScoring || !formId || !isScoringEnabled) return;
     
-    // Only call onToggleFormScoring if scoring is already enabled
-    if (isScoringEnabled) {
-      // Use setTimeout to ensure state updates have completed
-      setTimeout(() => {
-        onToggleFormScoring(true);
-        console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
-      }, 100);
-    }
+    // Update all fields with the score ranges
+    onToggleFormScoring(true);
+    
+    // Update the flag
+    setHasUnsavedRanges(false);
+    
+    toast({
+      title: "Cambios guardados",
+      description: "Los rangos de puntuación han sido guardados correctamente",
+    });
+    
+    console.log("Saved score ranges:", JSON.stringify(scoreRanges));
   };
 
   // Handle toggle of scoring feature - maintain local state
@@ -185,9 +174,8 @@ const FormSettings = ({
     console.log("Toggle scoring feature called with:", enabled);
     setIsScoringEnabled(enabled);
     
-    // Fix: Only add a default range if enabling scoring and there are no ranges yet
     if (enabled && scoreRanges.length === 0) {
-      // First update the local state and call the parent
+      // First update the local state
       onToggleFormScoring(enabled);
       
       // Then after a delay, add the first range
@@ -289,15 +277,27 @@ const FormSettings = ({
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={addScoreRange}
-                  className="flex items-center gap-1"
-                >
-                  <Plus className="h-4 w-4" /> Añadir rango
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addScoreRange}
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" /> Añadir rango
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={saveScoreRanges}
+                    disabled={!hasUnsavedRanges}
+                    className="flex items-center gap-1"
+                  >
+                    <Save className="h-4 w-4" /> Guardar rangos
+                  </Button>
+                </div>
               </div>
               
               {scoreRanges.length === 0 && (
@@ -373,6 +373,12 @@ const FormSettings = ({
                   </div>
                 )}
               </div>
+              
+              {hasUnsavedRanges && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                  ¡Tienes cambios sin guardar! Haz clic en "Guardar rangos" para aplicar los cambios.
+                </div>
+              )}
             </div>
           )}
         </div>
