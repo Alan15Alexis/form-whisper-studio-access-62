@@ -48,66 +48,32 @@ export const processFileUpload = async (fileData: string | File, fieldId: string
       
       console.log(`Converted base64 to blob: ${blob.type}, size: ${blob.size}`);
       
-      try {
-        // Upload to Supabase Storage - Using upsert to handle RLS policy
-        uploadResult = await supabase.storage
-          .from('respuestas-formulario')
-          .upload(filename, blob, {
-            contentType: blob.type,
-            upsert: true
-          });
-          
-        if (uploadResult.error) {
-          console.error('Storage upload error:', uploadResult.error);
-          throw uploadResult.error;
-        }
-      } catch (error) {
-        // Log the specific error for debugging
-        console.error('Error uploading base64 data:', error);
-        
-        // If we get an RLS policy error, try another approach or fail gracefully
-        if (error.message && error.message.includes('new row violates row-level security policy')) {
-          throw new Error('new row violates row-level security policy');
-        }
-        
-        throw error;
-      }
+      // Upload to Supabase Storage
+      uploadResult = await supabase.storage
+        .from('respuestas-formulario')
+        .upload(filename, blob, {
+          contentType: blob.type,
+          upsert: true
+        });
     } 
     // For File objects (file uploads)
     else if (fileData instanceof File) {
       console.log(`Uploading File object: ${fileData.name}, type: ${fileData.type}, size: ${fileData.size}`);
       
-      try {
-        // Upload to Supabase Storage - Using upsert to handle RLS policy
-        uploadResult = await supabase.storage
-          .from('respuestas-formulario')
-          .upload(filename, fileData, {
-            contentType: fileData.type,
-            upsert: true
-          });
-          
-        if (uploadResult.error) {
-          console.error('Storage upload error:', uploadResult.error);
-          throw uploadResult.error;
-        }
-      } catch (error) {
-        // Log the specific error for debugging
-        console.error('Error uploading file object:', error);
-        
-        // If we get an RLS policy error, try another approach or fail gracefully
-        if (error.message && error.message.includes('new row violates row-level security policy')) {
-          throw new Error('new row violates row-level security policy');
-        }
-        
-        throw error;
-      }
+      // Upload to Supabase Storage
+      uploadResult = await supabase.storage
+        .from('respuestas-formulario')
+        .upload(filename, fileData, {
+          contentType: fileData.type,
+          upsert: true
+        });
     } else {
       throw new Error('Unsupported file data format');
     }
     
-    if (!uploadResult.data) {
-      console.error('No data returned from storage upload');
-      throw new Error('No data returned from storage upload');
+    if (uploadResult.error) {
+      console.error('Storage upload error:', uploadResult.error);
+      throw uploadResult.error;
     }
     
     // Return the public URL

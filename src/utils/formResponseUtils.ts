@@ -50,21 +50,15 @@ export const processFormData = async (
             .catch(err => {
               console.error(`Upload failed for field ${field.id}:`, err);
               
-              // Handle RLS policy violation specifically
-              if (err.message && err.message.includes('new row violates row-level security policy')) {
-                // For RLS errors, we'll try an alternative approach with anon key
-                toast({
-                  title: "Advertencia",
-                  description: "Se detectó un problema de permisos al subir archivos. Procesando el formulario sin archivos.",
-                  variant: "default",
-                });
-                
-                // Store placeholder instead of file URL
-                processedData[field.id] = "Error de permisos al subir archivo: " + field.label;
-              } else {
-                // For other errors, continue with form submission with a note
-                processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
-              }
+              // Store placeholder instead of file URL
+              processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+              
+              toast({
+                title: "Advertencia",
+                description: "Hubo un problema al subir un archivo, pero el formulario se enviará de todos modos",
+                variant: "default",
+              });
+              
               return null;
             });
           
@@ -82,21 +76,15 @@ export const processFormData = async (
             .catch(err => {
               console.error(`Upload failed for field ${field.id}:`, err);
               
-              // Handle RLS policy violation specifically
-              if (err.message && err.message.includes('new row violates row-level security policy')) {
-                // For RLS errors, we'll try an alternative approach with anon key
-                toast({
-                  title: "Advertencia",
-                  description: "Se detectó un problema de permisos al subir archivos. Procesando el formulario sin archivos.",
-                  variant: "default",
-                });
-                
-                // Store placeholder instead of file URL
-                processedData[field.id] = "Error de permisos al subir archivo: " + field.label;
-              } else {
-                // For other errors, continue with form submission with error note
-                processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
-              }
+              // Store placeholder instead of file URL
+              processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
+              
+              toast({
+                title: "Advertencia",
+                description: "Hubo un problema al subir un archivo, pero el formulario se enviará de todos modos",
+                variant: "default",
+              });
+              
               return null;
             });
           
