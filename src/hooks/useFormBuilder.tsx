@@ -96,7 +96,7 @@ export const useFormBuilder = (formId?: string) => {
     
     if (fieldWithRanges?.scoreRanges) {
       scoreRanges = [...fieldWithRanges.scoreRanges];
-      console.log("Using existing score ranges:", scoreRanges);
+      console.log("Using existing score ranges:", JSON.stringify(scoreRanges));
     }
     
     // Update form data with scoring enabled/disabled
@@ -154,7 +154,7 @@ export const useFormBuilder = (formId?: string) => {
       }));
       
       // Log the score ranges for debugging
-      console.log("Updated score ranges for all fields:", updatedField.scoreRanges);
+      console.log("Updated score ranges for all fields:", JSON.stringify(updatedField.scoreRanges));
     } else {
       setFormData(prev => ({
         ...prev,
@@ -281,7 +281,10 @@ export const useFormBuilder = (formId?: string) => {
       // Log the form data before saving to check score ranges
       console.log("Form data before saving:", {
         showTotalScore: formData.showTotalScore,
-        fieldsWithScoreRanges: formData.fields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0)
+        fieldsWithScoreRanges: formData.fields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0).map(f => ({
+          fieldId: f.id,
+          scoreRanges: f.scoreRanges
+        }))
       });
       
       // Ensure score ranges consistency for all numeric fields
@@ -296,7 +299,7 @@ export const useFormBuilder = (formId?: string) => {
             return field;
           });
         }
-        console.log("Saving form with score ranges:", scoreRanges);
+        console.log("Saving form with score ranges:", JSON.stringify(scoreRanges));
       }
       
       if (isEditMode && formId) {

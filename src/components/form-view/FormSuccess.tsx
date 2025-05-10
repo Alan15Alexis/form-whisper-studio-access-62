@@ -23,6 +23,7 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
   console.log("FormSuccess render:", { showTotalScore, currentScore, scoreFeedback, showScore });
   console.log("Form values:", formValues);
   console.log("Form fields:", fields);
+  console.log("Score feedback:", scoreFeedback);
 
   return (
     <div className="container max-w-3xl mx-auto py-8">

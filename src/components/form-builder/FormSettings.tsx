@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -77,7 +76,7 @@ const FormSettings = ({
     if (formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
       if (fieldWithRanges?.scoreRanges) {
-        console.log("Initializing score ranges from fields:", fieldWithRanges.scoreRanges);
+        console.log("Initializing score ranges from fields:", JSON.stringify(fieldWithRanges.scoreRanges));
         return [...fieldWithRanges.scoreRanges];
       }
     }
@@ -87,9 +86,11 @@ const FormSettings = ({
   // Sync score ranges when fields change
   useEffect(() => {
     if (formFields && formFields.length > 0 && showTotalScore) {
-      const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
+      const fieldWithRanges = formFields.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
       if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
-        console.log("Syncing score ranges from fields:", fieldWithRanges.scoreRanges);
+        console.log("Syncing score ranges from fields:", JSON.stringify(fieldWithRanges.scoreRanges));
         setScoreRanges([...fieldWithRanges.scoreRanges]);
       }
     }
@@ -152,7 +153,7 @@ const FormSettings = ({
       // This will trigger the form to save with the updated ranges
       // Note: We pass the current showTotalScore value to maintain its state
       onToggleFormScoring(showTotalScore);
-      console.log("Updated score ranges in form configuration:", ranges);
+      console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
     }
   };
 

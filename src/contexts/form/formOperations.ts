@@ -60,7 +60,7 @@ export const createFormOperation = (
         
         if (fieldWithRanges?.scoreRanges) {
           scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Score ranges to save to Supabase:", scoreRanges);
+          console.log("Score ranges to save to Supabase:", JSON.stringify(scoreRanges));
         }
       }
     }
@@ -90,7 +90,7 @@ export const createFormOperation = (
       } else {
         console.log("Form created in Supabase:", data);
         console.log("Form created with showTotalScore:", newForm.showTotalScore);
-        console.log("Form created with score ranges:", scoreRanges);
+        console.log("Form created with score ranges:", JSON.stringify(scoreRanges));
       }
     } catch (error) {
       console.error("Error saving form to Supabase:", error);
@@ -159,7 +159,7 @@ export const updateFormOperation = (
         
         if (fieldWithRanges?.scoreRanges) {
           scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Score ranges to update in Supabase:", scoreRanges);
+          console.log("Score ranges to update in Supabase:", JSON.stringify(scoreRanges));
         }
       }
     }
@@ -200,7 +200,7 @@ export const updateFormOperation = (
         } else {
           console.log("Form updated in Supabase successfully");
           console.log("Form updated with showTotalScore:", updatedForm.showTotalScore);
-          console.log("Form updated with score ranges:", scoreRanges);
+          console.log("Form updated with score ranges:", JSON.stringify(scoreRanges));
         }
       } else {
         // Form doesn't exist, insert it
@@ -229,7 +229,7 @@ export const updateFormOperation = (
         } else {
           console.log("Form created in Supabase successfully");
           console.log("Form created with showTotalScore:", updatedForm.showTotalScore);
-          console.log("Form created with score ranges:", scoreRanges);
+          console.log("Form created with score ranges:", JSON.stringify(scoreRanges));
         }
       }
     } catch (error) {
