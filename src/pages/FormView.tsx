@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -7,7 +6,7 @@ import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
 import { FormField as FormFieldType, Form as FormType } from "@/types/form";
 import FormField from "@/components/form-view/FormField";
-import { ArrowLeft, ArrowRight, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, Send, Save } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import FormAccess from "@/components/form-view/FormAccess";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +18,7 @@ const FormView = () => {
   const { isAuthenticated, currentUser } = useAuth();
   const location = useLocation();
   const formFromLocation = location.state?.formData;
+  const isEditMode = location.state?.editMode || new URLSearchParams(location.search).get('edit') === 'true';
   const [form, setForm] = useState<FormType | null>(null);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,6 +107,59 @@ const FormView = () => {
     validateAccess();
   }, [id, token, isAuthenticated, currentUser, forms, validateAccessToken, isUserAllowed, formFromLocation]);
 
+  // New effect to load existing responses when in edit mode
+  useEffect(() => {
+    if (isEditMode && form && currentUser) {
+      const userEmail = currentUser?.email || localStorage.getItem('userEmail');
+      
+      // Fetch the user's previous response for this form
+      const fetchExistingResponse = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('formulario')
+            .select('respuestas')
+            .eq('nombre_formulario', form.title)
+            .eq('nombre_invitado', userEmail)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          if (error) throw error;
+          
+          if (data && data.length > 0 && data[0].respuestas) {
+            // Convert the responses back to the format our form expects
+            const storedResponses = data[0].respuestas;
+            const fieldResponses: Record<string, any> = {};
+            
+            // Map the labeled responses back to field IDs
+            form.fields.forEach(field => {
+              const fieldLabel = field.label || `Pregunta ${field.id.substring(0, 5)}`;
+              if (storedResponses[fieldLabel] !== undefined) {
+                fieldResponses[field.id] = storedResponses[fieldLabel];
+              }
+            });
+            
+            setFormResponses(fieldResponses);
+            toast({
+              title: "Respuestas cargadas",
+              description: "Puede editar sus respuestas anteriores",
+            });
+          }
+        } catch (error) {
+          console.error("Error loading previous responses:", error);
+          toast({
+            title: "Error",
+            description: "No se pudieron cargar las respuestas anteriores",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      if (form.allowEditOwnResponses) {
+        fetchExistingResponse();
+      }
+    }
+  }, [form, isEditMode, currentUser]);
+
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormResponses(prev => ({
       ...prev,
@@ -150,8 +203,8 @@ const FormView = () => {
       // Pass the form from location to the submit function to ensure we have the form data
       await submitFormResponse(id, formResponses, formFromLocation || form);
       toast({
-        title: "Respuesta enviada correctamente",
-        description: "Gracias por completar este formulario",
+        title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
+        description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
       });
       
       setIsSubmitSuccess(true);
@@ -298,6 +351,11 @@ const FormView = () => {
                   Vista previa
                 </span>
               )}
+              {isEditMode && (
+                <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                  Modo edición
+                </span>
+              )}
             </CardTitle>
             {form.description && (
               <CardDescription className="text-gray-600">
@@ -333,8 +391,17 @@ const FormView = () => {
                   disabled={isSubmitting}
                   style={buttonStyle}
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  {isSubmitting ? "Enviando..." : isAdminPreview ? "Vista previa" : "Enviar respuesta"}
+                  {isEditMode ? (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      {isSubmitting ? "Guardando..." : "Guardar cambios"}
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      {isSubmitting ? "Enviando..." : isAdminPreview ? "Vista previa" : "Enviar respuesta"}
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button

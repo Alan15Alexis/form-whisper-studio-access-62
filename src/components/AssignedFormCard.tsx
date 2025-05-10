@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Form } from "@/types/form";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRightIcon, CheckIcon, EyeIcon, XIcon } from "lucide-react";
+import { ArrowRightIcon, CheckIcon, EyeIcon, XIcon, Edit2 } from "lucide-react";
 import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -20,9 +20,14 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
   const { getFormResponses } = useForm();
   const navigate = useNavigate();
   const [showResponseDialog, setShowResponseDialog] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Check if form has local responses or if it's completed in the database for this user
   const hasResponded = getFormResponses(form.id).length > 0 || isCompleted;
+  
+  // Get form configuration for viewing and editing responses
+  const canViewOwnResponses = form.allowViewOwnResponses;
+  const canEditOwnResponses = form.allowEditOwnResponses;
   
   const cardStyle = form.formColor ? {
     backgroundColor: `${form.formColor}05`,
@@ -49,7 +54,21 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
   
   // Handle view form response
   const handleViewResponse = () => {
+    setIsEditMode(false);
     setShowResponseDialog(true);
+  };
+  
+  // Handle edit form response
+  const handleEditResponse = () => {
+    if (canEditOwnResponses) {
+      // Navigate to form view with edit mode param
+      navigate(`/forms/${form.id}?edit=true`, { 
+        state: { 
+          formData: form,
+          editMode: true
+        } 
+      });
+    }
   };
 
   return (
@@ -99,24 +118,52 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
             Ocultar
           </Button>
             
-          <Button
-            style={isCompleted ? {} : buttonStyle}
-            variant={isCompleted ? "outline" : "default"}
-            onClick={isCompleted ? handleViewResponse : undefined}
-            asChild={!isCompleted}
-          >
-            {isCompleted ? (
-              <div className="flex items-center cursor-pointer">
-                <EyeIcon className="mr-1 h-4 w-4" />
-                Ver respuesta
-              </div>
-            ) : (
+          {isCompleted ? (
+            <div className="flex gap-2">
+              {/* Only show view button if allowed */}
+              {canViewOwnResponses && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleViewResponse}
+                  size="sm"
+                >
+                  <EyeIcon className="mr-1 h-4 w-4" />
+                  Ver
+                </Button>
+              )}
+              
+              {/* Only show edit button if allowed */}
+              {canEditOwnResponses && (
+                <Button 
+                  style={buttonStyle}
+                  onClick={handleEditResponse}
+                  size="sm"
+                >
+                  <Edit2 className="mr-1 h-4 w-4" />
+                  Editar
+                </Button>
+              )}
+              
+              {/* Show default view button if no permissions */}
+              {!canViewOwnResponses && !canEditOwnResponses && (
+                <Button 
+                  variant="outline"
+                  onClick={handleViewResponse}
+                  size="sm"
+                >
+                  <CheckIcon className="mr-1 h-4 w-4" />
+                  Completado
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Button style={buttonStyle} asChild>
               <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
                 <ArrowRightIcon className="mr-1 h-4 w-4" />
                 Empezar ahora
               </Link>
-            )}
-          </Button>
+            </Button>
+          )}
         </CardFooter>
       </Card>
 

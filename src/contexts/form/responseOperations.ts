@@ -88,18 +88,40 @@ export const submitFormResponseOperation = (
       // Get admin email (form creator)
       const adminEmail = form.createdBy || form.ownerId || null;
       
-      // Save to Supabase (formulario table) - explicitly including user email and status
-      await supabase
+      // Check if this user already has a response for this form
+      // This handles the edit case
+      const { data: existingData, error: existingError } = await supabase
         .from('formulario')
-        .insert({
-          nombre_formulario: form.title || 'Untitled Form',
-          nombre_invitado: userEmail,  // Ensure we use the correct user email
-          nombre_administrador: adminEmail || null,
-          respuestas: formattedResponses,
-          estatus: true // Set the status to true for completed forms
-        });
+        .select('id')
+        .eq('nombre_formulario', form.title)
+        .eq('nombre_invitado', userEmail);
+      
+      // If the user already has a response and the form allows editing
+      if (existingData && existingData.length > 0 && form.allowEditOwnResponses) {
+        // Update the existing response
+        await supabase
+          .from('formulario')
+          .update({
+            respuestas: formattedResponses,
+            estatus: true // Confirm it's still complete
+          })
+          .eq('id', existingData[0].id);
+          
+        console.log(`Updated existing response for form ${form.title} by user ${userEmail}`);
+      } else {
+        // Insert a new response
+        await supabase
+          .from('formulario')
+          .insert({
+            nombre_formulario: form.title || 'Untitled Form',
+            nombre_invitado: userEmail,  // Ensure we use the correct user email
+            nombre_administrador: adminEmail || null,
+            respuestas: formattedResponses,
+            estatus: true // Set the status to true for completed forms
+          });
 
-      console.log(`Form response saved to Supabase for user ${userEmail} with status=true`);
+        console.log(`Form response saved to Supabase for user ${userEmail} with status=true`);
+      }
 
       // Send to MySQL database through API
       try {
