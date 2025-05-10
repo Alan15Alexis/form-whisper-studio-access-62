@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -141,12 +140,6 @@ export const useFormBuilder = (formId?: string) => {
     setTimeout(() => {
       handleSubmit(true);
     }, 200);
-    
-    // Show success message
-    toast({
-      title: 'Rangos de puntuación guardados',
-      description: 'Los rangos de puntuación y mensajes han sido guardados correctamente',
-    });
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {

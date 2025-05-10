@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -164,32 +163,20 @@ const FormSettings = ({
   const saveScoreRanges = () => {
     if (!onSaveScoreRanges || !formId) return;
     
-    // Apply the toggle change if it's unsaved
+    // Apply the toggle change first if it's unsaved (important to preserve this order)
     if (hasUnsavedToggle) {
       console.log("Applying toggle change:", isScoringEnabled);
       onToggleFormScoring(isScoringEnabled);
     }
     
-    // Call the prop function to save the ranges
+    // Only if scoring is enabled, save the ranges too
     if (isScoringEnabled) {
       console.log("Saving score ranges:", scoreRanges);
       onSaveScoreRanges(scoreRanges);
     } else {
-      // If scoring is disabled, we still need to apply the change
+      // If scoring is disabled, we still need to save the toggle state
       console.log("Scoring disabled, applying toggle change");
       onToggleFormScoring(false);
-      
-      // Save the form explicitly to update the showTotalScore value
-      // We use a setTimeout to ensure the state updates are processed
-      setTimeout(() => {
-        const formElement = document.querySelector('form[data-form-builder]');
-        if (formElement) {
-          const saveButton = formElement.querySelector('button[type="submit"]');
-          if (saveButton) {
-            (saveButton as HTMLButtonElement).click();
-          }
-        }
-      }, 300);
     }
     
     // Update the flag
@@ -200,8 +187,6 @@ const FormSettings = ({
       title: "Cambios guardados",
       description: "La configuración de puntuación ha sido guardada correctamente",
     });
-    
-    console.log("Saved score ranges:", JSON.stringify(scoreRanges));
   };
 
   // Handle toggle of scoring feature - maintain local state but don't save immediately
