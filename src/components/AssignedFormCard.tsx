@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 interface AssignedFormCardProps {
   form: Form;
   onRemove?: (formId: string) => void;
-  isCompleted?: boolean; // Status from Supabase specific to current user
+  isCompleted?: boolean;
 }
 
 const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormCardProps) => {
@@ -117,34 +117,37 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
         
         <CardContent className="flex-grow">
           {form.description && (
-            <p className="text-gray-600 mb-3 text-sm">{form.description}</p>
+            <p className="text-gray-600 mb-3 text-sm line-clamp-2">{form.description}</p>
           )}
           <div className="flex items-center space-x-2 text-xs text-gray-500">
             <span>{questionCount} {questionCount === 1 ? 'pregunta' : 'preguntas'}</span>
           </div>
         </CardContent>
         
-        <CardFooter className="flex justify-between items-center pt-4 gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRemove && onRemove(form.id)}
-            className="text-gray-500 hover:text-red-600 hover:bg-red-50"
-          >
-            <XIcon className="h-4 w-4 mr-1" />
-            Ocultar
-          </Button>
-            
+        <CardFooter className="flex flex-wrap justify-between items-center pt-4 gap-2">
           {isCompleted ? (
-            <div className="flex gap-2">
-              {/* Show form completion info button */}
+            <div className="flex flex-wrap gap-2 justify-end w-full">
+              {/* Hide button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemove && onRemove(form.id)}
+                className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                title="Ocultar"
+              >
+                <XIcon className="h-4 w-4" />
+                <span className="sr-only md:not-sr-only md:ml-2">Ocultar</span>
+              </Button>
+              
+              {/* Completed button */}
               <Button 
                 variant="outline" 
                 onClick={handleViewCompletionInfo}
                 size="sm"
+                title="Completado"
               >
-                <CheckIcon className="mr-1 h-4 w-4" />
-                Completado
+                <CheckIcon className="h-4 w-4" />
+                <span className="sr-only md:not-sr-only md:ml-2">Completado</span>
               </Button>
               
               {/* Only show view button if allowed */}
@@ -153,9 +156,10 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
                   variant="outline" 
                   onClick={handleViewResponse}
                   size="sm"
+                  title="Ver respuestas"
                 >
-                  <EyeIcon className="mr-1 h-4 w-4" />
-                  Ver respuestas
+                  <EyeIcon className="h-4 w-4" />
+                  <span className="sr-only md:not-sr-only md:ml-2">Ver respuestas</span>
                 </Button>
               )}
               
@@ -165,19 +169,33 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
                   style={buttonStyle}
                   onClick={handleEditResponse}
                   size="sm"
+                  title="Editar respuestas"
                 >
-                  <Edit2 className="mr-1 h-4 w-4" />
-                  Editar respuestas
+                  <Edit2 className="h-4 w-4" />
+                  <span className="sr-only md:not-sr-only md:ml-2">Editar respuestas</span>
                 </Button>
               )}
             </div>
           ) : (
-            <Button style={buttonStyle} asChild>
-              <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
-                <ArrowRightIcon className="mr-1 h-4 w-4" />
-                Empezar ahora
-              </Link>
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemove && onRemove(form.id)}
+                className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                title="Ocultar"
+              >
+                <XIcon className="h-4 w-4" />
+                <span className="sr-only md:not-sr-only md:ml-2">Ocultar</span>
+              </Button>
+              
+              <Button style={buttonStyle} asChild size="sm">
+                <Link to={`/forms/${form.id}`} state={{ formData: form }} className="flex items-center">
+                  <ArrowRightIcon className="h-4 w-4" />
+                  <span className="sr-only md:not-sr-only md:ml-2">Empezar ahora</span>
+                </Link>
+              </Button>
+            </>
           )}
         </CardFooter>
       </Card>
