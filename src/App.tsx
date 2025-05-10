@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import PrivateRoute from "./components/PrivateRoute";
 import PublicRoute from "./components/PublicRoute";
 import DashboardAdmin from "./pages/DashboardAdmin";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -35,7 +36,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/dashboard" element={<Navigate to="/assigned-forms" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard-admin" element={<PrivateRoute role="admin"><DashboardAdmin /></PrivateRoute>} />
               <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
               <Route path="/forms/new" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />

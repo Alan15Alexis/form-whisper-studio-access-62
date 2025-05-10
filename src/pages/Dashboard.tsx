@@ -8,6 +8,10 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if the current URL is already dashboard-admin and user is admin
+    // If so, don't redirect to avoid refresh loops
+    const isCurrentlyOnAdminDashboard = window.location.pathname === "/dashboard-admin";
+    
     // Check if we have a stored email from the homepage flow
     const storedEmail = localStorage.getItem('userEmail');
     
@@ -23,10 +27,17 @@ const Dashboard = () => {
       return;
     }
     
-    // If authenticated, redirect based on user role
+    // If authenticated and admin, redirect to admin dashboard (unless already there)
     if (currentUser?.role === "admin") {
-      navigate("/dashboard-admin");
-    } else if (currentUser?.role === "user") {
+      if (!isCurrentlyOnAdminDashboard) {
+        navigate("/dashboard-admin");
+      }
+      // If already on admin dashboard, don't navigate anywhere
+      return;
+    } 
+    
+    // If authenticated as regular user, redirect to assigned forms
+    if (currentUser?.role === "user") {
       navigate("/assigned-forms");
     }
   }, [currentUser, navigate, isAuthenticated]);
