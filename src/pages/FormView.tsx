@@ -47,6 +47,13 @@ const FormView = () => {
     setAccessValidated(true);
   };
 
+  // Create an adapter function that only takes email parameter
+  // but internally calls isUserAllowed with the current form's ID
+  const checkUserAllowed = (email: string) => {
+    if (!form || !form.id) return false;
+    return isUserAllowed(form.id, email);
+  };
+
   if (validationLoading) {
     return (
       <Layout hideNav>
@@ -62,7 +69,7 @@ const FormView = () => {
       <Layout hideNav>
         <FormAccess 
           onAccessGranted={handleAccessGranted} 
-          isUserAllowed={isUserAllowed}
+          isUserAllowed={checkUserAllowed}
         />
       </Layout>
     );
