@@ -40,7 +40,7 @@ interface FormSettingsProps {
   showTotalScore?: boolean;
   onToggleFormScoring?: (enabled: boolean) => void;
   onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
-  externalScoreRanges?: ScoreRange[]; // New prop to receive score ranges from parent
+  externalScoreRanges?: ScoreRange[];
 }
 
 const FormSettings = ({
@@ -59,7 +59,7 @@ const FormSettings = ({
   showTotalScore = false,
   onToggleFormScoring = () => {},
   onSaveScoreRanges = () => {},
-  externalScoreRanges = [] // Default to empty array
+  externalScoreRanges = []
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -81,9 +81,10 @@ const FormSettings = ({
   
   // Init state from props or fields
   useEffect(() => {
+    console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
+    
     // First priority: use externally provided score ranges if available
     if (externalScoreRanges && externalScoreRanges.length > 0) {
-      console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
       setScoreRanges([...externalScoreRanges]);
       return;
     }
@@ -115,7 +116,7 @@ const FormSettings = ({
   // Track if there are unsaved scoring toggle changes
   const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
   
-  // Better sync local state with prop and ensure we're not auto-enabling
+  // Better sync local state with prop
   useEffect(() => {
     console.log("showTotalScore prop changed to:", showTotalScore);
     setIsScoringEnabled(showTotalScore || false);
@@ -182,9 +183,9 @@ const FormSettings = ({
 
   // Save score ranges explicitly when the save button is clicked
   const saveScoreRanges = () => {
-    if (!onSaveScoreRanges || !formId) return;
+    if (!onSaveScoreRanges) return;
     
-    // Apply the toggle change first if it's unsaved (important to preserve this order)
+    // Apply the toggle change first if it's unsaved
     if (hasUnsavedToggle) {
       console.log("Applying toggle change:", isScoringEnabled);
       onToggleFormScoring(isScoringEnabled);
@@ -200,7 +201,7 @@ const FormSettings = ({
       onToggleFormScoring(false);
     }
     
-    // Update the flag
+    // Update the flags
     setHasUnsavedRanges(false);
     setHasUnsavedToggle(false);
     
@@ -210,13 +211,13 @@ const FormSettings = ({
     });
   };
 
-  // Handle toggle of scoring feature - maintain local state but don't save immediately
+  // Handle toggle of scoring feature
   const handleToggleScoringFeature = (enabled: boolean) => {
     console.log("Toggle scoring feature called with:", enabled);
     setIsScoringEnabled(enabled);
     setHasUnsavedToggle(true);
     
-    // Only add a range if enabling and no ranges exist yet - but don't save
+    // Only add a range if enabling and no ranges exist yet
     if (enabled && scoreRanges.length === 0) {
       addScoreRange();
     }

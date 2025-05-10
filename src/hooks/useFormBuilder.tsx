@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { useForm as useFormContext } from "@/contexts/form"; // Renamed to avoid conflict with react-hook-form
+import { useForm } from "@/contexts/form"; // Import with original name
 import { Form, FormField, HttpConfig, ScoreRange } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
@@ -11,7 +11,7 @@ import { addInvitedUser, checkInvitedUserExists } from "@/integrations/supabase/
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
-  const { getForm, createForm, updateForm } = useFormContext(); // Using renamed import
+  const { getForm, createForm, updateForm } = useForm(); // Use the original imported name
   const isEditMode = !!formId;
 
   const [formData, setFormData] = useState<Partial<Form>>({
@@ -73,6 +73,9 @@ export const useFormBuilder = (formId?: string) => {
           if (fieldWithRanges && fieldWithRanges.scoreRanges) {
             console.log("Loading score ranges from fields:", fieldWithRanges.scoreRanges);
             setScoreRanges(fieldWithRanges.scoreRanges);
+          } else {
+            // Default empty array if no ranges found
+            setScoreRanges([]);
           }
         }
         
@@ -329,6 +332,8 @@ export const useFormBuilder = (formId?: string) => {
       };
       
       console.log("Saving form with scoreConfig:", formToSave.scoreConfig);
+      console.log("Form showTotalScore:", formToSave.showTotalScore);
+      console.log("Score ranges being saved:", JSON.stringify(scoreRanges));
       
       // Apply score ranges to fields that have numeric values
       if (formToSave.showTotalScore && scoreRanges.length > 0) {
@@ -344,7 +349,7 @@ export const useFormBuilder = (formId?: string) => {
       
       if (isEditMode && formId) {
         console.log("Updating form with showTotalScore:", formToSave.showTotalScore);
-        console.log("Updating form with scoreRanges:", scoreRanges);
+        console.log("Updating form with scoreRanges:", JSON.stringify(scoreRanges));
         
         await updateForm(formId, formToSave);
         

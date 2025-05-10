@@ -39,7 +39,7 @@ const FormBuilder = () => {
   console.log("FormBuilder - Current form data:", {
     showTotalScore: formData.showTotalScore,
     fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
-    scoreRanges: scoreRanges // Log the scoreRanges
+    scoreRanges: scoreRanges // Log the scoreRanges from the hook
   });
 
   return (
