@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import FormAccess from "@/components/form-view/FormAccess";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import FormSuccess from "@/components/form-view/FormSuccess";
+import { supabase } from "@/integrations/supabase/client";
 
 const FormView = () => {
   const { id, token } = useParams();
