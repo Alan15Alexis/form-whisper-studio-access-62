@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -85,7 +84,7 @@ export const useFormBuilder = (formId?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   };
 
-  // Toggle form scoring function - only updates state, doesn't save immediately
+  // Toggle form scoring function - only updates state locally, doesn't save immediately
   const handleToggleFormScoring = (enabled: boolean) => {
     console.log("Toggle form scoring called with:", enabled);
     
@@ -111,10 +110,7 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // Auto-save to persist the change immediately
-    setTimeout(() => {
-      handleSubmit(true);
-    }, 200);
+    // No auto-save here anymore - user must click "Guardar rangos" button
   };
 
   // Enhanced function to explicitly save score ranges
@@ -143,7 +139,7 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // Save the form with updated score ranges
+    // Save the form with updated score ranges - this is the ONLY place we save when modifying scores
     setTimeout(() => {
       handleSubmit(true);
     }, 200);

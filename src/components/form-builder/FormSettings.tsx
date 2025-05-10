@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -90,11 +91,14 @@ const FormSettings = ({
   const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(showTotalScore || false);
   // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
+  // Track if there are unsaved scoring toggle changes
+  const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
   
   // Fix: Better sync local state with prop and ensure we're not auto-enabling
   useEffect(() => {
     console.log("showTotalScore prop changed to:", showTotalScore);
     setIsScoringEnabled(showTotalScore || false);
+    setHasUnsavedToggle(false); // Reset when props change
   }, [showTotalScore]);
 
   // Only sync score ranges when fields change and scoring is already enabled
@@ -155,35 +159,39 @@ const FormSettings = ({
 
   // Save score ranges explicitly when the save button is clicked
   const saveScoreRanges = () => {
-    if (!onSaveScoreRanges || !formId || !isScoringEnabled) return;
+    if (!onSaveScoreRanges || !formId) return;
+    
+    // Apply the toggle change if it's unsaved
+    if (hasUnsavedToggle) {
+      onToggleFormScoring(isScoringEnabled);
+    }
     
     // Call the prop function to save the ranges
-    onSaveScoreRanges(scoreRanges);
+    if (isScoringEnabled) {
+      onSaveScoreRanges(scoreRanges);
+    }
     
     // Update the flag
     setHasUnsavedRanges(false);
+    setHasUnsavedToggle(false);
     
     toast({
       title: "Cambios guardados",
-      description: "Los rangos de puntuación han sido guardados correctamente",
+      description: "La configuración de puntuación ha sido guardada correctamente",
     });
     
     console.log("Saved score ranges:", JSON.stringify(scoreRanges));
   };
 
-  // Handle toggle of scoring feature - maintain local state and propagate change
+  // Handle toggle of scoring feature - maintain local state but don't save immediately
   const handleToggleScoringFeature = (enabled: boolean) => {
     console.log("Toggle scoring feature called with:", enabled);
     setIsScoringEnabled(enabled);
+    setHasUnsavedToggle(true);
     
-    // Call the parent handler to update the form data
-    onToggleFormScoring(enabled);
-    
+    // Only add a range if enabling and no ranges exist yet - but don't save
     if (enabled && scoreRanges.length === 0) {
-      // First update the local state
-      setTimeout(() => {
-        addScoreRange();
-      }, 250);
+      addScoreRange();
     }
   };
 
@@ -258,6 +266,16 @@ const FormSettings = ({
               </p>
             </div>
           </div>
+
+          {/* Unsaved changes alert for toggle */}
+          {hasUnsavedToggle && (
+            <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Tienes cambios sin guardar en la configuración de puntuación. Haz clic en "Guardar rangos" para aplicar los cambios.
+              </AlertDescription>
+            </Alert>
+          )}
           
           {!hasFieldsWithNumericValues && (
             <div className="p-4 bg-primary/5 rounded-md text-sm">
@@ -288,13 +306,12 @@ const FormSettings = ({
                   </Button>
                   <Button 
                     type="button"
-                    variant="default"
+                    variant={hasUnsavedRanges || hasUnsavedToggle ? "default" : "outline"}
                     size="sm"
                     onClick={saveScoreRanges}
-                    disabled={!hasUnsavedRanges}
                     className="flex items-center gap-1"
                   >
-                    <Save className="h-4 w-4" /> Guardar rangos
+                    <Save className="h-4 w-4" /> Guardar cambios
                   </Button>
                 </div>
               </div>
@@ -373,9 +390,9 @@ const FormSettings = ({
                 )}
               </div>
               
-              {hasUnsavedRanges && (
+              {(hasUnsavedRanges || hasUnsavedToggle) && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                  ¡Tienes cambios sin guardar! Haz clic en "Guardar rangos" para aplicar los cambios.
+                  ¡Tienes cambios sin guardar! Haz clic en "Guardar cambios" para aplicar la configuración de puntuación.
                 </div>
               )}
             </div>
