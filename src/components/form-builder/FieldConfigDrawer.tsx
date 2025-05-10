@@ -165,21 +165,7 @@ const FieldConfigDrawer = ({
 
           <Separator />
           
-          {/* Form Scoring Toggle - Destacado */}
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="show-total-score" className="text-base font-medium">Mostrar puntuación total</Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Suma los valores de todas las respuestas seleccionadas y muestra el resultado al final
-              </p>
-            </div>
-            <Switch
-              id="show-total-score"
-              checked={formHasScoring}
-              onCheckedChange={onToggleFormScoring}
-              className="data-[state=checked]:bg-primary"
-            />
-          </div>
+          {/* Removed the Form Scoring Toggle section */}
 
           <div className="p-3 bg-primary/5 border rounded-md text-sm">
             <p className="font-medium">¿Dónde configurar los rangos de puntuación?</p>
