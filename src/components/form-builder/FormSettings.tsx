@@ -39,6 +39,7 @@ interface FormSettingsProps {
   formId?: string;
   showTotalScore?: boolean;
   onToggleFormScoring?: (enabled: boolean) => void;
+  onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
 }
 
 const FormSettings = ({
@@ -55,7 +56,8 @@ const FormSettings = ({
   formFields = [],
   formId = "",
   showTotalScore = false,
-  onToggleFormScoring = () => {}
+  onToggleFormScoring = () => {},
+  onSaveScoreRanges = () => {}
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -153,10 +155,10 @@ const FormSettings = ({
 
   // Save score ranges explicitly when the save button is clicked
   const saveScoreRanges = () => {
-    if (!onToggleFormScoring || !formId || !isScoringEnabled) return;
+    if (!onSaveScoreRanges || !formId || !isScoringEnabled) return;
     
-    // Update all fields with the score ranges
-    onToggleFormScoring(true);
+    // Call the prop function to save the ranges
+    onSaveScoreRanges(scoreRanges);
     
     // Update the flag
     setHasUnsavedRanges(false);

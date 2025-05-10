@@ -6,7 +6,7 @@ import FormFieldsList from "./FormFieldsList";
 import FieldsSidebar from "./FieldsSidebar";
 import FormSettings from "./FormSettings";
 import AccessControl from "../form-builder/AccessControl";
-import { Form, FormField } from "@/types/form";
+import { Form, FormField, ScoreRange } from "@/types/form";
 
 interface FormBuilderTabsProps {
   formData: Partial<Form>;
@@ -14,6 +14,7 @@ interface FormBuilderTabsProps {
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
   onToggleFormScoring: (enabled: boolean) => void;
+  onSaveScoreRanges: (ranges: ScoreRange[]) => void;
   updateField: (id: string, updatedField: FormField) => void;
   removeField: (id: string) => void;
   allowedUserEmail: string;
@@ -36,6 +37,7 @@ const FormBuilderTabs = ({
   onDescriptionChange,
   onPrivateChange,
   onToggleFormScoring,
+  onSaveScoreRanges,
   updateField,
   removeField,
   allowedUserEmail,
@@ -98,6 +100,7 @@ const FormBuilderTabs = ({
           formId={formId}
           showTotalScore={formData.showTotalScore}
           onToggleFormScoring={onToggleFormScoring}
+          onSaveScoreRanges={onSaveScoreRanges}
         />
       </TabsContent>
       

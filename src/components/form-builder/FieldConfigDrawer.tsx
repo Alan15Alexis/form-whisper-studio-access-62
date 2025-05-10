@@ -173,7 +173,7 @@ const FieldConfigDrawer = ({
             <p className="font-medium">¿Dónde configurar los rangos de puntuación?</p>
             <p className="mt-2">
               Los rangos de puntuación y mensajes personalizados se configuran en la pestaña "Configuración" del formulario,
-              en la sección "Puntuación y Resultados". Recuerde guardar sus cambios usando el botón "Guardar rangos".
+              en la sección "Puntuación y Resultados". Recuerde hacer clic en "Guardar rangos" para aplicar sus cambios.
             </p>
           </div>
         </div>

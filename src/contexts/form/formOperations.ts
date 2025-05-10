@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { Form } from '@/types/form';
+import { Form, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -45,7 +45,7 @@ export const createFormOperation = (
     }
     
     // Extract score ranges from fields for storage
-    let scoreRanges = [];
+    let scoreRanges: ScoreRange[] = [];
     let fieldsWithValues = false;
     
     if (formData.fields) {
@@ -156,7 +156,7 @@ export const updateFormOperation = (
     }
 
     // Extract all score ranges and check for numeric values
-    let scoreRanges = [];
+    let scoreRanges: ScoreRange[] = [];
     let fieldsWithValues = false;
     
     if (updatedForm.fields) {

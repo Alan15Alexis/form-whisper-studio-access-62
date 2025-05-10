@@ -84,7 +84,7 @@ export const useFormBuilder = (formId?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   };
 
-  // Fixed: Improved toggle form scoring function to prevent auto-saving without explicit ranges
+  // Toggle form scoring function - only updates state, doesn't save immediately
   const handleToggleFormScoring = (enabled: boolean) => {
     console.log("Toggle form scoring called with:", enabled);
     
@@ -109,9 +109,39 @@ export const useFormBuilder = (formId?: string) => {
         fields: updatedFields 
       };
     });
+  };
+
+  // New function to explicitly save score ranges
+  const handleSaveScoreRanges = (scoreRanges: ScoreRange[]) => {
+    console.log("Saving score ranges:", JSON.stringify(scoreRanges));
     
-    // If we're in edit mode, don't auto-save immediately
-    // User needs to explicitly save by clicking the Save button
+    if (!formData.showTotalScore) {
+      // Make sure scoring is enabled
+      setFormData(prev => ({ ...prev, showTotalScore: true }));
+    }
+    
+    // Update all fields with numeric values to include these score ranges
+    setFormData(prev => {
+      const updatedFields = prev.fields?.map(field => {
+        if (field.hasNumericValues) {
+          return { ...field, scoreRanges };
+        }
+        return field;
+      });
+      
+      // Update form data with the new fields
+      return {
+        ...prev,
+        fields: updatedFields
+      };
+    });
+    
+    // If we're in edit mode, save the form right away
+    if (isEditMode && formId) {
+      setTimeout(() => {
+        handleSubmit();
+      }, 200);
+    }
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
@@ -135,35 +165,10 @@ export const useFormBuilder = (formId?: string) => {
       field.id === id ? { ...updatedField } : field
     ) || [];
     
-    if (updatedField.scoreRanges && updatedField.scoreRanges.length > 0 && formData.showTotalScore) {
-      // When updating a field with score ranges, sync these ranges to all fields with numeric values
-      const fieldsWithScoreRanges = updatedFields.map(field => {
-        if (field.hasNumericValues) {
-          return { ...field, scoreRanges: updatedField.scoreRanges };
-        }
-        return field;
-      });
-      
-      setFormData(prev => ({
-        ...prev,
-        fields: fieldsWithScoreRanges
-      }));
-      
-      // Log the score ranges for debugging
-      console.log("Updated score ranges for all fields:", JSON.stringify(updatedField.scoreRanges));
-      
-      // Save the form if in edit mode
-      if (isEditMode && formId) {
-        setTimeout(() => {
-          handleSubmit();
-        }, 200);
-      }
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        fields: updatedFields
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      fields: updatedFields
+    }));
   };
 
   const removeField = (id: string) => {
@@ -290,35 +295,16 @@ export const useFormBuilder = (formId?: string) => {
         }))
       });
       
-      // Ensure score ranges consistency for all numeric fields
-      const formDataToSave = { ...formData };
-      if (formDataToSave.showTotalScore) {
-        // Find score ranges to use
-        const scoreRanges = formDataToSave.fields?.find(f => f.scoreRanges && f.scoreRanges.length > 0)?.scoreRanges || [];
-        
-        if (scoreRanges.length > 0) {
-          // Apply score ranges to all fields with numeric values
-          formDataToSave.fields = formDataToSave.fields?.map(field => {
-            if (field.hasNumericValues) {
-              return { ...field, scoreRanges };
-            }
-            return field;
-          });
-          
-          console.log("Saving form with score ranges:", JSON.stringify(scoreRanges));
-        }
-      }
-      
       if (isEditMode && formId) {
         // Ensure we retain the showTotalScore flag when updating
-        console.log("Updating form with showTotalScore:", formDataToSave.showTotalScore);
-        await updateForm(formId, formDataToSave);
+        console.log("Updating form with showTotalScore:", formData.showTotalScore);
+        await updateForm(formId, formData);
         toast({
           title: 'Form updated',
           description: 'Your form has been updated successfully',
         });
       } else {
-        const newForm = await createForm(formDataToSave);
+        const newForm = await createForm(formData);
         toast({
           title: 'Form created',
           description: 'Your form has been created successfully',
@@ -346,6 +332,7 @@ export const useFormBuilder = (formId?: string) => {
     handleDescriptionChange,
     handlePrivateChange,
     handleToggleFormScoring,
+    handleSaveScoreRanges,
     updateField,
     removeField,
     addField,
