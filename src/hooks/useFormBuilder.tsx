@@ -119,7 +119,9 @@ export const useFormBuilder = (formId?: string) => {
     
     // If we're in edit mode, save the form to update the database immediately
     if (isEditMode && formId) {
-      handleSubmit();
+      setTimeout(() => {
+        handleSubmit();
+      }, 200);
     }
   };
 
@@ -163,7 +165,9 @@ export const useFormBuilder = (formId?: string) => {
       
       // Save the form if in edit mode
       if (isEditMode && formId) {
-        handleSubmit();
+        setTimeout(() => {
+          handleSubmit();
+        }, 200);
       }
     } else {
       setFormData(prev => ({

@@ -82,6 +82,7 @@ const FormSettings = ({
         return [...fieldWithRanges.scoreRanges];
       }
     }
+    // Default to empty array if no ranges found
     return [];
   });
 
@@ -158,14 +159,19 @@ const FormSettings = ({
 
   // This function will update all fields with the current score ranges and trigger the form update
   const updateFieldsWithScoreRanges = (ranges: ScoreRange[]) => {
-    if (!onToggleFormScoring) return;
+    if (!onToggleFormScoring || !formId) return;
     
-    // Ensure the parent component knows about the updated ranges
-    if (formId) {
-      // This will trigger the form to update with the new ranges
+    // Ensure scoring is enabled
+    if (!showTotalScore) {
+      onToggleFormScoring(true);
+    }
+    
+    // Force a re-render to update the form with the new ranges
+    // This will trigger the form to update with the new ranges via useFormBuilder's handleToggleFormScoring
+    setTimeout(() => {
       onToggleFormScoring(true);
       console.log("Updated score ranges in form configuration:", JSON.stringify(ranges));
-    }
+    }, 100);
   };
 
   return (
@@ -227,7 +233,7 @@ const FormSettings = ({
               onCheckedChange={(checked) => {
                 onToggleFormScoring(checked);
                 if (checked && scoreRanges.length === 0) {
-                  // If enabling scoring but no ranges, add a default range
+                  // Si se activa la puntuación pero no hay rangos, añadir uno por defecto
                   setTimeout(() => {
                     addScoreRange();
                   }, 100);
@@ -258,7 +264,7 @@ const FormSettings = ({
             </div>
           )}
           
-          {/* Score Ranges Configuration */}
+          {/* Score Ranges Configuration - Solo mostrar cuando showTotalScore está activo */}
           {showTotalScore && (
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
@@ -274,7 +280,7 @@ const FormSettings = ({
                 </Button>
               </div>
               
-              {scoreRanges.length === 0 && showTotalScore && (
+              {scoreRanges.length === 0 && (
                 <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
