@@ -91,14 +91,17 @@ export function useFormScoring() {
   };
 
   const shouldShowScoreCard = (fields: FormField[], showTotalScore?: boolean): boolean => {
+    // First check if the showTotalScore flag is explicitly set
     if (!showTotalScore) {
       console.log("Score card hidden: showTotalScore is false");
       return false;
     }
     
-    // Verify that at least one field has numeric values
+    // Then verify that at least one field has numeric values
     const hasNumericFields = fields.some(f => f.hasNumericValues);
     console.log("Has fields with numeric values:", hasNumericFields);
+    
+    // Must explicitly be true (not just truthy) and have numeric fields
     return hasNumericFields && showTotalScore === true;
   };
 

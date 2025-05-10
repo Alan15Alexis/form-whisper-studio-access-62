@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -27,6 +28,7 @@ const FormView = () => {
   const [validationLoading, setValidationLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const navigate = useNavigate();
 
   // Validate access token if provided
@@ -162,6 +164,7 @@ const FormView = () => {
   }, [form, isEditMode, currentUser]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
+    console.log(`Field changed: ${fieldId} with value:`, value);
     setFormResponses(prev => ({
       ...prev,
       [fieldId]: value
@@ -201,8 +204,43 @@ const FormView = () => {
     setIsSubmitting(true);
     
     try {
+      console.log("Submitting form responses:", formResponses);
+      console.log("Form fields:", form.fields);
+      
+      // Check if we have any file fields and log them
+      const fileFields = form.fields.filter(field => 
+        field.type === 'image-upload' || 
+        field.type === 'file-upload' || 
+        field.type === 'drawing' || 
+        field.type === 'signature'
+      );
+      
+      if (fileFields.length > 0) {
+        console.log(`Form has ${fileFields.length} file fields:`, fileFields.map(f => f.id));
+        
+        // Log if any of these fields have values in the responses
+        fileFields.forEach(field => {
+          const value = formResponses[field.id];
+          if (value) {
+            if (typeof value === 'string' && value.startsWith('data:')) {
+              console.log(`Field ${field.id} has base64 data`);
+            } else if (value instanceof File) {
+              console.log(`Field ${field.id} has File: ${value.name}, ${value.type}, ${value.size}`);
+            } else if (typeof value === 'string') {
+              console.log(`Field ${field.id} has string value:`, value.substring(0, 100) + '...');
+            } else {
+              console.log(`Field ${field.id} has value of type:`, typeof value);
+            }
+          } else {
+            console.log(`Field ${field.id} has no value`);
+          }
+        });
+      }
+      
       // Pass the form from location to the submit function to ensure we have the form data
-      await submitFormResponse(id, formResponses, formFromLocation || form);
+      const result = await submitFormResponse(id, formResponses, formFromLocation || form);
+      console.log("Form submission result:", result);
+      
       toast({
         title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
         description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
@@ -214,15 +252,15 @@ const FormView = () => {
       setTimeout(() => {
         // Always redirect to assigned forms page
         navigate("/assigned-forms", { replace: true });
-      }, 2000);
+      }, 5000); // Extended to 5 seconds to give more time to see file uploads in the success screen
       
     } catch (error) {
+      console.error("Error submitting form:", error);
       toast({
         title: "Error al enviar respuesta",
-        description: "Por favor intenta nuevamente más tarde",
+        description: error instanceof Error ? error.message : "Por favor intenta nuevamente más tarde",
         variant: "destructive",
       });
-      console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -55,6 +54,9 @@ export const submitFormResponseOperation = (
     const processedData = {...data};
     const uploadPromises = [];
     
+    console.log("Processing form submission with fields:", form.fields);
+    console.log("Form data before processing:", data);
+    
     // Iterate through fields to find file uploads, images or drawings
     if (Array.isArray(form.fields)) {
       for (const field of form.fields) {
@@ -63,22 +65,61 @@ export const submitFormResponseOperation = (
         // Skip empty fields
         if (!fieldValue) continue;
         
+        console.log(`Processing field ${field.id} (${field.type}) with value:`, 
+          typeof fieldValue === 'string' && fieldValue.length > 100 
+            ? `${fieldValue.substring(0, 100)}... [truncated]` 
+            : fieldValue
+        );
+        
         // Handle file and image uploads
         if (field.type === 'image-upload' || field.type === 'file-upload' || 
             field.type === 'drawing' || field.type === 'signature') {
+          
+          console.log(`Found uploadable field ${field.id} of type ${field.type}`);
+          
           // For base64 data (images, drawings, signatures)
           if (typeof fieldValue === 'string' && fieldValue.startsWith('data:')) {
-            const uploadPromise = processFileUpload(fieldValue, field.id, userEmail, formId);
-            uploadPromises.push(uploadPromise.then(url => {
-              processedData[field.id] = url;
-            }));
+            console.log(`Processing base64 data for field ${field.id}`);
+            const uploadPromise = processFileUpload(fieldValue, field.id, userEmail, formId)
+              .then(url => {
+                console.log(`Upload success for field ${field.id}, URL: ${url}`);
+                processedData[field.id] = url;
+                return url;
+              })
+              .catch(err => {
+                console.error(`Upload failed for field ${field.id}:`, err);
+                throw err;
+              });
+            
+            uploadPromises.push(uploadPromise);
           } 
           // For File objects (file uploads)
           else if (fieldValue instanceof File) {
-            const uploadPromise = processFileUpload(fieldValue, field.id, userEmail, formId);
-            uploadPromises.push(uploadPromise.then(url => {
-              processedData[field.id] = url;
-            }));
+            console.log(`Processing File object for field ${field.id}: ${fieldValue.name}`);
+            const uploadPromise = processFileUpload(fieldValue, field.id, userEmail, formId)
+              .then(url => {
+                console.log(`Upload success for field ${field.id}, URL: ${url}`);
+                processedData[field.id] = url;
+                return url;
+              })
+              .catch(err => {
+                console.error(`Upload failed for field ${field.id}:`, err);
+                throw err;
+              });
+            
+            uploadPromises.push(uploadPromise);
+          }
+          // Already a URL (from previous upload or edit mode)
+          else if (typeof fieldValue === 'string' && (
+            fieldValue.startsWith('http://') || 
+            fieldValue.startsWith('https://') || 
+            fieldValue.includes('respuestas-formulario')
+          )) {
+            console.log(`Field ${field.id} already has a URL: ${fieldValue}`);
+            // No need to re-upload, keep the existing URL
+          }
+          else {
+            console.warn(`Unexpected value for uploadable field ${field.id}:`, fieldValue);
           }
         }
       }
@@ -86,6 +127,7 @@ export const submitFormResponseOperation = (
     
     // Wait for all uploads to complete
     if (uploadPromises.length > 0) {
+      console.log(`Waiting for ${uploadPromises.length} uploads to complete...`);
       try {
         await Promise.all(uploadPromises);
         console.log('All file uploads completed successfully');
@@ -96,9 +138,13 @@ export const submitFormResponseOperation = (
           description: "Hubo un problema al subir los archivos",
           variant: "destructive",
         });
-        // Continue with submission even if some uploads failed
+        throw error; // Stop the submission if files failed to upload
       }
+    } else {
+      console.log('No files to upload');
     }
+    
+    console.log("Form data after processing uploads:", processedData);
     
     // Convert response data to use question labels instead of IDs
     const formattedResponses: Record<string, any> = {};
@@ -226,15 +272,27 @@ export const submitFormResponseOperation = (
 // Helper function to process file uploads to Supabase storage
 const processFileUpload = async (fileData: string | File, fieldId: string, userEmail: string, formId: string): Promise<string> => {
   try {
+    console.log(`Starting file upload process for field ${fieldId}`);
+    
     // Generate a unique filename
     const timestamp = Date.now();
     const fileExtension = getFileExtension(fileData);
     const filename = `${formId}/${userEmail.replace('@', '_at_')}/${fieldId}_${timestamp}${fileExtension}`;
     
-    // Upload the file to Supabase Storage
-    let { data, error } = await uploadToSupabaseStorage(fileData, filename);
+    console.log(`Generated file path: respuestas-formulario/${filename}`);
     
-    if (error) throw error;
+    // Upload the file to Supabase Storage
+    const { data, error } = await uploadToSupabaseStorage(fileData, filename);
+    
+    if (error) {
+      console.error(`Storage upload error:`, error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.error(`No data returned from storage upload`);
+      throw new Error('No data returned from storage upload');
+    }
     
     // Return the public URL
     const fileUrl = getPublicUrl('respuestas-formulario', filename);
@@ -242,7 +300,7 @@ const processFileUpload = async (fileData: string | File, fieldId: string, userE
     
     return fileUrl;
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error in processFileUpload:', error);
     throw error;
   }
 };
@@ -252,12 +310,12 @@ const getFileExtension = (fileData: string | File): string => {
   if (fileData instanceof File) {
     // Get extension from file name
     const parts = fileData.name.split('.');
-    return parts.length > 1 ? `.${parts[parts.length - 1]}` : '';
+    return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : '';
   } else if (typeof fileData === 'string' && fileData.startsWith('data:')) {
     // Extract MIME type from data URL
     const mimeMatch = fileData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);/);
     if (mimeMatch && mimeMatch[1]) {
-      const mimeType = mimeMatch[1];
+      const mimeType = mimeMatch[1].toLowerCase();
       switch (mimeType) {
         case 'image/jpeg': return '.jpg';
         case 'image/png': return '.png';
@@ -272,37 +330,49 @@ const getFileExtension = (fileData: string | File): string => {
 
 // Helper function to upload to Supabase storage
 const uploadToSupabaseStorage = async (fileData: string | File, filename: string) => {
-  // For base64 data (images, drawings, signatures)
-  if (typeof fileData === 'string' && fileData.startsWith('data:')) {
-    // Convert base64 to blob
-    const res = await fetch(fileData);
-    const blob = await res.blob();
+  try {
+    console.log(`Uploading to Supabase storage: ${filename}`);
     
-    // Upload to Supabase Storage
-    return supabase.storage
-      .from('respuestas-formulario')
-      .upload(filename, blob, {
-        contentType: blob.type,
-        upsert: true
-      });
-  } 
-  // For File objects (file uploads)
-  else if (fileData instanceof File) {
-    // Upload to Supabase Storage
-    return supabase.storage
-      .from('respuestas-formulario')
-      .upload(filename, fileData, {
-        contentType: fileData.type,
-        upsert: true
-      });
+    // For base64 data (images, drawings, signatures)
+    if (typeof fileData === 'string' && fileData.startsWith('data:')) {
+      // Convert base64 to blob
+      const res = await fetch(fileData);
+      const blob = await res.blob();
+      
+      console.log(`Converted base64 to blob: ${blob.type}, size: ${blob.size}`);
+      
+      // Upload to Supabase Storage
+      return await supabase.storage
+        .from('respuestas-formulario')
+        .upload(filename, blob, {
+          contentType: blob.type,
+          upsert: true
+        });
+    } 
+    // For File objects (file uploads)
+    else if (fileData instanceof File) {
+      console.log(`Uploading File object: ${fileData.name}, type: ${fileData.type}, size: ${fileData.size}`);
+      
+      // Upload to Supabase Storage
+      return await supabase.storage
+        .from('respuestas-formulario')
+        .upload(filename, fileData, {
+          contentType: fileData.type,
+          upsert: true
+        });
+    }
+    
+    throw new Error('Unsupported file data format');
+  } catch (error) {
+    console.error('Error in uploadToSupabaseStorage:', error);
+    throw error;
   }
-  
-  throw new Error('Unsupported file data format');
 };
 
 // Helper function to get the public URL of an uploaded file
 const getPublicUrl = (bucket: string, path: string): string => {
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  console.log(`Generated public URL for ${bucket}/${path}:`, data.publicUrl);
   return data.publicUrl;
 };
 

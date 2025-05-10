@@ -47,16 +47,24 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
   const getFileNameFromUrl = (url: string): string => {
     try {
       const urlParts = url.split('/');
-      return decodeURIComponent(urlParts[urlParts.length - 1]) || 'Archivo';
+      const filename = urlParts[urlParts.length - 1];
+      // Decode and clean up the filename (remove any query parameters)
+      return decodeURIComponent(filename.split('?')[0]) || 'Archivo';
     } catch (e) {
       return 'Archivo';
     }
   };
   
+  // Helper function to check if a URL is an image
+  const isImageUrl = (url: string): boolean => {
+    // Check if URL ends with typical image extensions
+    return /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(url.toLowerCase());
+  };
+  
   // Helper function to render file preview
   const renderFilePreview = (fieldId: string, fileUrl: string) => {
     // Check if it's an image by extension
-    const isImage = /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(fileUrl.toLowerCase());
+    const isImage = isImageUrl(fileUrl);
     const field = fields?.find(f => f.id === fieldId);
     
     return (
@@ -97,6 +105,17 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
     );
   };
   
+  // Get all file fields and their values for display
+  const fileFields = Object.entries(formValues)
+    .filter(([key, value]) => isFileUrl(value))
+    .map(([key, value]) => ({
+      fieldId: key,
+      fileUrl: value as string,
+      field: fields?.find(f => f.id === key)
+    }));
+    
+  console.log("Found file fields to display:", fileFields.length);
+  
   return (
     <div className="container max-w-3xl mx-auto py-8">
       <Card className="shadow-md">
@@ -128,17 +147,15 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
           )}
           
           {/* Display files uploaded in the responses */}
-          {Object.entries(formValues).some(([key, value]) => isFileUrl(value)) && (
+          {fileFields.length > 0 && (
             <div className="mt-6 space-y-3">
               <h3 className="text-lg font-medium">Archivos adjuntos</h3>
               <div className="space-y-2">
-                {Object.entries(formValues).map(([key, value]) => 
-                  isFileUrl(value) ? (
-                    <div key={key}>
-                      {renderFilePreview(key, value as string)}
-                    </div>
-                  ) : null
-                )}
+                {fileFields.map(({fieldId, fileUrl, field}) => (
+                  <div key={fieldId}>
+                    {renderFilePreview(fieldId, fileUrl)}
+                  </div>
+                ))}
               </div>
             </div>
           )}
