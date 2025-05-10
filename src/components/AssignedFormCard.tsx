@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +8,8 @@ import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
 import { useState } from "react";
 import ViewResponseDialog from "./ViewResponseDialog";
+import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface AssignedFormCardProps {
   form: Form;
@@ -20,6 +21,7 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
   const { getFormResponses } = useForm();
   const navigate = useNavigate();
   const [showResponseDialog, setShowResponseDialog] = useState(false);
+  const [showCompletionInfo, setShowCompletionInfo] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   
   // Check if form has local responses or if it's completed in the database for this user
@@ -49,8 +51,22 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
     }
   };
 
+  // Format date with time or use fallback
+  const formatDateTime = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
+    } catch (error) {
+      return 'Fecha y hora no disponible';
+    }
+  };
+
   // Get question count safely
   const questionCount = Array.isArray(form.fields) ? form.fields.length : 0;
+  
+  // Handle view completion info
+  const handleViewCompletionInfo = () => {
+    setShowCompletionInfo(true);
+  };
   
   // Handle view form response
   const handleViewResponse = () => {
@@ -120,6 +136,16 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
             
           {isCompleted ? (
             <div className="flex gap-2">
+              {/* Show form completion info button */}
+              <Button 
+                variant="outline" 
+                onClick={handleViewCompletionInfo}
+                size="sm"
+              >
+                <CheckIcon className="mr-1 h-4 w-4" />
+                Completado
+              </Button>
+              
               {/* Only show view button if allowed */}
               {canViewOwnResponses && (
                 <Button 
@@ -143,18 +169,6 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
                   Editar
                 </Button>
               )}
-              
-              {/* Show default view button if no permissions */}
-              {!canViewOwnResponses && !canEditOwnResponses && (
-                <Button 
-                  variant="outline"
-                  onClick={handleViewResponse}
-                  size="sm"
-                >
-                  <CheckIcon className="mr-1 h-4 w-4" />
-                  Completado
-                </Button>
-              )}
             </div>
           ) : (
             <Button style={buttonStyle} asChild>
@@ -167,6 +181,21 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
         </CardFooter>
       </Card>
 
+      {/* Completion Info Dialog */}
+      <Dialog open={showCompletionInfo} onOpenChange={setShowCompletionInfo}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle style={{ color: form.formColor || 'inherit' }}>Formulario Completado</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <p><strong>Formulario:</strong> {form.title}</p>
+            <p><strong>Fecha de envío:</strong> {formatDateTime(form.updatedAt)}</p>
+            <p className="text-sm text-gray-500">Este formulario ya ha sido completado correctamente.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Keep the existing ViewResponseDialog for when view is explicitly requested */}
       {showResponseDialog && (
         <ViewResponseDialog 
           formId={form.id} 
