@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -154,7 +155,7 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
                   size="sm"
                 >
                   <EyeIcon className="mr-1 h-4 w-4" />
-                  Ver
+                  Ver respuestas
                 </Button>
               )}
               
@@ -166,7 +167,7 @@ const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormC
                   size="sm"
                 >
                   <Edit2 className="mr-1 h-4 w-4" />
-                  Editar
+                  Editar respuestas
                 </Button>
               )}
             </div>
