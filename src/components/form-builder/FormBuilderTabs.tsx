@@ -29,6 +29,7 @@ interface FormBuilderTabsProps {
   formId?: string;
   allowedUserName?: string;
   setAllowedUserName?: (name: string) => void;
+  externalScoreRanges?: ScoreRange[]; // New prop to receive score ranges
 }
 
 const FormBuilderTabs = ({
@@ -51,7 +52,8 @@ const FormBuilderTabs = ({
   addField,
   formId,
   allowedUserName = "",
-  setAllowedUserName = () => {}
+  setAllowedUserName = () => {},
+  externalScoreRanges = [] // Default to empty array
 }: FormBuilderTabsProps) => {
   return (
     <Tabs defaultValue="fields" className="w-full mt-6">
@@ -101,6 +103,7 @@ const FormBuilderTabs = ({
           showTotalScore={formData.showTotalScore}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
+          externalScoreRanges={externalScoreRanges} // Pass score ranges to FormSettings
         />
       </TabsContent>
       

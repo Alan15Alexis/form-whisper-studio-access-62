@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { Form, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -34,7 +33,8 @@ export const createFormOperation = (
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
-      showTotalScore: formData.showTotalScore || false // Ensure this is explicitly set
+      showTotalScore: formData.showTotalScore || false, // Ensure this is explicitly set
+      scoreConfig: formData.scoreConfig // Include scoreConfig if provided
     };
 
     setForms(prevForms => [...prevForms, newForm]);
@@ -44,11 +44,14 @@ export const createFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
     }
     
-    // Extract score ranges from fields for storage
+    // Get score ranges from scoreConfig if available, otherwise try from fields
     let scoreRanges: ScoreRange[] = [];
     let fieldsWithValues = false;
     
-    if (formData.fields) {
+    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = formData.scoreConfig.ranges;
+      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
+    } else if (formData.fields) {
       // Check if any field has numeric values
       fieldsWithValues = formData.fields.some(field => field.hasNumericValues);
       
@@ -60,38 +63,32 @@ export const createFormOperation = (
         
         if (fieldWithRanges?.scoreRanges) {
           scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Score ranges to save to Supabase:", JSON.stringify(scoreRanges));
+          console.log("Score ranges from fields:", JSON.stringify(scoreRanges));
         }
       }
     }
     
-    // Explicitly get score ranges from the scoreConfig if available
-    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      scoreRanges = formData.scoreConfig.ranges;
-      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
-    }
-    
     // Save form to Supabase database with detailed configuration
     try {
-      // Convert fields to ensure score ranges are properly included
-      const fieldsToSave = formData.showTotalScore ? 
-        ensureScoreRangesInAllFields(formData.fields || [], scoreRanges) : 
-        formData.fields;
+      // Make sure score ranges are properly included in the configuration
+      const configObject = {
+        isPrivate: newForm.isPrivate,
+        formColor: newForm.formColor,
+        allowViewOwnResponses: newForm.allowViewOwnResponses,
+        allowEditOwnResponses: newForm.allowEditOwnResponses,
+        httpConfig: newForm.httpConfig,
+        showTotalScore: newForm.showTotalScore, 
+        scoreRanges: scoreRanges, // Explicitly store score ranges
+        hasFieldsWithNumericValues: fieldsWithValues
+      };
+      
+      console.log("Saving configuration to Supabase:", configObject);
 
       const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
         descripcion: newForm.description,
-        preguntas: fieldsToSave,
-        configuracion: {
-          isPrivate: newForm.isPrivate,
-          formColor: newForm.formColor,
-          allowViewOwnResponses: newForm.allowViewOwnResponses,
-          allowEditOwnResponses: newForm.allowEditOwnResponses,
-          httpConfig: newForm.httpConfig,
-          showTotalScore: newForm.showTotalScore, // Ensure this is explicitly set
-          scoreRanges: scoreRanges, // Store score ranges explicitly in the configuration
-          hasFieldsWithNumericValues: fieldsWithValues
-        },
+        preguntas: newForm.fields,
+        configuracion: configObject,
         administrador: currentUserEmail || 'unknown@email.com',
         acceso: newForm.allowedUsers
       }).select();
@@ -166,11 +163,14 @@ export const updateFormOperation = (
       setAllowedUsers(prev => ({...prev, [id]: updatedForm.allowedUsers}));
     }
 
-    // Extract all score ranges and check for numeric values
+    // Get score ranges from scoreConfig if available, otherwise try from fields
     let scoreRanges: ScoreRange[] = [];
     let fieldsWithValues = false;
     
-    if (updatedForm.fields) {
+    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = formData.scoreConfig.ranges;
+      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
+    } else if (updatedForm.fields) {
       // Check if any field has numeric values
       fieldsWithValues = updatedForm.fields.some(field => field.hasNumericValues);
       
@@ -182,21 +182,24 @@ export const updateFormOperation = (
         
         if (fieldWithRanges?.scoreRanges) {
           scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Score ranges to update in Supabase:", JSON.stringify(scoreRanges));
+          console.log("Score ranges from fields:", JSON.stringify(scoreRanges));
         }
       }
     }
     
-    // Explicitly get score ranges from the scoreConfig if available
-    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      scoreRanges = formData.scoreConfig.ranges;
-      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
-    }
-    
-    // Ensure all fields with numeric values have the score ranges
-    const fieldsToSave = updatedForm.showTotalScore 
-      ? ensureScoreRangesInAllFields(updatedForm.fields || [], scoreRanges) 
-      : updatedForm.fields;
+    // Prepare the configuration object with explicit score ranges
+    const configObject = {
+      isPrivate: updatedForm.isPrivate,
+      formColor: updatedForm.formColor,
+      allowViewOwnResponses: updatedForm.allowViewOwnResponses,
+      allowEditOwnResponses: updatedForm.allowEditOwnResponses,
+      httpConfig: updatedForm.httpConfig,
+      showTotalScore: updatedForm.showTotalScore === true, // Ensure this is explicitly a boolean
+      scoreRanges: scoreRanges, // Explicitly store score ranges
+      hasFieldsWithNumericValues: fieldsWithValues
+    };
+
+    console.log("Saving configuration to Supabase:", configObject);
     
     // Update the form in Supabase
     try {
@@ -207,20 +210,6 @@ export const updateFormOperation = (
         .eq('titulo', updatedForm.title)
         .maybeSingle();
 
-      // Prepare the configuration object with explicit score ranges
-      const configObject = {
-        isPrivate: updatedForm.isPrivate,
-        formColor: updatedForm.formColor,
-        allowViewOwnResponses: updatedForm.allowViewOwnResponses,
-        allowEditOwnResponses: updatedForm.allowEditOwnResponses,
-        httpConfig: updatedForm.httpConfig,
-        showTotalScore: updatedForm.showTotalScore, // Ensure this is explicitly set
-        scoreRanges: scoreRanges, // Ensure score ranges are explicitly stored in configuration
-        hasFieldsWithNumericValues: fieldsWithValues
-      };
-
-      console.log("Saving configuration to Supabase:", configObject);
-
       if (existingForm) {
         // Update existing form
         const { data, error } = await supabase
@@ -228,7 +217,7 @@ export const updateFormOperation = (
           .update({
             titulo: updatedForm.title,
             descripcion: updatedForm.description,
-            preguntas: fieldsToSave,
+            preguntas: updatedForm.fields,
             configuracion: configObject,
             acceso: updatedForm.allowedUsers
           })
@@ -248,7 +237,7 @@ export const updateFormOperation = (
           .insert({
             titulo: updatedForm.title,
             descripcion: updatedForm.description,
-            preguntas: fieldsToSave,
+            preguntas: updatedForm.fields,
             configuracion: configObject,
             administrador: updatedForm.ownerId,
             acceso: updatedForm.allowedUsers

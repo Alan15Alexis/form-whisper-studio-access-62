@@ -26,6 +26,8 @@ export const useFormBuilder = (formId?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
   const [allowedUserName, setAllowedUserName] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  // Store score ranges separately to ensure they're preserved even when toggling scoring
+  const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
 
   // Add new field function
   const addField = (fieldType: string) => {
@@ -61,6 +63,19 @@ export const useFormBuilder = (formId?: string) => {
         setFormData(form);
         console.log("Loaded form data:", form);
         console.log("Form has showTotalScore:", form.showTotalScore);
+        
+        // Extract score ranges from either the scoreConfig or from fields
+        if (form.scoreConfig && form.scoreConfig.ranges && form.scoreConfig.ranges.length > 0) {
+          console.log("Loading score ranges from scoreConfig:", form.scoreConfig.ranges);
+          setScoreRanges(form.scoreConfig.ranges);
+        } else {
+          const fieldWithRanges = form.fields?.find(f => f.scoreRanges?.length > 0);
+          if (fieldWithRanges && fieldWithRanges.scoreRanges) {
+            console.log("Loading score ranges from fields:", fieldWithRanges.scoreRanges);
+            setScoreRanges(fieldWithRanges.scoreRanges);
+          }
+        }
+        
         console.log("Fields with score ranges:", form.fields?.filter(f => f.scoreRanges?.length > 0));
       } else {
         toast({
@@ -93,8 +108,8 @@ export const useFormBuilder = (formId?: string) => {
       // Create a copy of fields to update
       const updatedFields = prev.fields?.map(field => {
         if (field.hasNumericValues && enabled) {
-          // For fields with numeric values, keep existing score ranges if any
-          return { ...field };
+          // For fields with numeric values, apply scoreRanges
+          return { ...field, scoreRanges: [...scoreRanges] };
         } 
         else if (!enabled) {
           // If disabling scoring, remove score ranges
@@ -107,25 +122,41 @@ export const useFormBuilder = (formId?: string) => {
       return { 
         ...prev, 
         showTotalScore: enabled,
-        fields: updatedFields 
+        fields: updatedFields,
+        // Also update scoreConfig for consistency
+        scoreConfig: enabled ? {
+          enabled: true,
+          ranges: scoreRanges
+        } : undefined
       };
     });
   };
 
   // Enhanced function to explicitly save score ranges
-  const handleSaveScoreRanges = (scoreRanges: ScoreRange[]) => {
-    console.log("Saving score ranges:", JSON.stringify(scoreRanges));
+  const handleSaveScoreRanges = (newScoreRanges: ScoreRange[]) => {
+    console.log("Saving score ranges:", JSON.stringify(newScoreRanges));
+    
+    // Store the ranges locally for future use
+    setScoreRanges(newScoreRanges);
     
     // Update all fields with numeric values to include these score ranges
     setFormData(prev => {
       // First ensure showTotalScore is set to true
-      const updatedFormData = { ...prev, showTotalScore: true };
+      const updatedFormData = { 
+        ...prev, 
+        showTotalScore: true,
+        // Update scoreConfig to ensure it's saved to the database
+        scoreConfig: {
+          enabled: true,
+          ranges: newScoreRanges
+        }
+      };
       
       // Then update fields with numeric values
       const updatedFields = prev.fields?.map(field => {
         if (field.hasNumericValues) {
           console.log(`Adding score ranges to field ${field.id}`);
-          return { ...field, scoreRanges: [...scoreRanges] };
+          return { ...field, scoreRanges: [...newScoreRanges] };
         }
         return field;
       });
@@ -288,45 +319,34 @@ export const useFormBuilder = (formId?: string) => {
     setIsSaving(true);
 
     try {
-      // Extract score ranges for explicit storage in configuration
-      let scoreRanges: ScoreRange[] = [];
+      // Ensure the scoreConfig is properly set with the current state
+      const formToSave = {
+        ...formData,
+        scoreConfig: formData.showTotalScore ? {
+          enabled: true,
+          ranges: scoreRanges
+        } : undefined
+      };
       
-      if (formData.showTotalScore && formData.fields) {
-        // Find a field with score ranges to store them
-        const fieldWithRanges = formData.fields.find(field => 
-          field.scoreRanges && field.scoreRanges.length > 0
-        );
+      console.log("Saving form with scoreConfig:", formToSave.scoreConfig);
+      
+      // Apply score ranges to fields that have numeric values
+      if (formToSave.showTotalScore && scoreRanges.length > 0) {
+        const updatedFields = formToSave.fields?.map(field => {
+          if (field.hasNumericValues) {
+            return { ...field, scoreRanges: [...scoreRanges] };
+          }
+          return field;
+        });
         
-        if (fieldWithRanges?.scoreRanges) {
-          scoreRanges = fieldWithRanges.scoreRanges;
-          console.log("Found score ranges to save in configuration:", JSON.stringify(scoreRanges));
-        }
+        formToSave.fields = updatedFields;
       }
       
-      // Log the form data before saving to check score ranges
-      console.log("Form data before saving:", {
-        showTotalScore: formData.showTotalScore,
-        fieldsWithScoreRanges: formData.fields?.filter(f => f.scoreRanges && f.scoreRanges.length > 0).map(f => ({
-          fieldId: f.id,
-          scoreRanges: f.scoreRanges
-        }))
-      });
-      
       if (isEditMode && formId) {
-        // Create a complete form data object with all required properties
-        const completeFormData = {
-          ...formData,
-          showTotalScore: formData.showTotalScore === true, // Make sure it's a boolean
-          scoreConfig: {
-            enabled: formData.showTotalScore === true,
-            ranges: scoreRanges
-          }
-        };
+        console.log("Updating form with showTotalScore:", formToSave.showTotalScore);
+        console.log("Updating form with scoreRanges:", scoreRanges);
         
-        console.log("Updating form with showTotalScore:", completeFormData.showTotalScore);
-        console.log("Updating form with scoreConfig:", completeFormData.scoreConfig);
-        
-        await updateForm(formId, completeFormData);
+        await updateForm(formId, formToSave);
         
         if (!skipValidation) {
           toast({
@@ -335,16 +355,7 @@ export const useFormBuilder = (formId?: string) => {
           });
         }
       } else {
-        // For new forms, add the score configuration
-        const newFormData = {
-          ...formData,
-          scoreConfig: {
-            enabled: formData.showTotalScore === true,
-            ranges: scoreRanges
-          }
-        };
-        
-        const newForm = await createForm(newFormData);
+        const newForm = await createForm(formToSave);
         toast({
           title: 'Form created',
           description: 'Your form has been created successfully',
@@ -385,6 +396,7 @@ export const useFormBuilder = (formId?: string) => {
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
-    handleHttpConfigChange
+    handleHttpConfigChange,
+    scoreRanges // Expose score ranges to components
   };
 };

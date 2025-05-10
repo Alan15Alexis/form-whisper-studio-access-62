@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -39,6 +40,7 @@ interface FormSettingsProps {
   showTotalScore?: boolean;
   onToggleFormScoring?: (enabled: boolean) => void;
   onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
+  externalScoreRanges?: ScoreRange[]; // New prop to receive score ranges from parent
 }
 
 const FormSettings = ({
@@ -56,7 +58,8 @@ const FormSettings = ({
   formId = "",
   showTotalScore = false,
   onToggleFormScoring = () => {},
-  onSaveScoreRanges = () => {}
+  onSaveScoreRanges = () => {},
+  externalScoreRanges = [] // Default to empty array
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -73,19 +76,37 @@ const FormSettings = ({
 
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
 
-  // Initialize score ranges from fields
-  const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>(() => {
-    // Initialize with existing score ranges from the form fields
-    if (formFields && formFields.length > 0) {
-      const fieldWithRanges = formFields.find(field => field.scoreRanges && field.scoreRanges.length > 0);
-      if (fieldWithRanges?.scoreRanges) {
-        console.log("Initializing score ranges from fields:", fieldWithRanges.scoreRanges);
-        return [...fieldWithRanges.scoreRanges];
+  // Initialize score ranges from props or existing fields
+  const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
+  
+  // Init state from props or fields
+  useEffect(() => {
+    // First priority: use externally provided score ranges if available
+    if (externalScoreRanges && externalScoreRanges.length > 0) {
+      console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
+      setScoreRanges([...externalScoreRanges]);
+      return;
+    }
+    
+    // Second priority: look for ranges in fields if scoring is enabled
+    if (showTotalScore && formFields && formFields.length > 0) {
+      const fieldWithRanges = formFields.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
+      
+      if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
+        console.log("Setting score ranges from fields:", fieldWithRanges.scoreRanges);
+        setScoreRanges([...fieldWithRanges.scoreRanges]);
+        return;
       }
     }
-    // Default to empty array if no ranges found
-    return [];
-  });
+    
+    // If no ranges found and we're toggling on scoring, create a default range
+    if (showTotalScore && scoreRanges.length === 0) {
+      console.log("Creating default score range");
+      setScoreRanges([{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }]);
+    }
+  }, [externalScoreRanges, formFields, showTotalScore]);
 
   // Track when the scoring toggle changes locally
   const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(showTotalScore || false);
@@ -101,23 +122,23 @@ const FormSettings = ({
     setHasUnsavedToggle(false); // Reset when props change
   }, [showTotalScore]);
 
-  // Only sync score ranges when fields change and scoring is already enabled
-  useEffect(() => {
-    if (formFields && formFields.length > 0) {
-      const fieldWithRanges = formFields.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
-      );
-      
-      if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
-        console.log("Updating score ranges from fields:", fieldWithRanges.scoreRanges);
-        setScoreRanges([...fieldWithRanges.scoreRanges]);
-        setHasUnsavedRanges(false); // Reset unsaved changes flag after loading from props
-      }
-    }
-  }, [formFields]);
-
   // Score range management functions
   const addScoreRange = () => {
+    if (scoreRanges.length === 0) {
+      // First range
+      const newRanges = [
+        { min: 0, max: 10, message: "Mensaje para puntuación 0-10" }
+      ];
+      setScoreRanges(newRanges);
+      setHasUnsavedRanges(true);
+      
+      toast({
+        title: "Rango añadido",
+        description: `Se añadió un nuevo rango de puntuación: 0-10`,
+      });
+      return;
+    }
+    
     const lastRange = scoreRanges[scoreRanges.length - 1];
     const newMin = lastRange ? lastRange.max + 1 : 0;
     const newMax = newMin + 10;
