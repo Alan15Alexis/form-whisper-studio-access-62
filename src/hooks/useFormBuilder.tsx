@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { useForm } from "@/contexts/form";
+import { useForm as useFormContext } from "@/contexts/form"; // Renamed to avoid conflict with react-hook-form
 import { Form, FormField, HttpConfig, ScoreRange } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
@@ -11,7 +11,7 @@ import { addInvitedUser, checkInvitedUserExists } from "@/integrations/supabase/
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
-  const { getForm, createForm, updateForm } = useForm();
+  const { getForm, createForm, updateForm } = useFormContext(); // Using renamed import
   const isEditMode = !!formId;
 
   const [formData, setFormData] = useState<Partial<Form>>({
