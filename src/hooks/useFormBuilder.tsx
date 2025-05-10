@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -109,6 +110,11 @@ export const useFormBuilder = (formId?: string) => {
         fields: updatedFields 
       };
     });
+    
+    // Auto-save to persist the change immediately
+    setTimeout(() => {
+      handleSubmit(true);
+    }, 200);
   };
 
   // Enhanced function to explicitly save score ranges
@@ -132,7 +138,8 @@ export const useFormBuilder = (formId?: string) => {
       // Update form data with the new fields
       return {
         ...prev,
-        fields: updatedFields
+        fields: updatedFields,
+        showTotalScore: true // Ensure this is set to true
       };
     });
     
@@ -305,7 +312,10 @@ export const useFormBuilder = (formId?: string) => {
       if (isEditMode && formId) {
         // Ensure we retain the showTotalScore flag when updating
         console.log("Updating form with showTotalScore:", formData.showTotalScore);
-        await updateForm(formId, formData);
+        await updateForm(formId, {
+          ...formData,
+          showTotalScore: formData.showTotalScore
+        });
         
         if (!skipValidation) {
           toast({

@@ -19,6 +19,8 @@ const FormFieldsList = ({
   onToggleFormScoring,
   formShowTotalScore
 }: FormFieldsListProps) => {
+  console.log("FormFieldsList - formShowTotalScore:", formShowTotalScore);
+  
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Campos del Formulario</h3>

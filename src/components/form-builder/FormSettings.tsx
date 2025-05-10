@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -94,6 +93,7 @@ const FormSettings = ({
   
   // Fix: Better sync local state with prop and ensure we're not auto-enabling
   useEffect(() => {
+    console.log("showTotalScore prop changed to:", showTotalScore);
     setIsScoringEnabled(showTotalScore || false);
   }, [showTotalScore]);
 
@@ -171,22 +171,19 @@ const FormSettings = ({
     console.log("Saved score ranges:", JSON.stringify(scoreRanges));
   };
 
-  // Handle toggle of scoring feature - maintain local state
+  // Handle toggle of scoring feature - maintain local state and propagate change
   const handleToggleScoringFeature = (enabled: boolean) => {
     console.log("Toggle scoring feature called with:", enabled);
     setIsScoringEnabled(enabled);
     
+    // Call the parent handler to update the form data
+    onToggleFormScoring(enabled);
+    
     if (enabled && scoreRanges.length === 0) {
       // First update the local state
-      onToggleFormScoring(enabled);
-      
-      // Then after a delay, add the first range
       setTimeout(() => {
         addScoreRange();
       }, 250);
-    } else {
-      // Just update the toggle state without auto-adding ranges
-      onToggleFormScoring(enabled);
     }
   };
 

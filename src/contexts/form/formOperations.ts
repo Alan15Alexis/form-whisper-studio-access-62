@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { Form, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -33,7 +34,7 @@ export const createFormOperation = (
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
-      showTotalScore: formData.showTotalScore || false
+      showTotalScore: formData.showTotalScore || false // Ensure this is explicitly set
     };
 
     setForms(prevForms => [...prevForms, newForm]);
@@ -81,7 +82,7 @@ export const createFormOperation = (
           allowViewOwnResponses: newForm.allowViewOwnResponses,
           allowEditOwnResponses: newForm.allowEditOwnResponses,
           httpConfig: newForm.httpConfig,
-          showTotalScore: newForm.showTotalScore,
+          showTotalScore: newForm.showTotalScore, // Ensure this is explicitly set
           scoreRanges: scoreRanges, // Store score ranges explicitly in the configuration
           hasFieldsWithNumericValues: fieldsWithValues
         },
@@ -201,7 +202,7 @@ export const updateFormOperation = (
         allowViewOwnResponses: updatedForm.allowViewOwnResponses,
         allowEditOwnResponses: updatedForm.allowEditOwnResponses,
         httpConfig: updatedForm.httpConfig,
-        showTotalScore: updatedForm.showTotalScore,
+        showTotalScore: updatedForm.showTotalScore, // Ensure this is explicitly set
         scoreRanges: scoreRanges, // Ensure score ranges are explicitly stored in configuration
         hasFieldsWithNumericValues: fieldsWithValues
       };
