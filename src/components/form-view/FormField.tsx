@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { type FormField as FormFieldType } from "@/types/form";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Clock, Star, Upload } from "lucide-react";
+import { CalendarIcon, Clock, ExternalLink, FileIcon, Star, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useRef } from "react";
@@ -99,6 +100,13 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
     }
   };
 
+  const isExistingFileUrl = (val: any): boolean => {
+    return typeof val === 'string' && 
+           (val.startsWith('http://') || 
+            val.startsWith('https://') || 
+            val.startsWith('respuestas-formulario/'));
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -161,6 +169,75 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
       borderColor: formColor,
       boxShadow: `0 2px 8px 0 ${formColor}22`
     };
+  };
+
+  const getFileNameFromUrl = (url: string): string => {
+    try {
+      // Extract filename from URL
+      const urlParts = url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      // Decode any URL encoding
+      return decodeURIComponent(fileName) || 'Archivo';
+    } catch (e) {
+      return 'Archivo';
+    }
+  };
+
+  const renderFilePreview = (fileUrl: string) => {
+    // Check if it's an image by extension
+    const isImage = /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(fileUrl);
+    
+    if (isImage) {
+      return (
+        <div className="flex flex-col items-center">
+          <img 
+            src={fileUrl} 
+            alt="Preview" 
+            className="max-h-60 max-w-full object-contain mb-2"
+            onError={(e) => {
+              // If image fails to load, show file icon instead
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                const icon = document.createElement('div');
+                icon.innerHTML = '<div class="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>';
+                parent.insertBefore(icon, parent.firstChild);
+              }
+            }}
+          />
+          <a 
+            href={fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center text-sm text-blue-600 hover:underline"
+          >
+            <ExternalLink className="h-4 w-4 mr-1" />
+            Ver archivo
+          </a>
+        </div>
+      );
+    } else {
+      // For non-image files, show an icon and the filename
+      return (
+        <div className="flex flex-col items-center">
+          <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-2">
+            <FileIcon className="h-8 w-8 text-gray-500" />
+          </div>
+          <div className="text-sm text-gray-700 mb-2">
+            {getFileNameFromUrl(fileUrl)}
+          </div>
+          <a 
+            href={fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center text-sm text-blue-600 hover:underline"
+          >
+            <ExternalLink className="h-4 w-4 mr-1" />
+            Ver archivo
+          </a>
+        </div>
+      );
+    }
   };
 
   return (
@@ -445,30 +522,37 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
       {field.type === 'image-upload' && (
         <div className="space-y-2">
           <div className="flex items-center justify-center w-full">
-            <label
-              htmlFor={`file-upload-${field.id}`}
-              className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-            >
-              {value ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <img src={value} alt="Preview" className="max-h-60 max-w-full" />
-                </div>
-              ) : (
+            {isExistingFileUrl(value) ? (
+              // Display saved image from URL
+              <div className="w-full h-64 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-gray-50">
+                {renderFilePreview(value)}
+              </div>
+            ) : value ? (
+              // Display preview of locally uploaded image
+              <div className="w-full h-64 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-gray-50">
+                <img src={value} alt="Preview" className="max-h-60 max-w-full" />
+              </div>
+            ) : (
+              // Display upload area
+              <label
+                htmlFor={`file-upload-${field.id}`}
+                className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+              >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <Upload className="w-8 h-8 text-gray-500 mb-2" />
                   <p className="mb-2 text-sm text-gray-500">Haga clic para subir una imagen</p>
                   <p className="text-xs text-gray-500">PNG, JPG, GIF</p>
                 </div>
-              )}
-              <input
-                id={`file-upload-${field.id}`}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-                required={field.required}
-              />
-            </label>
+                <input
+                  id={`file-upload-${field.id}`}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  required={field.required}
+                />
+              </label>
+            )}
           </div>
           
           {value && (
@@ -482,25 +566,41 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
       {field.type === 'file-upload' && (
         <div className="space-y-2">
           <div className="flex items-center justify-center w-full">
-            <label
-              htmlFor={`file-upload-${field.id}`}
-              className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-            >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 text-gray-500 mb-2" />
-                <p className="mb-2 text-sm text-gray-500">
-                  {value ? value.name : "Haga clic para subir un archivo"}
-                </p>
+            {isExistingFileUrl(value) ? (
+              // Display saved file from URL
+              <div className="w-full h-32 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-gray-50">
+                {renderFilePreview(value)}
               </div>
-              <input
-                id={`file-upload-${field.id}`}
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileUpload}
-                required={field.required}
-              />
-            </label>
+            ) : value instanceof File ? (
+              // Display locally uploaded file info
+              <div className="w-full h-32 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-gray-50">
+                <div className="flex flex-col items-center space-y-2">
+                  <FileIcon className="w-10 h-10 text-gray-500" />
+                  <span className="text-sm text-gray-700">{value.name}</span>
+                </div>
+              </div>
+            ) : (
+              // Display upload area
+              <label
+                htmlFor={`file-upload-${field.id}`}
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="w-8 h-8 text-gray-500 mb-2" />
+                  <p className="mb-2 text-sm text-gray-500">
+                    Haga clic para subir un archivo
+                  </p>
+                </div>
+                <input
+                  id={`file-upload-${field.id}`}
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  required={field.required}
+                />
+              </label>
+            )}
           </div>
           
           {value && (
@@ -513,21 +613,35 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
 
       {(field.type === 'drawing' || field.type === 'signature') && (
         <div className="space-y-2">
-          <div className="border rounded-md p-1 bg-white">
-            <canvas
-              ref={canvasRef}
-              width={500}
-              height={200}
-              className="w-full h-40 border cursor-crosshair touch-none"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={endDrawing}
-              onMouseLeave={endDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={endDrawing}
-            />
-          </div>
+          {isExistingFileUrl(value) ? (
+            // Display saved drawing/signature from URL
+            <div className="border rounded-md p-1 bg-white">
+              <div className="w-full h-40 flex items-center justify-center">
+                <img 
+                  src={value} 
+                  alt={field.type === 'signature' ? 'Firma' : 'Dibujo'} 
+                  className="max-h-40 max-w-full"
+                />
+              </div>
+            </div>
+          ) : (
+            // Display canvas for drawing
+            <div className="border rounded-md p-1 bg-white">
+              <canvas
+                ref={canvasRef}
+                width={500}
+                height={200}
+                className="w-full h-40 border cursor-crosshair touch-none"
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={endDrawing}
+                onMouseLeave={endDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={endDrawing}
+              />
+            </div>
+          )}
           <Button variant="outline" onClick={clearCanvas} type="button">
             Borrar {field.type === 'signature' ? 'firma' : 'dibujo'}
           </Button>

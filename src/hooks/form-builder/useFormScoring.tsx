@@ -18,8 +18,14 @@ export function useFormScoring() {
       
       if (response === undefined || response === null) return;
       
+      // Skip file uploads, images, drawings and signatures - they don't contribute to score
+      if (field.type === 'image-upload' || field.type === 'file-upload' || 
+          field.type === 'drawing' || field.type === 'signature') {
+        return;
+      }
+      
       if (field.type === 'checkbox' && Array.isArray(response)) {
-        // Para checkboxes, sumamos los valores numéricos de todas las opciones seleccionadas
+        // For checkboxes, sum numeric values of all selected options
         response.forEach(value => {
           const option = field.options?.find(opt => opt.value === value);
           if (option && option.numericValue !== undefined) {
@@ -28,22 +34,22 @@ export function useFormScoring() {
           }
         });
       } else if (field.type === 'yesno') {
-        // Para campos Sí/No, buscamos la opción correspondiente
+        // For Yes/No fields, find the corresponding option
         const isYes = response === true || response === "true" || response === "yes" || response === "sí";
-        const option = field.options?.[isYes ? 0 : 1]; // Asumimos que Sí es el índice 0 y No es el índice 1
+        const option = field.options?.[isYes ? 0 : 1]; // Assuming Yes is index 0 and No is index 1
         if (option && option.numericValue !== undefined) {
           console.log(`  Adding ${option.numericValue} from yesno option ${option.label}`);
           totalScore += option.numericValue;
         }
       } else if (field.type === 'radio' || field.type === 'select' || field.type === 'image-select') {
-        // Para selecciones únicas y selección de imágenes
+        // For single selections and image selections
         const option = field.options?.find(opt => opt.value === response);
         if (option && option.numericValue !== undefined) {
           console.log(`  Adding ${option.numericValue} from radio/select option ${option.label}`);
           totalScore += option.numericValue;
         }
       } else if (field.type === 'star-rating' || field.type === 'opinion-scale') {
-        // Para calificaciones numéricas directas
+        // For direct numeric ratings
         const numValue = parseInt(response);
         if (!isNaN(numValue)) {
           console.log(`  Adding ${numValue} from rating scale`);
