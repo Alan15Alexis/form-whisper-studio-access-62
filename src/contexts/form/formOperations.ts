@@ -65,6 +65,12 @@ export const createFormOperation = (
       }
     }
     
+    // Explicitly get score ranges from the scoreConfig if available
+    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = formData.scoreConfig.ranges;
+      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
+    }
+    
     // Save form to Supabase database with detailed configuration
     try {
       // Convert fields to ensure score ranges are properly included
@@ -179,6 +185,12 @@ export const updateFormOperation = (
           console.log("Score ranges to update in Supabase:", JSON.stringify(scoreRanges));
         }
       }
+    }
+    
+    // Explicitly get score ranges from the scoreConfig if available
+    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = formData.scoreConfig.ranges;
+      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
     }
     
     // Ensure all fields with numeric values have the score ranges

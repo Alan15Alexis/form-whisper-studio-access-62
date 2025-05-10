@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -287,6 +288,21 @@ export const useFormBuilder = (formId?: string) => {
     setIsSaving(true);
 
     try {
+      // Extract score ranges for explicit storage in configuration
+      let scoreRanges: ScoreRange[] = [];
+      
+      if (formData.showTotalScore && formData.fields) {
+        // Find a field with score ranges to store them
+        const fieldWithRanges = formData.fields.find(field => 
+          field.scoreRanges && field.scoreRanges.length > 0
+        );
+        
+        if (fieldWithRanges?.scoreRanges) {
+          scoreRanges = fieldWithRanges.scoreRanges;
+          console.log("Found score ranges to save in configuration:", JSON.stringify(scoreRanges));
+        }
+      }
+      
       // Log the form data before saving to check score ranges
       console.log("Form data before saving:", {
         showTotalScore: formData.showTotalScore,
@@ -300,10 +316,15 @@ export const useFormBuilder = (formId?: string) => {
         // Create a complete form data object with all required properties
         const completeFormData = {
           ...formData,
-          showTotalScore: formData.showTotalScore === true // Make sure it's a boolean
+          showTotalScore: formData.showTotalScore === true, // Make sure it's a boolean
+          scoreConfig: {
+            enabled: formData.showTotalScore === true,
+            ranges: scoreRanges
+          }
         };
         
         console.log("Updating form with showTotalScore:", completeFormData.showTotalScore);
+        console.log("Updating form with scoreConfig:", completeFormData.scoreConfig);
         
         await updateForm(formId, completeFormData);
         
@@ -314,7 +335,16 @@ export const useFormBuilder = (formId?: string) => {
           });
         }
       } else {
-        const newForm = await createForm(formData);
+        // For new forms, add the score configuration
+        const newFormData = {
+          ...formData,
+          scoreConfig: {
+            enabled: formData.showTotalScore === true,
+            ranges: scoreRanges
+          }
+        };
+        
+        const newForm = await createForm(newFormData);
         toast({
           title: 'Form created',
           description: 'Your form has been created successfully',

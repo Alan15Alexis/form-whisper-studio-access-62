@@ -87,6 +87,11 @@ export interface HttpConfig {
   };
 }
 
+export interface ScoreConfig {
+  enabled: boolean;
+  ranges: ScoreRange[];
+}
+
 export interface Form {
   id: string;
   title: string;
@@ -100,6 +105,7 @@ export interface Form {
   ownerId: string;
   showTotalScore?: boolean;
   enableScoring?: boolean; // Adding the missing property
+  scoreConfig?: ScoreConfig; // Added specific score configuration
   welcomeMessage?: {
     text: string;
     imageUrl?: string;
