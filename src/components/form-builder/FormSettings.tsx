@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
 const FORM_COLORS = [
@@ -211,11 +212,14 @@ const FormSettings = ({
       // Get current configuration or create new one
       const currentConfig = existingForm.configuracion || {};
       
+      // FIXED: Create a deep copy of the ranges array to avoid reference issues
+      const rangesCopy = JSON.parse(JSON.stringify(ranges));
+      
       // Update scoring configuration - IMPORTANT: Set exact values for both flags
       const updatedConfig = {
         ...currentConfig,
         showTotalScore: isScoringEnabled === true, // Ensure boolean value
-        scoreRanges: ranges,
+        scoreRanges: rangesCopy, // Use the deep copied array
         // Add additional fields to preserve existing configuration
         isPrivate: currentConfig.isPrivate || false,
         formColor: currentConfig.formColor || '#3b82f6',
@@ -229,6 +233,7 @@ const FormSettings = ({
       // Get current fields and remove scoreRanges from them
       const currentFields = existingForm.preguntas || [];
       const fieldsWithoutRanges = currentFields.map(field => {
+        // Use destructuring with rest operator to exclude scoreRanges
         const { scoreRanges, ...fieldWithoutRanges } = field;
         return fieldWithoutRanges;
       });
@@ -283,7 +288,10 @@ const FormSettings = ({
     console.log("Got form title for saving ranges:", formTitle);
       
     if (formTitle) {
-      const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRanges);
+      // FIXED: Create a deep copy of the scoreRanges to avoid any reference issues
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+      const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
+      
       if (saved) {
         // Update the flags
         setHasUnsavedRanges(false);
@@ -296,7 +304,9 @@ const FormSettings = ({
     }
     
     // Also call the parent handler to update globally
-    onSaveScoreRanges(scoreRanges);
+    // FIXED: Pass a deep copy of the score ranges
+    const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+    onSaveScoreRanges(scoreRangesCopy);
     
     // Update the flags
     setHasUnsavedRanges(false);
@@ -334,8 +344,9 @@ const FormSettings = ({
     
     // Update Supabase directly with the toggle state
     if (formTitle) {
-      // We need to save the toggle state immediately
-      await directlySaveScoreRangesToSupabase(formTitle, scoreRanges);
+      // FIXED: Create a deep copy of the scoreRanges to avoid any reference issues
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+      await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
     }
     
     // If enabling scoring and we have ranges, save them immediately
