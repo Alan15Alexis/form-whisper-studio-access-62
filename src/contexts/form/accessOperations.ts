@@ -103,12 +103,13 @@ export const removeAllowedUserOperation = (
   };
 };
 
+// Fix: Updated to accept either a user with email only or a user with both id and email
 export const isUserAllowedOperation = (
   forms: Form[],
   allowedUsers: Record<string, string[]>,
-  currentUser: { id: string, email: string } | null | undefined
+  currentUser: { id?: string, email: string } | null | undefined
 ) => {
-  return (formId: string, email: string): boolean => {
+  return (formId: string): boolean => {
     const form = forms.find(form => form.id === formId);
     
     // If form doesn't exist or is not private, user is not allowed
@@ -118,10 +119,10 @@ export const isUserAllowedOperation = (
     if (!form.isPrivate) return true;
     
     // If user is the owner, they are allowed
-    if (currentUser?.id === form.ownerId) return true;
+    if (currentUser?.id && currentUser.id === form.ownerId) return true;
     
     // Otherwise, check if they're in the allowed users list
-    return (allowedUsers[formId] || []).includes(email);
+    return currentUser?.email ? (allowedUsers[formId] || []).includes(currentUser.email) : false;
   };
 };
 
