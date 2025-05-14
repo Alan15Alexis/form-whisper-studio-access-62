@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -186,14 +185,14 @@ const FormSettings = ({
     });
   };
 
-  // Save score ranges directly to Supabase
+  // Save score ranges directly to Supabase - updated to separate fields from config
   const directlySaveScoreRangesToSupabase = async (formTitle: string, ranges: ScoreRange[]) => {
     try {
       // First check if the form exists in Supabase by title
       console.log("Checking for form in Supabase:", formTitle);
       const { data: existingForm, error: queryError } = await supabase
         .from('formulario_construccion')
-        .select('id, configuracion, titulo')
+        .select('id, configuracion, preguntas, titulo')
         .eq('titulo', formTitle)
         .maybeSingle();
       
@@ -227,11 +226,21 @@ const FormSettings = ({
       
       console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
       
-      // Update the configuration column
+      // Get current fields and remove scoreRanges from them
+      const currentFields = existingForm.preguntas || [];
+      const fieldsWithoutRanges = currentFields.map(field => {
+        const { scoreRanges, ...fieldWithoutRanges } = field;
+        return fieldWithoutRanges;
+      });
+      
+      console.log("Fields without score ranges:", JSON.stringify(fieldsWithoutRanges));
+      
+      // Update both the configuration and questions columns
       const { error: updateError } = await supabase
         .from('formulario_construccion')
         .update({
-          configuracion: updatedConfig
+          configuracion: updatedConfig,
+          preguntas: fieldsWithoutRanges // Update fields without score ranges
         })
         .eq('id', existingForm.id);
         

@@ -16,6 +16,17 @@ export function ensureScoreRangesInAllFields(fields: FormField[], scoreRanges: S
   });
 }
 
+// Helper function to remove score ranges from fields before saving to database
+function removeScoreRangesFromFields(fields: FormField[]) {
+  if (!fields) return [];
+  
+  return fields.map(field => {
+    // Create a new object without the scoreRanges property
+    const { scoreRanges, ...fieldWithoutRanges } = field;
+    return fieldWithoutRanges;
+  });
+}
+
 export const createFormOperation = (
   forms: Form[], 
   setForms: React.Dispatch<React.SetStateAction<Form[]>>,
@@ -102,12 +113,16 @@ export const createFormOperation = (
       };
       
       console.log("Saving configuration to Supabase:", JSON.stringify(configObject));
+      
+      // Remove scoreRanges from fields before saving to database
+      const fieldsForDatabase = removeScoreRangesFromFields(newForm.fields);
+      console.log("Fields for database (without scoreRanges):", JSON.stringify(fieldsForDatabase));
 
       const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
         descripcion: newForm.description,
-        preguntas: newForm.fields,
-        configuracion: configObject,
+        preguntas: fieldsForDatabase, // Save fields WITHOUT scoreRanges
+        configuracion: configObject, // Save configuration WITH scoreRanges
         administrador: currentUserEmail || 'unknown@email.com',
         acceso: newForm.allowedUsers
       }).select();
@@ -231,6 +246,10 @@ export const updateFormOperation = (
     console.log("Form has showTotalScore:", updatedForm.showTotalScore);
     console.log("Form has scoreRanges:", JSON.stringify(scoreRanges));
     
+    // Remove scoreRanges from fields before saving to database
+    const fieldsForDatabase = removeScoreRangesFromFields(updatedForm.fields);
+    console.log("Fields for database (without scoreRanges):", JSON.stringify(fieldsForDatabase));
+    
     // Update the form in Supabase
     try {
       // First check if the form exists in Supabase by title
@@ -247,8 +266,8 @@ export const updateFormOperation = (
           .update({
             titulo: updatedForm.title,
             descripcion: updatedForm.description,
-            preguntas: updatedForm.fields,
-            configuracion: configObject,
+            preguntas: fieldsForDatabase, // Save fields WITHOUT scoreRanges
+            configuracion: configObject, // Save configuration WITH scoreRanges
             acceso: updatedForm.allowedUsers
           })
           .eq('id', existingForm.id);
@@ -267,8 +286,8 @@ export const updateFormOperation = (
           .insert({
             titulo: updatedForm.title,
             descripcion: updatedForm.description,
-            preguntas: updatedForm.fields,
-            configuracion: configObject,
+            preguntas: fieldsForDatabase, // Save fields WITHOUT scoreRanges
+            configuracion: configObject, // Save configuration WITH scoreRanges
             administrador: updatedForm.ownerId,
             acceso: updatedForm.allowedUsers
           });
