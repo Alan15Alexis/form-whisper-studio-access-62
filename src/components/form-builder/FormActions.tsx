@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 interface FormActionsProps {
   isSaving: boolean;

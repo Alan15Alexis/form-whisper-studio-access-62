@@ -1,5 +1,5 @@
 
-import { useToast, toast } from "@/hooks/use-toast";
-import { ToastProvider } from "@/components/ui/toast";
+// Re-export toast functionality from the hooks directory
+import { useToast, toast, ToastProvider, Toaster } from "@/hooks/use-toast";
 
-export { useToast, toast, ToastProvider };
+export { useToast, toast, ToastProvider, Toaster };
