@@ -32,18 +32,19 @@ const FormBuilder = () => {
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
     handleHttpConfigChange,
-    scoreRanges, // Get scoreRanges from the hook
-    isScoringEnabled // Get the scoring enabled state from the hook
+    scoreRanges, 
+    isScoringEnabled 
   } = useFormBuilder(id);
 
   // Log the form data for debugging
   console.log("FormBuilder - Current form data:", {
+    id: id,
     showTotalScore: formData.showTotalScore,
     scoreConfig: formData.scoreConfig,
     scoreRanges: formData.scoreRanges,
     fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
-    externalScoreRanges: scoreRanges, // Log the scoreRanges from the hook
-    isScoringEnabled: isScoringEnabled // Log the scoring enabled state
+    externalScoreRanges: scoreRanges,
+    isScoringEnabled: isScoringEnabled
   });
 
   return (
@@ -78,8 +79,8 @@ const FormBuilder = () => {
             formId={id}
             allowedUserName={allowedUserName}
             setAllowedUserName={setAllowedUserName}
-            externalScoreRanges={scoreRanges} // Pass scoreRanges to the tabs
-            isScoringEnabled={isScoringEnabled} // Pass the scoring enabled state
+            externalScoreRanges={scoreRanges}
+            isScoringEnabled={isScoringEnabled}
           />
         </DragDropContext>
       </div>

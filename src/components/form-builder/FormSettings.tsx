@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
 const FORM_COLORS = [
@@ -145,8 +146,8 @@ const FormSettings = ({
       
       toast({
         title: "Rango añadido",
-        description: `Se añadió un nuevo rango de puntuación: 0-10`,
-        variant: 'default',
+        description: "Se añadió un nuevo rango de puntuación: 0-10",
+        variant: "default",
       });
       return;
     }
@@ -168,7 +169,7 @@ const FormSettings = ({
     toast({
       title: "Rango añadido",
       description: `Se añadió un nuevo rango de puntuación: ${newMin}-${newMax}`,
-      variant: 'default',
+      variant: "default",
     });
   };
 
@@ -202,7 +203,7 @@ const FormSettings = ({
     toast({
       title: "Rango eliminado",
       description: "El rango de puntuación ha sido eliminado",
-      variant: 'default',
+      variant: "default",
     });
   };
 
@@ -296,7 +297,7 @@ const FormSettings = ({
       toast({
         title: "Error",
         description: "No hay rangos de puntuación para guardar",
-        variant: 'destructive',
+        variant: "destructive",
       });
       return;
     }
@@ -305,25 +306,46 @@ const FormSettings = ({
     console.log("- isScoringEnabled:", isScoringEnabled);
     console.log("- Ranges to save:", JSON.stringify(scoreRanges));
     
-    // Get current form title
-    let formTitle = '';
-    try {
-      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
-      if (titleInput) {
-        formTitle = titleInput.value;
-      } else {
-        const h1Element = document.querySelector('h1.text-3xl');
-        if (h1Element) {
-          formTitle = h1Element.textContent || '';
-        }
-      }
-    } catch (error) {
-      console.error("Error getting form title:", error);
+    // Get current form title from formId instead of DOM elements
+    if (!formId) {
+      toast({
+        title: "Error",
+        description: "No se encontró un ID de formulario",
+        variant: "destructive",
+      });
+      return;
     }
 
-    console.log("Got form title for saving ranges:", formTitle);
+    try {
+      // First try to get the form by ID
+      const { data: formData, error } = await supabase
+        .from('formulario_construccion')
+        .select('titulo')
+        .eq('id', formId)
+        .maybeSingle();
+
+      if (error || !formData) {
+        console.error("Error fetching form:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo obtener la información del formulario",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formTitle = formData.titulo;
+      console.log("Got form title for saving ranges:", formTitle);
       
-    if (formTitle) {
+      if (!formTitle) {
+        toast({
+          title: "Error",
+          description: "El formulario no tiene título",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Create a deep copy of the scoreRanges
       const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
       console.log("DIRECT ACTION - Saving score ranges directly to Supabase");
@@ -335,21 +357,22 @@ const FormSettings = ({
         toast({
           title: "Rangos guardados",
           description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
-          variant: 'default',
+          variant: "default",
         });
       } else {
         toast({
           title: "Error",
           description: "No se pudieron guardar los rangos de puntuación",
-          variant: 'destructive',
+          variant: "destructive",
         });
         return; // Stop if direct save failed
       }
-    } else {
+    } catch (error) {
+      console.error("Error saving score ranges:", error);
       toast({
         title: "Error",
-        description: "No se pudo determinar el título del formulario",
-        variant: 'destructive',
+        description: "Ocurrió un error al guardar los rangos de puntuación",
+        variant: "destructive",
       });
       return;
     }
@@ -377,45 +400,59 @@ const FormSettings = ({
       addScoreRange();
     }
     
-    // Get current form title
-    let formTitle = '';
-    try {
-      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
-      if (titleInput) {
-        formTitle = titleInput.value;
-      } else {
-        const h1Element = document.querySelector('h1.text-3xl');
-        if (h1Element) {
-          formTitle = h1Element.textContent || '';
-        }
-      }
-    } catch (error) {
-      console.error("Error getting form title:", error);
+    // If we don't have a formId, we can't save directly to Supabase
+    if (!formId) {
+      console.error("No formId provided, cannot save directly to Supabase");
+      return;
     }
-    
-    // Save to Supabase immediately
-    if (formTitle) {
+
+    try {
+      // Get form title from formId
+      const { data: formData, error } = await supabase
+        .from('formulario_construccion')
+        .select('titulo')
+        .eq('id', formId)
+        .maybeSingle();
+
+      if (error || !formData) {
+        console.error("Error fetching form:", error);
+        return;
+      }
+
+      const formTitle = formData.titulo;
+      
+      if (!formTitle) {
+        console.error("Form has no title");
+        return;
+      }
+      
+      console.log("Got form title for toggle:", formTitle);
+      
       // Deep clone to avoid reference issues
       const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
       console.log("DIRECT ACTION - Saving toggle state directly to Supabase");
+      
       const success = await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
       
       if (!success) {
         toast({
           title: "Error",
           description: "No se pudo guardar la configuración de puntuación",
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
-    }
-    
-    // If enabling scoring and we have ranges, save them immediately
-    if (enabled && scoreRanges.length > 0) {
-      // Use setTimeout to ensure state is updated before saving
-      setTimeout(() => {
-        console.log("Auto-saving score ranges after enabling scoring");
-        saveScoreRanges();
-      }, 100);
+      
+      // If enabling scoring and we have ranges, save them immediately
+      if (enabled && scoreRanges.length > 0) {
+        // Use setTimeout to ensure state is updated before saving
+        setTimeout(() => {
+          console.log("Auto-saving score ranges after enabling scoring");
+          saveScoreRanges();
+        }, 100);
+      }
+      
+    } catch (error) {
+      console.error("Error saving toggle state:", error);
     }
   };
 
