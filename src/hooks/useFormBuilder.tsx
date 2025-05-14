@@ -18,7 +18,23 @@ export const useFormBuilder = (id?: string) => {
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<Partial<Form>>({});
+  const [formData, setFormData] = useState<Form>({
+    id: '',
+    title: '',
+    description: '',
+    fields: [],
+    isPrivate: false,
+    allowedUsers: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    accessLink: '',
+    ownerId: '',
+    formColor: '#3b82f6',
+    allowViewOwnResponses: false,
+    allowEditOwnResponses: false,
+    showTotalScore: false,
+    scoreRanges: []
+  });
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
   const [scoreRanges, setScoreRanges] = useState<any[]>([]);
@@ -47,11 +63,21 @@ export const useFormBuilder = (id?: string) => {
     } else {
       // Initialize empty form data for new form
       setFormData({
+        id: '',
         title: '',
         description: '',
         fields: [],
         isPrivate: false,
         allowedUsers: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        accessLink: '',
+        ownerId: '',
+        formColor: '#3b82f6',
+        allowViewOwnResponses: false,
+        allowEditOwnResponses: false,
+        showTotalScore: false,
+        scoreRanges: []
       });
       setIsLoading(false);
     }

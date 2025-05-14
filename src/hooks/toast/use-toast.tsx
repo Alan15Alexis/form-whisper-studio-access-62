@@ -3,14 +3,7 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 
 import { toastStore, useToastStore } from "./toast-store";
-import { type ToastProps, type Toast, type ToastActionElement } from "./types";
-
-// Custom implementation that doesn't rely on ToastActionElement from radix-ui
-// Define ToastActionElement type locally if needed
-type CustomToastActionElement = React.ReactElement<{
-  altText: string;
-  onClick: () => void;
-}>;
+import { type ToastProps, type Toast, type ToastActionElementType } from "./types";
 
 const TOAST_REMOVE_DELAY = 1000000;
 
