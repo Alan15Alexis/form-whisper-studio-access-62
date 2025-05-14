@@ -1,80 +1,94 @@
 
-import { FormField, Form } from "@/types/form";
-import FormFieldEditor from "@/components/FormFieldEditor";
-import { Droppable, Draggable } from "react-beautiful-dnd";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { Form, FormField as FormFieldType } from "@/types/form";
+import { Button } from "@/components/ui/button";
+import FieldConfigDrawer from "./FieldConfigDrawer";
+import { Draggable, Droppable } from "react-beautiful-dnd";
+import FormField from "@/components/form-view/FormField";
 
 interface FormFieldsListProps {
   formData: Partial<Form>;
-  updateField: (id: string, updatedField: FormField) => void;
+  updateField: (id: string, field: FormFieldType) => void;
   removeField: (id: string) => void;
-  onToggleFormScoring?: (enabled: boolean) => void;
-  formShowTotalScore?: boolean;
 }
 
 const FormFieldsList = ({ 
   formData, 
   updateField, 
   removeField,
-  onToggleFormScoring,
-  formShowTotalScore
 }: FormFieldsListProps) => {
-  console.log("FormFieldsList - formShowTotalScore:", formShowTotalScore);
-  
+  const [openConfig, setOpenConfig] = React.useState<string | null>(null);
+
+  const handleOpenConfig = (fieldId: string) => {
+    setOpenConfig(fieldId);
+  };
+
+  const handleCloseConfig = () => {
+    setOpenConfig(null);
+  };
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Campos del Formulario</h3>
+    <div className="space-y-6">
+      <h2 className="text-lg font-medium">Campos del formulario</h2>
       
-      <Droppable droppableId="FORM_FIELDS">
-        {(provided, snapshot) => (
+      <Droppable droppableId="form-fields">
+        {(provided) => (
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className={cn(
-              "space-y-4 min-h-[200px] p-4 rounded-lg",
-              snapshot.isDraggingOver && "bg-primary/5"
-            )}
+            className="space-y-4"
           >
             {formData.fields && formData.fields.length > 0 ? (
               formData.fields.map((field, index) => (
                 <Draggable key={field.id} draggableId={field.id} index={index}>
-                  {(provided, snapshot) => (
+                  {(provided) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
+                      className="border rounded-md p-4 bg-white relative group"
                     >
-                      <FormFieldEditor
+                      <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleOpenConfig(field.id)}
+                          className="text-xs h-7 px-2"
+                        >
+                          ⚙️ Configurar
+                        </Button>
+                      </div>
+                      
+                      <FormField
                         field={field}
-                        onChange={(updatedField) => updateField(field.id, updatedField)}
-                        onDelete={() => removeField(field.id)}
-                        isDragging={snapshot.isDragging}
-                        formShowTotalScore={formShowTotalScore}
-                        onToggleFormScoring={onToggleFormScoring}
+                        formValues={{}}
+                        onChange={() => {}}
+                        errors={{}}
+                        isPreview
+                      />
+                      
+                      {/* Field configuration drawer */}
+                      <FieldConfigDrawer
+                        isOpen={openConfig === field.id}
+                        onClose={handleCloseConfig}
+                        field={field}
+                        updateField={(updatedField) => updateField(field.id, updatedField)}
+                        removeField={() => removeField(field.id)}
                       />
                     </div>
                   )}
                 </Draggable>
               ))
             ) : (
-              <div className="text-center py-8 border rounded-lg border-dashed">
-                <p className="text-gray-500">Arrastra campos desde la barra lateral para comenzar</p>
+              <div className="p-8 border border-dashed rounded-md text-center">
+                <p className="text-gray-500">No hay campos añadidos aún. Agrega campos desde el panel derecho.</p>
               </div>
             )}
             {provided.placeholder}
           </div>
         )}
       </Droppable>
-      
-      {formShowTotalScore && formData.fields && formData.fields.some(f => f.hasNumericValues) && (
-        <div className="mt-4 p-4 border rounded-lg bg-secondary/10">
-          <h3 className="font-medium">Puntuación Total</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Este formulario mostrará la puntuación total y los mensajes personalizados 
-            según las respuestas seleccionadas.
-          </p>
-        </div>
-      )}
     </div>
   );
 };
