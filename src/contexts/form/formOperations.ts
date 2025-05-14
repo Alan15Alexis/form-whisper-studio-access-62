@@ -9,7 +9,7 @@ export function ensureScoreRangesInAllFields(fields: FormField[], scoreRanges: S
   
   return fields.map(field => {
     if (field.hasNumericValues) {
-      // FIXED: Create a deep copy of scoreRanges to avoid reference issues
+      // Create a deep copy of scoreRanges to avoid reference issues
       return { ...field, scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) };
     }
     return field;
@@ -47,11 +47,11 @@ export const createFormOperation = (
     
     // Get score ranges from the most reliable source
     if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      // FIXED: Create a deep copy of scoreConfig.ranges to avoid reference issues
+      // Create a deep copy of scoreConfig.ranges to avoid reference issues
       scoreRanges = JSON.parse(JSON.stringify(formData.scoreConfig.ranges));
       console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
     } else if (formData.scoreRanges && formData.scoreRanges.length > 0) {
-      // FIXED: Create a deep copy of scoreRanges to avoid reference issues
+      // Create a deep copy of scoreRanges to avoid reference issues
       scoreRanges = JSON.parse(JSON.stringify(formData.scoreRanges));
       console.log("Using score ranges from direct scoreRanges:", JSON.stringify(scoreRanges));
     } else if (formData.fields) {
@@ -61,7 +61,7 @@ export const createFormOperation = (
       );
       
       if (fieldWithRanges?.scoreRanges) {
-        // FIXED: Create a deep copy of fieldWithRanges.scoreRanges to avoid reference issues
+        // Create a deep copy of fieldWithRanges.scoreRanges to avoid reference issues
         scoreRanges = JSON.parse(JSON.stringify(fieldWithRanges.scoreRanges));
         console.log("Using score ranges from fields:", JSON.stringify(scoreRanges));
       }
@@ -176,11 +176,11 @@ export const updateFormOperation = (
     
     // Get score ranges from the most reliable source
     if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      // FIXED: Create a deep copy of scoreConfig.ranges to avoid reference issues
+      // Create a deep copy of scoreConfig.ranges to avoid reference issues
       scoreRanges = JSON.parse(JSON.stringify(formData.scoreConfig.ranges));
       console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
     } else if (formData.scoreRanges && formData.scoreRanges.length > 0) {
-      // FIXED: Create a deep copy of scoreRanges to avoid reference issues
+      // Create a deep copy of scoreRanges to avoid reference issues
       scoreRanges = JSON.parse(JSON.stringify(formData.scoreRanges));
       console.log("Using score ranges from direct scoreRanges:", JSON.stringify(scoreRanges));
     } else if (formData.fields) {
@@ -190,7 +190,7 @@ export const updateFormOperation = (
       );
       
       if (fieldWithRanges?.scoreRanges) {
-        // FIXED: Create a deep copy of fieldWithRanges.scoreRanges to avoid reference issues
+        // Create a deep copy of fieldWithRanges.scoreRanges to avoid reference issues
         scoreRanges = JSON.parse(JSON.stringify(fieldWithRanges.scoreRanges));
         console.log("Using score ranges from fields:", JSON.stringify(scoreRanges));
       }
