@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -136,7 +137,7 @@ const FormResponses = () => {
     
     const allKeys = new Set<string>();
     responses.forEach(response => {
-      Object.keys(response.responses).forEach(key => {
+      Object.keys(response.data).forEach(key => {
         allKeys.add(key);
       });
     });
@@ -155,7 +156,7 @@ const FormResponses = () => {
       ];
       
       allKeys.forEach(key => {
-        const value = response.responses[key];
+        const value = response.data[key];
         if (Array.isArray(value)) {
           row.push(value.join(', '));
         } else {
@@ -316,7 +317,7 @@ const FormResponses = () => {
                             <TableCell>{response.submittedBy || 'Anonymous'}</TableCell>
                             {form?.fields.map((field) => (
                               <TableCell key={field.id}>
-                                {formatResponseValue(response.responses[field.id], field)}
+                                {formatResponseValue(response.data[field.id], field)}
                               </TableCell>
                             ))}
                           </TableRow>
@@ -350,7 +351,7 @@ const FormResponses = () => {
                               {field.label}
                             </div>
                             <div className="w-full sm:w-2/3">
-                              {formatResponseValue(response.responses[field.id], field)}
+                              {formatResponseValue(response.data[field.id], field)}
                             </div>
                           </div>
                         ))}

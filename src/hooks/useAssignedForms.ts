@@ -4,7 +4,7 @@ import { Form } from '@/types/form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from '@/contexts/form';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/toast';
 import { v4 as uuidv4 } from 'uuid';
 
 export const useAssignedForms = () => {

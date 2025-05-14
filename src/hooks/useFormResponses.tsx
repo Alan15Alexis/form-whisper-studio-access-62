@@ -4,7 +4,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { Form as FormType } from "@/types/form";
 
 /**
@@ -19,8 +19,6 @@ export function useFormResponses(form: FormType | null) {
   const navigate = useNavigate();
   
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
-  const [questionScores, setQuestionScores] = useState<Record<string, number>>({});
-  const [totalScore, setTotalScore] = useState<number | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -157,15 +155,6 @@ export function useFormResponses(form: FormType | null) {
       const result = await submitFormResponse(id, formResponses, form);
       console.log("Form submission result:", result);
       
-      // Store scores for use in the success screen
-      if (result.questionScores) {
-        setQuestionScores(result.questionScores);
-      }
-      
-      if (result.totalScore !== undefined) {
-        setTotalScore(result.totalScore);
-      }
-      
       toast({
         title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
         description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
@@ -207,8 +196,6 @@ export function useFormResponses(form: FormType | null) {
   
   return {
     formResponses,
-    questionScores,
-    totalScore,
     isSubmitting,
     isSubmitSuccess,
     currentQuestionIndex,

@@ -23,8 +23,6 @@ const FormView = () => {
   const { form, accessValidated, validationLoading, setAccessValidated } = useFormValidation();
   const { 
     formResponses, 
-    questionScores,
-    totalScore,
     isSubmitting, 
     isSubmitSuccess, 
     currentQuestionIndex, 
@@ -89,17 +87,12 @@ const FormView = () => {
   if (isSubmitSuccess) {
     console.log("Showing success page with score:", form.showTotalScore);
     console.log("Form scoring enabled:", form.enableScoring);
-    console.log("Question scores:", questionScores);
-    console.log("Total score:", totalScore);
-    
     return (
       <Layout hideNav>
         <FormSuccess 
           formValues={formResponses} 
           fields={form.fields}
           showTotalScore={form.showTotalScore || form.enableScoring}
-          questionScores={questionScores}
-          totalScore={totalScore}
         />
       </Layout>
     );

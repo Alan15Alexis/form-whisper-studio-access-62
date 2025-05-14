@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { HelpCircle, UserPlus, Mail, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { fetchInvitedUsers, addInvitedUser, removeInvitedUser, checkInvitedUserExists } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/toast";
 
 interface InvitedUsersManagerProps {
   formId: string;

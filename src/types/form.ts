@@ -120,11 +120,10 @@ export interface Form {
 export interface FormResponse {
   id: string;
   formId: string;
-  responses: Record<string, any>;
   submittedBy?: string;
   submittedAt: string;
-  questionScores?: Record<string, number>; // Add field for individual question scores
-  totalScore?: number; // Add field for total score
+  data: Record<string, any>;
+  formattedData?: Record<string, any>;
 }
 
 export interface User {
