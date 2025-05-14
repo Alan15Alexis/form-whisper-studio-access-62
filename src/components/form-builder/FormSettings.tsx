@@ -41,6 +41,7 @@ interface FormSettingsProps {
   onToggleFormScoring?: (enabled: boolean) => void;
   onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
   externalScoreRanges?: ScoreRange[];
+  isScoringEnabled?: boolean; // Added this prop to receive scoring state
 }
 
 const FormSettings = ({
@@ -59,7 +60,8 @@ const FormSettings = ({
   showTotalScore = false,
   onToggleFormScoring = () => {},
   onSaveScoreRanges = () => {},
-  externalScoreRanges = []
+  externalScoreRanges = [],
+  isScoringEnabled = false // Default to false if not provided
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -79,8 +81,6 @@ const FormSettings = ({
   // Initialize score ranges from props or existing fields
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
   
-  // Track when the scoring toggle changes locally
-  const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(!!showTotalScore);
   // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
   // Track if there are unsaved scoring toggle changes
@@ -88,11 +88,13 @@ const FormSettings = ({
 
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
   console.log("FormSettings - external score ranges:", externalScoreRanges);
+  console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
   
   // Init state from props or fields
   useEffect(() => {
     console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
     console.log("Current showTotalScore value:", showTotalScore);
+    console.log("Current isScoringEnabled value:", isScoringEnabled);
     
     // First priority: use externally provided score ranges if available
     if (externalScoreRanges && externalScoreRanges.length > 0) {
@@ -101,7 +103,7 @@ const FormSettings = ({
     }
     
     // Second priority: look for ranges in fields if scoring is enabled
-    if (showTotalScore && formFields && formFields.length > 0) {
+    if ((showTotalScore || isScoringEnabled) && formFields && formFields.length > 0) {
       const fieldWithRanges = formFields.find(field => 
         field.scoreRanges && field.scoreRanges.length > 0
       );
@@ -114,18 +116,17 @@ const FormSettings = ({
     }
     
     // If no ranges found and we're toggling on scoring, create a default range
-    if (showTotalScore && scoreRanges.length === 0) {
+    if ((showTotalScore || isScoringEnabled) && scoreRanges.length === 0) {
       console.log("Creating default score range");
       setScoreRanges([{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }]);
     }
-  }, [externalScoreRanges, formFields, showTotalScore]);
+  }, [externalScoreRanges, formFields, showTotalScore, isScoringEnabled]);
   
   // Better sync local state with props
   useEffect(() => {
-    console.log("showTotalScore prop changed to:", showTotalScore);
-    setIsScoringEnabled(!!showTotalScore);
-    setHasUnsavedToggle(false); // Reset when props change
-  }, [showTotalScore]);
+    // Reset unsaved changes flag when props change
+    setHasUnsavedToggle(false);
+  }, [showTotalScore, isScoringEnabled]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -192,21 +193,8 @@ const FormSettings = ({
     console.log("Saving score ranges with toggle state:", isScoringEnabled);
     console.log("Ranges to save:", scoreRanges);
     
-    // Apply the toggle change first if it's unsaved
-    if (hasUnsavedToggle) {
-      console.log("Applying toggle change to:", isScoringEnabled);
-      onToggleFormScoring(isScoringEnabled);
-      setHasUnsavedToggle(false);
-    }
-    
     // Only if scoring is enabled, save the ranges too
-    if (isScoringEnabled) {
-      onSaveScoreRanges(scoreRanges);
-    } else {
-      // If scoring is disabled, we still need to save the toggle state
-      console.log("Scoring disabled, applying toggle change to false");
-      onToggleFormScoring(false);
-    }
+    onSaveScoreRanges(scoreRanges);
     
     // Update the flags
     setHasUnsavedRanges(false);
@@ -220,12 +208,15 @@ const FormSettings = ({
   // Handle toggle of scoring feature
   const handleToggleScoringFeature = (enabled: boolean) => {
     console.log("Toggle scoring feature called with:", enabled);
-    setIsScoringEnabled(enabled);
-    setHasUnsavedToggle(true);
     
-    // Only add a range if enabling and no ranges exist yet
+    // If toggling on and no ranges exist yet, add a default range
     if (enabled && scoreRanges.length === 0) {
       addScoreRange();
+    }
+    
+    // Call the parent handler to update globally
+    if (onToggleFormScoring) {
+      onToggleFormScoring(enabled);
     }
   };
 
@@ -286,7 +277,7 @@ const FormSettings = ({
           <div className="flex items-center space-x-4">
             <Switch
               id="show-total-score"
-              checked={isScoringEnabled}
+              checked={isScoringEnabled} 
               onCheckedChange={handleToggleScoringFeature}
               disabled={!hasFieldsWithNumericValues}
               className="data-[state=checked]:bg-[#686df3]"
@@ -301,16 +292,6 @@ const FormSettings = ({
             </div>
           </div>
 
-          {/* Unsaved changes alert for toggle */}
-          {hasUnsavedToggle && (
-            <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Tienes cambios sin guardar en la configuración de puntuación. Haz clic en "Guardar cambios" para aplicar los cambios.
-              </AlertDescription>
-            </Alert>
-          )}
-          
           {!hasFieldsWithNumericValues && (
             <div className="p-4 bg-primary/5 rounded-md text-sm">
               <p className="font-medium">Para habilitar la puntuación total:</p>
@@ -340,7 +321,7 @@ const FormSettings = ({
                   </Button>
                   <Button 
                     type="button"
-                    variant={hasUnsavedRanges || hasUnsavedToggle ? "default" : "outline"}
+                    variant={hasUnsavedRanges ? "default" : "outline"}
                     size="sm"
                     onClick={saveScoreRanges}
                     className="flex items-center gap-1"
@@ -424,7 +405,7 @@ const FormSettings = ({
                 )}
               </div>
               
-              {(hasUnsavedRanges || hasUnsavedToggle) && (
+              {hasUnsavedRanges && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
                   ¡Tienes cambios sin guardar! Haz clic en "Guardar cambios" para aplicar la configuración de puntuación.
                 </div>

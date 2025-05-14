@@ -33,6 +33,8 @@ export const useFormBuilder = (formId?: string) => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   // Store score ranges separately to ensure they're preserved even when toggling scoring
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
+  // Add state to track scoring being enabled
+  const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(false);
 
   // Add new field function
   const addField = (fieldType: string) => {
@@ -68,6 +70,9 @@ export const useFormBuilder = (formId?: string) => {
         setFormData(form);
         console.log("Loaded form data:", form);
         console.log("Form has showTotalScore:", form.showTotalScore);
+        
+        // Update our local state for scoring enabled
+        setIsScoringEnabled(!!form.showTotalScore);
         
         // Extract score ranges from the form's scoreConfig
         if (form.scoreConfig && form.scoreConfig.ranges && form.scoreConfig.ranges.length > 0) {
@@ -109,6 +114,8 @@ export const useFormBuilder = (formId?: string) => {
   // Toggle form scoring function - only updates state locally, doesn't save immediately
   const handleToggleFormScoring = (enabled: boolean) => {
     console.log("Toggle form scoring called with:", enabled);
+    // Update local tracking state
+    setIsScoringEnabled(enabled);
     
     setFormData(prev => {
       // Create a copy of fields to update
@@ -156,10 +163,10 @@ export const useFormBuilder = (formId?: string) => {
       // First ensure showTotalScore is set to true
       const updatedFormData = { 
         ...prev, 
-        showTotalScore: true,
+        showTotalScore: isScoringEnabled, // Use our tracked state instead of hardcoded true
         // Update scoreConfig to ensure it's saved to the database
         scoreConfig: {
-          enabled: true,
+          enabled: isScoringEnabled, // Use our tracked state instead of hardcoded true
           ranges: [...newScoreRanges]
         },
         // Also set the direct scoreRanges property
@@ -168,7 +175,7 @@ export const useFormBuilder = (formId?: string) => {
       
       // Then update fields with numeric values
       const updatedFields = prev.fields?.map(field => {
-        if (field.hasNumericValues) {
+        if (field.hasNumericValues && isScoringEnabled) {
           console.log(`Adding score ranges to field ${field.id}`);
           return { ...field, scoreRanges: [...newScoreRanges] };
         }
@@ -336,10 +343,10 @@ export const useFormBuilder = (formId?: string) => {
       // Ensure the scoreConfig is properly set with the current state
       const formToSave: Partial<Form> = {
         ...formData,
-        // Explicitly set the showTotalScore as a boolean
-        showTotalScore: formData.showTotalScore === true,
+        // Explicitly set the showTotalScore as a boolean with our tracking state
+        showTotalScore: isScoringEnabled,
         scoreConfig: {
-          enabled: formData.showTotalScore === true,
+          enabled: isScoringEnabled,
           ranges: scoreRanges
         },
         scoreRanges: [...scoreRanges] // Also save direct scoreRanges property
@@ -413,6 +420,7 @@ export const useFormBuilder = (formId?: string) => {
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
     handleHttpConfigChange,
-    scoreRanges // Expose score ranges to components
+    scoreRanges, // Expose score ranges to components
+    isScoringEnabled // Expose scoring enabled state
   };
 };

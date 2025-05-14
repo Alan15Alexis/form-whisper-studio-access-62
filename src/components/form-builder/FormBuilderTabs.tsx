@@ -30,6 +30,7 @@ interface FormBuilderTabsProps {
   allowedUserName?: string;
   setAllowedUserName?: (name: string) => void;
   externalScoreRanges?: ScoreRange[]; // Prop to receive score ranges
+  isScoringEnabled?: boolean; // New prop to receive scoring enabled state
 }
 
 const FormBuilderTabs = ({
@@ -53,11 +54,13 @@ const FormBuilderTabs = ({
   formId,
   allowedUserName = "",
   setAllowedUserName = () => {},
-  externalScoreRanges = []
+  externalScoreRanges = [],
+  isScoringEnabled = false // Default to false if not provided
 }: FormBuilderTabsProps) => {
   // Log the incoming data to debug
   console.log("FormBuilderTabs - formData showTotalScore:", formData.showTotalScore);
   console.log("FormBuilderTabs - External score ranges:", externalScoreRanges);
+  console.log("FormBuilderTabs - isScoringEnabled:", isScoringEnabled);
 
   return (
     <Tabs defaultValue="fields" className="w-full mt-6">
@@ -80,7 +83,7 @@ const FormBuilderTabs = ({
               formData={formData}
               updateField={updateField}
               removeField={removeField}
-              formShowTotalScore={formData.showTotalScore === true}
+              formShowTotalScore={isScoringEnabled}
               onToggleFormScoring={onToggleFormScoring}
             />
           </div>
@@ -104,10 +107,11 @@ const FormBuilderTabs = ({
           onHttpConfigChange={onHttpConfigChange}
           formFields={formData.fields || []}
           formId={formId}
-          showTotalScore={formData.showTotalScore === true}
+          showTotalScore={formData.showTotalScore}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
           externalScoreRanges={externalScoreRanges} // Pass score ranges to FormSettings
+          isScoringEnabled={isScoringEnabled} // Pass the isScoringEnabled state
         />
       </TabsContent>
       
