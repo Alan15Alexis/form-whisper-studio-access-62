@@ -195,20 +195,29 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateForm
   );
 
-  const isUserAllowed = isUserAllowedOperation(
-    forms,
-    allowedUsers,
-    currentUser ? {
-      id: String(currentUser.id),
-      email: currentUser.email
-    } : null
-  );
+  // Modify isUserAllowed to accept an optional email parameter
+  const isUserAllowed = (formId: string, email?: string): boolean => {
+    const operation = isUserAllowedOperation(
+      forms,
+      allowedUsers,
+      email ? { email } : (currentUser ? {
+        id: String(currentUser.id),
+        email: currentUser.email
+      } : null)
+    );
+    return operation(formId);
+  };
 
-  const generateAccessLink = generateAccessLinkOperation(
-    forms,
-    accessTokens,
-    setAccessTokens
-  );
+  // Make generateAccessLink return a string directly, not a Promise
+  const generateAccessLink = (formId: string): string => {
+    const operation = generateAccessLinkOperation(
+      forms,
+      accessTokens,
+      setAccessTokens
+    );
+    // Call the operation and return the result directly
+    return operation(formId);
+  };
 
   const validateAccessToken = validateAccessTokenOperation(accessTokens);
 

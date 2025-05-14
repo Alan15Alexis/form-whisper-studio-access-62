@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -37,6 +36,7 @@ const FormResponses = () => {
       return;
     }
     setForm(formData);
+    // Now generateAccessLink returns string directly, not a Promise
     setAccessLink(generateAccessLink(id));
     setLoading(false);
 

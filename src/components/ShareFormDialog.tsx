@@ -22,7 +22,7 @@ const ShareFormDialog = ({ open, onOpenChange, formId, formTitle, isPrivate }: S
   const [copied, setCopied] = useState(false);
   const { generateAccessLink } = useForm();
   
-  // Generate the share URL from the form ID
+  // Generate the share URL from the form ID directly
   const shareUrl = formId ? generateAccessLink(formId) : '';
   
   // Safely extract the base form URL without the access token

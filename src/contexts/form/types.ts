@@ -13,8 +13,8 @@ export interface FormContextType {
   getFormResponses: (formId: string) => FormResponse[];
   addAllowedUser: (formId: string, email: string) => Promise<boolean>;
   removeAllowedUser: (formId: string, email: string) => Promise<boolean>;
-  isUserAllowed: (formId: string) => boolean;
-  generateAccessLink: (formId: string) => Promise<string>;
+  isUserAllowed: (formId: string, email?: string) => boolean;
+  generateAccessLink: (formId: string) => string;
   validateAccessToken: (formId: string, token: string) => boolean;
   setForms: React.Dispatch<React.SetStateAction<Form[]>>;
 }
