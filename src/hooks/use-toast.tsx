@@ -91,14 +91,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
-type ToastActionElementType = React.ReactElement<typeof ToastAction>;
-
-export type ToastActionProps = {
-  altText?: string;
-  action: ToastActionElementType;
-};
-
-// Fixed ToastProps1 interface to provide correct typing
+// Fixed type definitions to use ReactNode correctly
 interface ToastProps1 {
   id: string;
   title?: React.ReactNode;
@@ -107,6 +100,13 @@ interface ToastProps1 {
   variant?: "default" | "destructive";
   onOpenChange?: (open: boolean) => void;
 }
+
+type ToastActionElementType = React.ReactElement<typeof ToastAction>;
+
+export type ToastActionProps = {
+  altText?: string;
+  action: ToastActionElementType;
+};
 
 const TOAST_LIMIT = 5;
 const TOAST_REMOVE_DELAY = 5000;
@@ -209,7 +209,7 @@ function dispatch(action: Action) {
   });
 }
 
-// Fixed toast function to use correct parameter type
+// Fixed toast function to properly type the props parameter
 function toast(props: Omit<ToastProps1, "id">) {
   const id = genId();
 

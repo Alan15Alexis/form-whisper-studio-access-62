@@ -37,6 +37,7 @@ export function useToast() {
 }
 
 // Toast function to create toasts
+// Fixed to properly type the props parameter to match the Toast interface
 export function toast(props: Omit<Toast, "id">) {
   const id = genId();
 
