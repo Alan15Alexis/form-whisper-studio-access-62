@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -86,8 +85,6 @@ export const useFormBuilder = (formId?: string) => {
           // Default empty array if no ranges found
           setScoreRanges([]);
         }
-        
-        console.log("Fields with score ranges:", form.fields?.filter(f => f.scoreRanges?.length > 0));
       } else {
         toast({
           title: 'Form not found',
@@ -99,45 +96,65 @@ export const useFormBuilder = (formId?: string) => {
     }
   }, [formId, isEditMode, getForm, navigate]);
 
-  // Update Supabase directly with scoring configuration
-  const updateSupabaseFormScoring = async (formTitle: string, showTotalScore: boolean, scoreRanges: ScoreRange[]) => {
+  // New function: direct Supabase update to ensure settings are saved
+  const saveSettingsDirectlyToSupabase = async (formTitle: string, showTotalScore: boolean, scoreRangesData: ScoreRange[]) => {
     try {
-      // First check if the form exists in Supabase by title
-      const { data: existingForm } = await supabase
+      // Find the form by title
+      const { data: existingForm, error: findError } = await supabase
         .from('formulario_construccion')
-        .select('id, configuracion')
+        .select('id, configuracion, preguntas')
         .eq('titulo', formTitle)
         .maybeSingle();
-
-      if (existingForm) {
-        // Get current configuration or create new one
-        const currentConfig = existingForm.configuracion || {};
         
-        // Update scoring configuration directly
-        const updatedConfig = {
-          ...currentConfig,
-          showTotalScore: showTotalScore,
-          scoreRanges: scoreRanges
-        };
-        
-        console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
-        
-        // Update just the configuration column
-        const { error } = await supabase
-          .from('formulario_construccion')
-          .update({
-            configuracion: updatedConfig
-          })
-          .eq('id', existingForm.id);
-          
-        if (error) {
-          console.error("Error updating form scoring in Supabase:", error);
-        } else {
-          console.log("Form scoring updated in Supabase successfully");
-        }
+      if (findError) {
+        console.error("Error finding form:", findError);
+        return false;
       }
+      
+      if (!existingForm) {
+        console.error("Form not found:", formTitle);
+        return false;
+      }
+      
+      // Get current configuration or create new one
+      let currentConfig = existingForm.configuracion || {};
+      
+      // CRITICAL FIX: Make sure we set the showTotalScore as true/false explicitly
+      const updatedConfig = {
+        ...currentConfig,
+        showTotalScore: showTotalScore === true, // Ensure it's a boolean
+        scoreRanges: scoreRangesData
+      };
+      
+      console.log("Saving directly to Supabase - updatedConfig:", JSON.stringify(updatedConfig));
+      console.log("showTotalScore value being saved:", showTotalScore === true);
+      
+      // Get current fields and ensure scoreRanges are removed before saving
+      const currentFields = existingForm.preguntas || [];
+      const fieldsWithoutRanges = currentFields.map(field => {
+        const { scoreRanges, ...fieldWithoutRanges } = field;
+        return fieldWithoutRanges;
+      });
+      
+      // Update the database record
+      const { error: updateError } = await supabase
+        .from('formulario_construccion')
+        .update({
+          configuracion: updatedConfig,
+          preguntas: fieldsWithoutRanges
+        })
+        .eq('id', existingForm.id);
+        
+      if (updateError) {
+        console.error("Error updating form:", updateError);
+        return false;
+      }
+      
+      console.log("Form settings saved successfully!");
+      return true;
     } catch (error) {
-      console.error("Error updating form scoring in Supabase:", error);
+      console.error("Error saving form settings:", error);
+      return false;
     }
   };
 
@@ -154,8 +171,9 @@ export const useFormBuilder = (formId?: string) => {
   };
 
   // Toggle form scoring function - only updates state locally, doesn't save immediately
-  const handleToggleFormScoring = (enabled: boolean) => {
+  const handleToggleFormScoring = async (enabled: boolean) => {
     console.log("Toggle form scoring called with:", enabled);
+    
     // Update local tracking state
     setIsScoringEnabled(enabled);
     
@@ -186,6 +204,12 @@ export const useFormBuilder = (formId?: string) => {
         scoreRanges: enabled ? [...scoreRanges] : [] // Also update the direct scoreRanges property
       };
     });
+    
+    // CRITICAL FIX: Also save the toggle state directly to Supabase immediately
+    if (formData.title) {
+      console.log("Saving toggle state directly to Supabase:", enabled);
+      await saveSettingsDirectlyToSupabase(formData.title, enabled, scoreRanges);
+    }
   };
 
   // Enhanced function to explicitly save score ranges
@@ -226,27 +250,34 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // Save the form with updated score ranges
-    try {
-      // Update Supabase directly first to ensure configuration is saved properly
-      if (formData.title) {
-        await updateSupabaseFormScoring(formData.title, isScoringEnabled, newScoreRanges);
+    // CRITICAL FIX: Save the form with updated score ranges directly to Supabase first
+    if (formData.title) {
+      console.log("Saving score ranges directly to Supabase before general save");
+      const success = await saveSettingsDirectlyToSupabase(
+        formData.title,
+        isScoringEnabled, // Use tracked state for showTotalScore
+        newScoreRanges
+      );
+      
+      if (success) {
+        toast({
+          title: 'Rangos de puntuación guardados',
+          description: 'Los rangos de puntuación se han guardado correctamente',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudieron guardar los rangos de puntuación',
+          variant: 'destructive'
+        });
       }
-      
-      // Then use the regular save mechanism
+    }
+    
+    // Also use the regular save mechanism
+    try {
       await handleSubmit(true);
-      
-      toast({
-        title: 'Rangos de puntuación guardados',
-        description: 'Los rangos de puntuación se han guardado correctamente',
-      });
     } catch (error) {
-      console.error("Error saving score ranges:", error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron guardar los rangos de puntuación',
-        variant: 'destructive'
-      });
+      console.error("Error in regular save mechanism:", error);
     }
   };
 
@@ -395,21 +426,22 @@ export const useFormBuilder = (formId?: string) => {
     setIsSaving(true);
 
     try {
-      // Ensure the scoreConfig is properly set with the current state
+      // CRITICAL FIX: Ensure scoreRanges and showTotalScore are properly set before saving
+      // Make an explicit copy to avoid reference issues
       const formToSave: Partial<Form> = {
         ...formData,
         // Explicitly set the showTotalScore as a boolean with our tracking state
         showTotalScore: isScoringEnabled,
         scoreConfig: {
           enabled: isScoringEnabled,
-          ranges: scoreRanges
+          ranges: [...scoreRanges]
         },
         scoreRanges: [...scoreRanges] // Also save direct scoreRanges property
       };
       
-      console.log("Saving form with showTotalScore:", formToSave.showTotalScore);
-      console.log("Saving form with scoreConfig:", formToSave.scoreConfig);
-      console.log("Saving form with direct scoreRanges:", formToSave.scoreRanges);
+      console.log("Final form saving, showTotalScore:", formToSave.showTotalScore);
+      console.log("Final form saving, scoreConfig:", JSON.stringify(formToSave.scoreConfig));
+      console.log("Final form saving, scoreRanges:", JSON.stringify(formToSave.scoreRanges));
       
       // Apply score ranges to fields that have numeric values
       if (formToSave.showTotalScore && scoreRanges.length > 0) {
@@ -421,6 +453,16 @@ export const useFormBuilder = (formId?: string) => {
         });
         
         formToSave.fields = updatedFields;
+      }
+      
+      // CRITICAL FIX: Before using the update/create operations, save directly to Supabase
+      // to ensure the configuration is properly saved
+      if (formData.title) {
+        await saveSettingsDirectlyToSupabase(
+          formData.title,
+          isScoringEnabled,
+          scoreRanges
+        );
       }
       
       if (isEditMode && formId) {
