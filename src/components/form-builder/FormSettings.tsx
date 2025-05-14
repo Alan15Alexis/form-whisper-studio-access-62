@@ -212,11 +212,17 @@ const FormSettings = ({
       // Get current configuration or create new one
       const currentConfig = existingForm.configuracion || {};
       
-      // Update scoring configuration
+      // Update scoring configuration - IMPORTANT: Set exact values for both flags
       const updatedConfig = {
         ...currentConfig,
-        showTotalScore: isScoringEnabled,
-        scoreRanges: ranges
+        showTotalScore: isScoringEnabled === true, // Ensure boolean value
+        scoreRanges: ranges,
+        // Add additional fields to preserve existing configuration
+        isPrivate: currentConfig.isPrivate || false,
+        formColor: currentConfig.formColor || '#3b82f6',
+        allowViewOwnResponses: currentConfig.allowViewOwnResponses || false,
+        allowEditOwnResponses: currentConfig.allowEditOwnResponses || false,
+        httpConfig: currentConfig.httpConfig || null,
       };
       
       console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
@@ -249,9 +255,23 @@ const FormSettings = ({
     console.log("Saving score ranges with toggle state:", isScoringEnabled);
     console.log("Ranges to save:", JSON.stringify(scoreRanges));
     
-    // First attempt to save directly to Supabase
-    const formTitle = formId ? 
-      document.querySelector('input[placeholder="Título del formulario"]')?.getAttribute('value') || '' : '';
+    // Get current form title
+    let formTitle = '';
+    try {
+      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
+      if (titleInput) {
+        formTitle = titleInput.value;
+      } else {
+        const h1Element = document.querySelector('h1.text-3xl');
+        if (h1Element) {
+          formTitle = h1Element.textContent || '';
+        }
+      }
+    } catch (error) {
+      console.error("Error getting form title:", error);
+    }
+
+    console.log("Got form title for saving ranges:", formTitle);
       
     if (formTitle) {
       const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRanges);
@@ -274,17 +294,39 @@ const FormSettings = ({
   };
 
   // Handle toggle of scoring feature
-  const handleToggleScoringFeature = (enabled: boolean) => {
+  const handleToggleScoringFeature = async (enabled: boolean) => {
     console.log("Toggle scoring feature called with:", enabled);
+    
+    // Call the parent handler to update globally
+    if (onToggleFormScoring) {
+      onToggleFormScoring(enabled);
+    }
     
     // If toggling on and no ranges exist yet, add a default range
     if (enabled && scoreRanges.length === 0) {
       addScoreRange();
     }
     
-    // Call the parent handler to update globally
-    if (onToggleFormScoring) {
-      onToggleFormScoring(enabled);
+    // Get current form title (same as in saveScoreRanges)
+    let formTitle = '';
+    try {
+      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
+      if (titleInput) {
+        formTitle = titleInput.value;
+      } else {
+        const h1Element = document.querySelector('h1.text-3xl');
+        if (h1Element) {
+          formTitle = h1Element.textContent || '';
+        }
+      }
+    } catch (error) {
+      console.error("Error getting form title:", error);
+    }
+    
+    // Update Supabase directly with the toggle state
+    if (formTitle) {
+      // We need to save the toggle state immediately
+      await directlySaveScoreRangesToSupabase(formTitle, scoreRanges);
     }
     
     // If enabling scoring and we have ranges, save them immediately
@@ -401,7 +443,6 @@ const FormSettings = ({
                     size="sm"
                     onClick={saveScoreRanges}
                     className="flex items-center gap-1"
-                    disabled={!hasUnsavedRanges}
                   >
                     <Save className="h-4 w-4" /> Guardar cambios
                   </Button>

@@ -185,9 +185,10 @@ export const updateFormOperation = (
       ...formData,
       updatedAt: new Date().toISOString(),
       // Ensure score configuration is properly set
-      showTotalScore: formData.showTotalScore ?? forms[formIndex].showTotalScore,
+      // IMPORTANT: Use explicit boolean check for showTotalScore
+      showTotalScore: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
       scoreConfig: {
-        enabled: formData.showTotalScore ?? forms[formIndex].showTotalScore,
+        enabled: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
         ranges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreConfig?.ranges || [])
       },
       scoreRanges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreRanges || [])
@@ -220,7 +221,8 @@ export const updateFormOperation = (
       allowViewOwnResponses: updatedForm.allowViewOwnResponses,
       allowEditOwnResponses: updatedForm.allowEditOwnResponses,
       httpConfig: updatedForm.httpConfig,
-      showTotalScore: updatedForm.showTotalScore === true, // Ensure this is explicitly a boolean
+      // IMPORTANT: Use explicit boolean check for showTotalScore
+      showTotalScore: updatedForm.showTotalScore === true, 
       scoreRanges: scoreRanges, // Explicitly store score ranges
       hasFieldsWithNumericValues: fieldsWithValues
     };
