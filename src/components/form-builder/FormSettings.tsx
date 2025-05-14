@@ -98,7 +98,7 @@ const FormSettings = ({
     
     // First priority: use externally provided score ranges if available
     if (externalScoreRanges && externalScoreRanges.length > 0) {
-      setScoreRanges([...externalScoreRanges]);
+      setScoreRanges(JSON.parse(JSON.stringify(externalScoreRanges))); // Create deep copy
       return;
     }
     
@@ -110,7 +110,7 @@ const FormSettings = ({
       
       if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
         console.log("Setting score ranges from fields:", fieldWithRanges.scoreRanges);
-        setScoreRanges([...fieldWithRanges.scoreRanges]);
+        setScoreRanges(JSON.parse(JSON.stringify(fieldWithRanges.scoreRanges))); // Create deep copy
         return;
       }
     }
@@ -141,6 +141,7 @@ const FormSettings = ({
       toast({
         title: "Rango añadido",
         description: `Se añadió un nuevo rango de puntuación: 0-10`,
+        variant: 'default',
       });
       return;
     }
@@ -160,6 +161,7 @@ const FormSettings = ({
     toast({
       title: "Rango añadido",
       description: `Se añadió un nuevo rango de puntuación: ${newMin}-${newMax}`,
+      variant: 'default',
     });
   };
 
@@ -183,6 +185,7 @@ const FormSettings = ({
     toast({
       title: "Rango eliminado",
       description: "El rango de puntuación ha sido eliminado",
+      variant: 'default',
     });
   };
 
@@ -212,7 +215,7 @@ const FormSettings = ({
       // Get current configuration or create new one
       const currentConfig = existingForm.configuracion || {};
       
-      // FIXED: Create a deep copy of the ranges array to avoid reference issues
+      // Create a deep copy of the ranges array to avoid reference issues
       const rangesCopy = JSON.parse(JSON.stringify(ranges));
       
       // Update scoring configuration - IMPORTANT: Set exact values for both flags
@@ -226,6 +229,7 @@ const FormSettings = ({
         allowViewOwnResponses: currentConfig.allowViewOwnResponses || false,
         allowEditOwnResponses: currentConfig.allowEditOwnResponses || false,
         httpConfig: currentConfig.httpConfig || null,
+        hasFieldsWithNumericValues: hasFieldsWithNumericValues
       };
       
       console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
@@ -288,7 +292,7 @@ const FormSettings = ({
     console.log("Got form title for saving ranges:", formTitle);
       
     if (formTitle) {
-      // FIXED: Create a deep copy of the scoreRanges to avoid any reference issues
+      // Create a deep copy of the scoreRanges to avoid any reference issues
       const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
       const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
       
@@ -299,12 +303,13 @@ const FormSettings = ({
         toast({
           title: "Rangos guardados",
           description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
+          variant: 'default',
         });
       }
     }
     
     // Also call the parent handler to update globally
-    // FIXED: Pass a deep copy of the score ranges
+    // Pass a deep copy of the score ranges
     const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
     onSaveScoreRanges(scoreRangesCopy);
     
@@ -344,7 +349,7 @@ const FormSettings = ({
     
     // Update Supabase directly with the toggle state
     if (formTitle) {
-      // FIXED: Create a deep copy of the scoreRanges to avoid any reference issues
+      // Create a deep copy of the scoreRanges to avoid any reference issues
       const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
       await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
     }
