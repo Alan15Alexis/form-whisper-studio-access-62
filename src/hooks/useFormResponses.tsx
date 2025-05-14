@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { useForm } from "@/contexts/form";
+import { useForm } from "@/contexts/formulario";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
