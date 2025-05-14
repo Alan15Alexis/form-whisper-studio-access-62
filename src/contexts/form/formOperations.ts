@@ -1,7 +1,19 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Form, ScoreRange } from '@/types/form';
+import { Form, FormField, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+
+// Helper function to ensure all fields with numeric values have the specified score ranges
+export function ensureScoreRangesInAllFields(fields: FormField[], scoreRanges: ScoreRange[]) {
+  if (!fields || !scoreRanges || scoreRanges.length === 0) return fields;
+  
+  return fields.map(field => {
+    if (field.hasNumericValues) {
+      return { ...field, scoreRanges: [...scoreRanges] };
+    }
+    return field;
+  });
+}
 
 export const createFormOperation = (
   forms: Form[], 
@@ -119,18 +131,6 @@ export const createFormOperation = (
     return newForm;
   };
 };
-
-// Helper function to ensure all fields with numeric values have the specified score ranges
-function ensureScoreRangesInAllFields(fields, scoreRanges) {
-  if (!fields || !scoreRanges || scoreRanges.length === 0) return fields;
-  
-  return fields.map(field => {
-    if (field.hasNumericValues) {
-      return { ...field, scoreRanges: [...scoreRanges] };
-    }
-    return field;
-  });
-}
 
 export const updateFormOperation = (
   forms: Form[],

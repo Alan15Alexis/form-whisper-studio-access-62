@@ -1,13 +1,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { Form, FormResponse } from '@/types/form';
+import { FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '../AuthContext';
 
 export const submitFormResponseOperation = (
-  getForm: (id: string) => Form | undefined,
-  setResponses: (responses: any) => void,
+  getForm: (id: string) => any,
+  setResponses: React.Dispatch<React.SetStateAction<any[]>>,
   user: { email: string } | null,
   apiEndpoint: string
 ) => {
@@ -29,58 +27,70 @@ export const submitFormResponseOperation = (
       id: responseId,
       formId,
       responses: data,
-      submittedBy: user?.email || 'anonymous',
+      submittedBy: user?.email,
       submittedAt: new Date().toISOString()
     };
 
     try {
-      // Perform form response calculation for scoring if applicable
-      let calculatedScore = null;
-      let scoreMessage = '';
+      console.log('Submitting form response:', response);
       
-      if (form.showTotalScore) {
-        calculatedScore = calculateTotalScore(form, data);
-        scoreMessage = getScoreMessage(form, calculatedScore);
-        
-        // Add score data to response
-        response.responses.calculatedScore = calculatedScore;
-        response.responses.scoreMessage = scoreMessage;
-      }
-
-      // Process HTTP webhook if configured
-      if (form.httpConfig && form.httpConfig.enabled) {
+      // Save response to local state
+      setResponses(prev => [...prev, response]);
+      
+      // If the form has HTTP config enabled, send data to external API
+      if (form.httpConfig && form.httpConfig.enabled && form.httpConfig.url) {
         try {
-          // Process webhook (implementation not relevant for this fix)
-          console.log('Processing webhook for form response');
+          const { url, method, headers, body } = form.httpConfig;
+          
+          // Parse headers
+          const headersObj = headers?.reduce((acc, h) => {
+            if (h.key && h.value) {
+              acc[h.key] = h.value;
+            }
+            return acc;
+          }, {} as Record<string, string>) || {};
+          
+          // Replace placeholder in body with actual response data
+          let parsedBody = body;
+          try {
+            const bodyObj = JSON.parse(body);
+            
+            // If body contains "respuesta" key, replace with form response data
+            if (bodyObj && typeof bodyObj === 'object' && 'id_del_elemento' in bodyObj) {
+              bodyObj.id_del_elemento = response;
+              parsedBody = JSON.stringify(bodyObj);
+            }
+          } catch (e) {
+            console.error('Error parsing HTTP body:', e);
+          }
+          
+          console.log('Sending HTTP request:', {
+            url,
+            method,
+            headers: headersObj,
+            body: parsedBody
+          });
+          
+          // Make HTTP request
+          const httpResponse = await fetch(url, {
+            method,
+            headers: {
+              'Content-Type': 'application/json',
+              ...headersObj
+            },
+            body: method === 'POST' ? parsedBody : undefined
+          });
+          
+          // Save last response to form
+          const httpData = await httpResponse.text();
+          console.log('HTTP response:', httpResponse.status, httpData);
         } catch (error) {
-          console.error('Error processing webhook:', error);
+          console.error('HTTP request error:', error);
         }
       }
-
-      // Store response in local state (for in-memory implementation)
-      setResponses((prevResponses: any[]) => [...prevResponses, response]);
       
-      // Save response to Supabase
-      try {
-        const { error } = await supabase.from('formulario').insert({
-          nombre_formulario: form.title,
-          respuestas: response.responses,
-          estatus: true,
-          nombre_administrador: form.ownerId,
-          nombre_invitado: user?.email || 'anonymous'
-        });
-        
-        if (error) {
-          console.error('Error saving response to Supabase:', error);
-        } else {
-          console.log('Response saved to Supabase successfully');
-        }
-      } catch (error) {
-        console.error('Error saving response to Supabase:', error);
-      }
-
       toast({
-        title: 'Response submitted',
+        title: 'Form submitted',
         description: 'Your response has been submitted successfully',
         variant: 'default',
       });
@@ -89,7 +99,7 @@ export const submitFormResponseOperation = (
     } catch (error) {
       console.error('Error submitting form response:', error);
       toast({
-        title: 'Submission failed',
+        title: 'Error',
         description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: 'destructive',
       });
@@ -98,56 +108,10 @@ export const submitFormResponseOperation = (
   };
 };
 
-// Helper function to calculate total score from form responses
-const calculateTotalScore = (form: Form, responses: Record<string, any>): number => {
-  let totalScore = 0;
-  
-  // Iterate through fields with numeric values
-  form.fields.forEach(field => {
-    if (field.hasNumericValues && field.options) {
-      const responseValue = responses[field.id];
-      
-      // Handle different field types
-      if (field.type === 'checkbox' && Array.isArray(responseValue)) {
-        // For checkboxes (multiple selection)
-        responseValue.forEach(value => {
-          const selectedOption = field.options?.find(opt => opt.value === value);
-          if (selectedOption && selectedOption.numericValue) {
-            totalScore += selectedOption.numericValue;
-          }
-        });
-      } else if (responseValue) {
-        // For single value fields (radio, select)
-        const selectedOption = field.options?.find(opt => opt.value === responseValue);
-        if (selectedOption && selectedOption.numericValue) {
-          totalScore += selectedOption.numericValue;
-        }
-      }
-    }
-  });
-  
-  return totalScore;
-};
-
-// Helper function to get score message based on ranges
-const getScoreMessage = (form: Form, score: number): string => {
-  // Try to get score ranges from most reliable source
-  const scoreRanges = form.scoreConfig?.ranges || form.scoreRanges || [];
-  
-  if (!scoreRanges || scoreRanges.length === 0) {
-    return '';
-  }
-  
-  // Find matching range
-  const matchingRange = scoreRanges.find(range => 
-    score >= range.min && score <= range.max
-  );
-  
-  return matchingRange ? matchingRange.message : '';
-};
-
-export const getFormResponsesOperation = (responses: FormResponse[]) => {
-  return (formId: string): FormResponse[] => {
+export const getFormResponsesOperation = (
+  responses: any[]
+) => {
+  return (formId: string): any[] => {
     return responses.filter(response => response.formId === formId);
   };
 };

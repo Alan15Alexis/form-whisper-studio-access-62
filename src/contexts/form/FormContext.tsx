@@ -28,6 +28,7 @@ import {
   validateAccessTokenOperation
 } from './accessOperations';
 import { supabase } from '@/integrations/supabase/client';
+import { FormResponse } from '@/types/form';
 
 const FormContext = createContext<FormContextType | undefined>(undefined);
 
@@ -164,7 +165,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Response operations
-  const submitFormResponse = async (formId: string, data: Record<string, any>, formFromLocation: any = null) => {
+  const submitFormResponse = async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
     const operation = submitFormResponseOperation(
       getForm,
       setResponses,
@@ -211,7 +212,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const validateAccessToken = validateAccessTokenOperation(accessTokens);
 
-  const value = {
+  const value: FormContextType = {
     forms,
     responses,
     allowedUsers,
