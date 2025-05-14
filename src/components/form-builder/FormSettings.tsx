@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -189,7 +188,7 @@ const FormSettings = ({
     if (!onSaveScoreRanges) return;
     
     console.log("Saving score ranges with toggle state:", isScoringEnabled);
-    console.log("Ranges to save:", scoreRanges);
+    console.log("Ranges to save:", JSON.stringify(scoreRanges));
     
     // Only if scoring is enabled, save the ranges too
     onSaveScoreRanges(scoreRanges);
@@ -326,6 +325,7 @@ const FormSettings = ({
                     size="sm"
                     onClick={saveScoreRanges}
                     className="flex items-center gap-1"
+                    disabled={!hasUnsavedRanges} // Disable if no changes to save
                   >
                     <Save className="h-4 w-4" /> Guardar cambios
                   </Button>

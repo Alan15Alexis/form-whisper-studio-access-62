@@ -101,7 +101,7 @@ export const createFormOperation = (
         hasFieldsWithNumericValues: fieldsWithValues
       };
       
-      console.log("Saving configuration to Supabase:", configObject);
+      console.log("Saving configuration to Supabase:", JSON.stringify(configObject));
 
       const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
@@ -225,7 +225,7 @@ export const updateFormOperation = (
       hasFieldsWithNumericValues: fieldsWithValues
     };
 
-    console.log("Saving configuration to Supabase:", configObject);
+    console.log("Saving configuration to Supabase:", JSON.stringify(configObject));
     console.log("Form has showTotalScore:", updatedForm.showTotalScore);
     console.log("Form has scoreRanges:", JSON.stringify(scoreRanges));
     

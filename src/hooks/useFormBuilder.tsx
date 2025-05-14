@@ -120,7 +120,7 @@ export const useFormBuilder = (formId?: string) => {
           scoreRanges: scoreRanges
         };
         
-        console.log("Updating Supabase form scoring directly:", updatedConfig);
+        console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
         
         // Update just the configuration column
         const { error } = await supabase
