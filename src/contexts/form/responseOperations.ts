@@ -1,3 +1,4 @@
+
 import { Form, FormResponse } from '@/types/form';
 import { processFormData, saveFormResponseToDatabase, formatResponsesWithLabels } from '@/utils/formResponseUtils';
 
@@ -30,11 +31,11 @@ export const submitFormResponseOperation = (
       // Format responses to use labels instead of IDs
       const formattedResponses = formatResponsesWithLabels(form.fields, processedData);
       
-      // Create the response object
+      // Create the response object - Using the correct FormResponse type properties
       const formResponse: FormResponse = {
         id: crypto.randomUUID(),
         formId,
-        userId: currentUser?.email || 'anonymous',
+        submittedBy: currentUser?.email || 'anonymous',
         submittedAt: new Date().toISOString(),
         data: processedData,
         formattedData: formattedResponses
@@ -58,9 +59,9 @@ export const submitFormResponseOperation = (
 export const getFormResponsesOperation = (responses: FormResponse[]) => {
   return (formId: string, userEmail?: string): FormResponse[] => {
     if (userEmail) {
-      // If userEmail is provided, filter by both formId and userEmail
+      // If userEmail is provided, filter by both formId and submittedBy
       return responses.filter(
-        response => response.formId === formId && response.userId === userEmail
+        response => response.formId === formId && response.submittedBy === userEmail
       );
     }
     

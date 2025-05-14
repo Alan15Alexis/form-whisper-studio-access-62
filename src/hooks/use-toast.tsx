@@ -33,17 +33,18 @@ const toastVariants = cva(
 );
 
 // Fix the ToastProps interface to avoid type conflicts
-export interface ToastProps
-  extends React.ComponentPropsWithoutRef<typeof Toast>,
-    VariantProps<typeof toastVariants> {
+export interface ToastProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  variant?: "default" | "destructive";
+  className?: string;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const ToastComponent = React.forwardRef<
   React.ElementRef<typeof Toast>,
-  ToastProps
+  React.ComponentPropsWithoutRef<typeof Toast> & ToastProps
 >(({ className, variant, title, description, action, ...props }, ref) => {
   return (
     <Toast
