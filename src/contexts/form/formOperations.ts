@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { Form, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -55,9 +54,9 @@ export const createFormOperation = (
       ownerId: currentUserId || 'unknown',
       formColor: formData.formColor || '#3b82f6',
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
-      allowEditOwnResponses: formData.allowEditOwnResponses || false,
+      allowEditOwnResponses: formData.allowEditOwnResponsesChange || false,
       httpConfig: formData.httpConfig,
-      showTotalScore: formData.showTotalScore || false, // Set the show total score flag
+      showTotalScore: formData.showTotalScore || false,
       scoreConfig: {
         enabled: formData.showTotalScore || false,
         ranges: scoreRanges

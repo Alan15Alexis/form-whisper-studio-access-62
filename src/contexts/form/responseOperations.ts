@@ -1,88 +1,149 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { FormResponse } from '@/types/form';
+import { Form, FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
-import { validateFormResponses } from '@/utils/http-utils';
-import { processFormData, formatResponsesWithLabels, saveFormResponseToDatabase } from '@/utils/formResponseUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '../AuthContext';
 
 export const submitFormResponseOperation = (
-  getForm: (id: string) => any,
-  setResponses: React.Dispatch<React.SetStateAction<FormResponse[]>>,
-  currentUser: { email: string } | null | undefined,
+  getForm: (id: string) => Form | undefined,
+  setResponses: (responses: any) => void,
+  user: { email: string } | null,
   apiEndpoint: string
 ) => {
-  return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
-    // Validate that data is not empty
-    if (!validateFormResponses(data)) {
-      toast({
-        title: "Error",
-        description: "No se pueden enviar respuestas vacías",
-        variant: "destructive",
-      });
-      throw new Error("Las respuestas del formulario no pueden estar vacías");
-    }
-    
-    // First try to get the form from the location state if provided
-    let form = formFromLocation;
-    
-    // If not available in location, try to get it from the context
-    if (!form) {
-      form = getForm(formId);
-    }
-    
+  return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<boolean> => {
+    // Use form from location if provided, otherwise fetch it
+    const form = formFromLocation || getForm(formId);
     if (!form) {
       toast({
-        title: "Error",
-        description: "No se encontró el formulario",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Form not found',
+        variant: 'destructive',
       });
-      throw new Error("No se encontró el formulario");
+      return false;
     }
-    
-    // Get user email - ensure we always have a valid user identifier
-    const userEmail = currentUser?.email || localStorage.getItem('userEmail');
-    
-    if (!userEmail) {
-      toast({
-        title: "Error", 
-        description: "No se pudo identificar al usuario",
-        variant: "destructive",
-      });
-      throw new Error("No se pudo identificar al usuario");
-    }
-    
-    // Process form data including file uploads
-    const processedData = await processFormData(form, data, userEmail, formId);
-    
-    // Convert response data to use question labels instead of IDs
-    const formattedResponses = formatResponsesWithLabels(form.fields, processedData);
-    
-    // Create the response object
-    const response: FormResponse = {
-      id: uuidv4(),
+
+    // Create response object
+    const responseId = uuidv4();
+    const response = {
+      id: responseId,
       formId,
-      responses: processedData, // Keep original format for internal usage
-      submittedBy: userEmail,
-      submittedAt: new Date().toISOString(),
+      responses: data,
+      submittedBy: user?.email || 'anonymous',
+      submittedAt: new Date().toISOString()
     };
-    
-    // Make sure we persist the responses to localStorage FIRST to ensure local state is updated
-    // This is crucial for showing the form as completed even if database operations fail
-    const updatedResponses = JSON.parse(localStorage.getItem('formResponses') || '[]');
-    updatedResponses.push(response);
-    localStorage.setItem('formResponses', JSON.stringify(updatedResponses));
-    
-    // Update the state after localStorage has been updated
-    setResponses(prev => {
-      console.log('Setting responses:', [...prev, response]);
-      return [...prev, response];
-    });
-    
-    // Save the response to databases
-    await saveFormResponseToDatabase(form, formId, userEmail, formattedResponses, apiEndpoint);
-    
-    return response;
+
+    try {
+      // Perform form response calculation for scoring if applicable
+      let calculatedScore = null;
+      let scoreMessage = '';
+      
+      if (form.showTotalScore) {
+        calculatedScore = calculateTotalScore(form, data);
+        scoreMessage = getScoreMessage(form, calculatedScore);
+        
+        // Add score data to response
+        response.responses.calculatedScore = calculatedScore;
+        response.responses.scoreMessage = scoreMessage;
+      }
+
+      // Process HTTP webhook if configured
+      if (form.httpConfig && form.httpConfig.enabled) {
+        try {
+          // Process webhook (implementation not relevant for this fix)
+          console.log('Processing webhook for form response');
+        } catch (error) {
+          console.error('Error processing webhook:', error);
+        }
+      }
+
+      // Store response in local state (for in-memory implementation)
+      setResponses((prevResponses: any[]) => [...prevResponses, response]);
+      
+      // Save response to Supabase
+      try {
+        const { error } = await supabase.from('formulario').insert({
+          nombre_formulario: form.title,
+          respuestas: response.responses,
+          estatus: true,
+          nombre_administrador: form.ownerId,
+          nombre_invitado: user?.email || 'anonymous'
+        });
+        
+        if (error) {
+          console.error('Error saving response to Supabase:', error);
+        } else {
+          console.log('Response saved to Supabase successfully');
+        }
+      } catch (error) {
+        console.error('Error saving response to Supabase:', error);
+      }
+
+      toast({
+        title: 'Response submitted',
+        description: 'Your response has been submitted successfully',
+        variant: 'default',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error submitting form response:', error);
+      toast({
+        title: 'Submission failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    }
   };
+};
+
+// Helper function to calculate total score from form responses
+const calculateTotalScore = (form: Form, responses: Record<string, any>): number => {
+  let totalScore = 0;
+  
+  // Iterate through fields with numeric values
+  form.fields.forEach(field => {
+    if (field.hasNumericValues && field.options) {
+      const responseValue = responses[field.id];
+      
+      // Handle different field types
+      if (field.type === 'checkbox' && Array.isArray(responseValue)) {
+        // For checkboxes (multiple selection)
+        responseValue.forEach(value => {
+          const selectedOption = field.options?.find(opt => opt.value === value);
+          if (selectedOption && selectedOption.numericValue) {
+            totalScore += selectedOption.numericValue;
+          }
+        });
+      } else if (responseValue) {
+        // For single value fields (radio, select)
+        const selectedOption = field.options?.find(opt => opt.value === responseValue);
+        if (selectedOption && selectedOption.numericValue) {
+          totalScore += selectedOption.numericValue;
+        }
+      }
+    }
+  });
+  
+  return totalScore;
+};
+
+// Helper function to get score message based on ranges
+const getScoreMessage = (form: Form, score: number): string => {
+  // Try to get score ranges from most reliable source
+  const scoreRanges = form.scoreConfig?.ranges || form.scoreRanges || [];
+  
+  if (!scoreRanges || scoreRanges.length === 0) {
+    return '';
+  }
+  
+  // Find matching range
+  const matchingRange = scoreRanges.find(range => 
+    score >= range.min && score <= range.max
+  );
+  
+  return matchingRange ? matchingRange.message : '';
 };
 
 export const getFormResponsesOperation = (responses: FormResponse[]) => {

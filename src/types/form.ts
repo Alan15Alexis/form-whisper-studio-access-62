@@ -1,4 +1,3 @@
-
 export type FormFieldType = 
   // Essential fields
   | 'text' 
@@ -104,17 +103,17 @@ export interface Form {
   accessLink: string;
   ownerId: string;
   showTotalScore?: boolean;
-  enableScoring?: boolean; // Adding the missing property
-  scoreConfig?: ScoreConfig; // Added specific score configuration
-  scoreRanges?: ScoreRange[]; // Explicitly adding scoreRanges to the Form interface
+  enableScoring?: boolean;
+  scoreConfig?: ScoreConfig; 
+  scoreRanges?: ScoreRange[]; 
   welcomeMessage?: {
     text: string;
     imageUrl?: string;
   };
-  allowViewOwnResponses?: boolean; // Permitir ver solo sus respuestas
-  allowEditOwnResponses?: boolean; // Permitir editar sus respuestas
+  allowViewOwnResponses?: boolean;
+  allowEditOwnResponses?: boolean;
   formColor?: string;
-  httpConfig?: HttpConfig; // Nueva propiedad para la configuración HTTP
+  httpConfig?: HttpConfig;
 }
 
 export interface FormResponse {

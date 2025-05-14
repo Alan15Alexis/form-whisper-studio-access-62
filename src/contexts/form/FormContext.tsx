@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -84,7 +85,12 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               allowViewOwnResponses: formData.configuracion?.allowViewOwnResponses || false,
               allowEditOwnResponses: formData.configuracion?.allowEditOwnResponses || false,
               httpConfig: formData.configuracion?.httpConfig,
-              showTotalScore: showTotalScore
+              showTotalScore: showTotalScore,
+              scoreConfig: {
+                enabled: showTotalScore,
+                ranges: scoreRanges
+              },
+              scoreRanges: scoreRanges // Also set direct scoreRanges property
             };
           });
           
