@@ -2,7 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FormResponse } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
-import { calculateTotalScore } from '@/hooks/form-builder/useFormScoring';
+import { useFormScoring } from '@/hooks/form-builder/useFormScoring';
 
 export const submitFormResponseOperation = (
   getForm: (id: string) => any,
@@ -27,7 +27,11 @@ export const submitFormResponseOperation = (
     let totalScore = 0;
     
     if (form.enableScoring || form.showTotalScore) {
-      // Calculate score for each field with numeric values
+      // Use the useFormScoring hook to calculate scores
+      const { calculateTotalScore } = useFormScoring();
+      totalScore = calculateTotalScore(data, form.fields);
+      
+      // Calculate individual field scores
       form.fields.forEach(field => {
         if (!field.hasNumericValues) return;
         
@@ -72,7 +76,6 @@ export const submitFormResponseOperation = (
         }
         
         questionScores[field.id] = fieldScore;
-        totalScore += fieldScore;
       });
     }
 
