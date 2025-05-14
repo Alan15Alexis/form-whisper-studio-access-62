@@ -98,7 +98,7 @@ export type ToastActionProps = {
   action: ToastActionElementType;
 };
 
-// Fixed ToastProps1 interface to resolve type conflicts
+// Fixed ToastProps1 interface to provide correct typing
 interface ToastProps1 {
   id: string;
   title?: React.ReactNode;
@@ -209,11 +209,11 @@ function dispatch(action: Action) {
   });
 }
 
-// Fixed type for the toast function to correctly handle React.ReactNode
-function toast({ ...props }: Omit<ToastProps1, "id">) {
+// Fixed toast function to use correct parameter type
+function toast(props: Omit<ToastProps1, "id">) {
   const id = genId();
 
-  const update = (props: Omit<ToastProps1, "id">) =>
+  const update = (props: Partial<Omit<ToastProps1, "id">>) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: props,
