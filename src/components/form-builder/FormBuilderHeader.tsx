@@ -18,7 +18,7 @@ const FormBuilderHeader = ({ isSaving, isEditMode, onSave, formTitle }: FormBuil
   return (
     <div className="mb-6 flex justify-between items-center">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => navigate("/dashboard-admin")}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <h1 className="text-xl font-semibold">{formTitle || 'New Form'}</h1>
