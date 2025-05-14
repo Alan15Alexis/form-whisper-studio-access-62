@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle, Save } from "lucide-react";
+import { Trash, Plus, AlertCircle, Save, ArrowDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +37,11 @@ interface FormSettingsProps {
   onHttpConfigChange?: (config: HttpConfig) => void;
   formFields?: any[];
   formId?: string;
-  // Removed showTotalScore, onToggleFormScoring, onSaveScoreRanges, externalScoreRanges, isScoringEnabled props
+  showTotalScore?: boolean;
+  onToggleFormScoring?: (enabled: boolean) => void;
+  onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
+  externalScoreRanges?: ScoreRange[];
+  isScoringEnabled?: boolean;
 }
 
 const FormSettings = ({
@@ -54,7 +57,11 @@ const FormSettings = ({
   onHttpConfigChange,
   formFields = [],
   formId = "",
-  // Removed showTotalScore, onToggleFormScoring, onSaveScoreRanges, externalScoreRanges, isScoringEnabled parameters
+  showTotalScore = false,
+  onToggleFormScoring,
+  onSaveScoreRanges,
+  externalScoreRanges = [],
+  isScoringEnabled = false,
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -67,6 +74,89 @@ const FormSettings = ({
     body: `{
   "id_del_elemento": "respuesta"
 }`,
+  };
+
+  // For scoring section
+  const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  // Initialize with default or existing score ranges
+  useEffect(() => {
+    // If external score ranges are provided, use them
+    if (externalScoreRanges && externalScoreRanges.length > 0) {
+      setScoreRanges([...externalScoreRanges]);
+    } 
+    // Otherwise, if scoring is enabled but no ranges exist, create default one
+    else if (isScoringEnabled && scoreRanges.length === 0) {
+      setScoreRanges([{ min: 0, max: 10, message: "" }]);
+    }
+  }, [externalScoreRanges, isScoringEnabled]);
+
+  const handleToggleScoring = (enabled: boolean) => {
+    if (onToggleFormScoring) {
+      onToggleFormScoring(enabled);
+      
+      // If enabling scoring and no ranges exist, add a default one
+      if (enabled && scoreRanges.length === 0) {
+        setScoreRanges([{ min: 0, max: 10, message: "" }]);
+      }
+    }
+  };
+
+  const handleAddScoreRange = () => {
+    const lastRange = scoreRanges[scoreRanges.length - 1];
+    const newMin = lastRange ? lastRange.max + 1 : 0;
+    const newMax = newMin + 10;
+    
+    setScoreRanges([...scoreRanges, { min: newMin, max: newMax, message: "" }]);
+  };
+
+  const handleRemoveScoreRange = (index: number) => {
+    const newRanges = [...scoreRanges];
+    newRanges.splice(index, 1);
+    setScoreRanges(newRanges);
+  };
+
+  const updateScoreRange = (index: number, field: keyof ScoreRange, value: any) => {
+    const newRanges = [...scoreRanges];
+    newRanges[index] = { ...newRanges[index], [field]: value };
+    setScoreRanges(newRanges);
+  };
+
+  const handleSaveScoreRanges = () => {
+    // Validate ranges before saving
+    const hasInvalidRanges = scoreRanges.some(range => 
+      range.min === undefined || 
+      range.max === undefined || 
+      range.min > range.max
+    );
+
+    if (hasInvalidRanges) {
+      toast({
+        title: "Rangos inválidos",
+        description: "Asegúrate de que los valores mínimos sean menores que los máximos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for overlapping ranges
+    const sortedRanges = [...scoreRanges].sort((a, b) => a.min - b.min);
+    for (let i = 0; i < sortedRanges.length - 1; i++) {
+      if (sortedRanges[i].max >= sortedRanges[i + 1].min) {
+        toast({
+          title: "Rangos superpuestos",
+          description: "Los rangos de puntuación no deben superponerse.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Save the ranges
+    if (onSaveScoreRanges) {
+      onSaveScoreRanges([...scoreRanges]);
+    }
   };
 
   return (
@@ -154,6 +244,119 @@ const FormSettings = ({
               </p>
             </div>
           </div>
+        </div>
+      </Card>
+      
+      {/* Scoring and Results Card */}
+      <Card className="p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">Puntuación y Resultados</h3>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <ArrowDown className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Switch
+              id="show-total-score"
+              checked={isScoringEnabled}
+              onCheckedChange={handleToggleScoring}
+            />
+            <div>
+              <Label htmlFor="show-total-score" className="text-lg font-medium">
+                Mostrar puntuación total
+              </Label>
+              <p className="text-sm text-gray-500">
+                Si está activo, se mostrará la puntuación total al finalizar el formulario.
+              </p>
+            </div>
+          </div>
+
+          {isScoringEnabled && isExpanded && (
+            <div className="pt-4">
+              <h4 className="text-md font-medium mb-3">Rangos de puntuación</h4>
+              
+              {scoreRanges.length === 0 ? (
+                <Alert variant="default" className="mb-4 bg-yellow-50 text-yellow-800 border-yellow-200">
+                  <AlertDescription>
+                    No hay rangos de puntuación definidos. Agrega al menos uno para mostrar mensajes personalizados.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-6">
+                  {scoreRanges.map((range, index) => (
+                    <div key={index} className="p-4 border rounded-md bg-slate-50 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`min-${index}`} className="mb-1 block">Puntuación mínima</Label>
+                          <Input
+                            id={`min-${index}`}
+                            type="number"
+                            value={range.min}
+                            onChange={(e) => updateScoreRange(index, 'min', parseInt(e.target.value))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`max-${index}`} className="mb-1 block">Puntuación máxima</Label>
+                          <Input
+                            id={`max-${index}`}
+                            type="number"
+                            value={range.max}
+                            onChange={(e) => updateScoreRange(index, 'max', parseInt(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor={`message-${index}`} className="mb-1 block">Mensaje para este rango</Label>
+                        <Input
+                          id={`message-${index}`}
+                          value={range.message || ''}
+                          onChange={(e) => updateScoreRange(index, 'message', e.target.value)}
+                          placeholder="Ej: Buen trabajo, has obtenido una puntuación media."
+                        />
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveScoreRange(index)}
+                        disabled={scoreRanges.length === 1}
+                      >
+                        <Trash className="h-4 w-4 mr-1" /> Eliminar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex flex-col gap-4 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddScoreRange}
+                  className="flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Añadir rango
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={handleSaveScoreRanges}
+                  className="flex items-center"
+                >
+                  <Save className="h-4 w-4 mr-1" /> Guardar cambios
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
       

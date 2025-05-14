@@ -6,7 +6,7 @@ import FormFieldsList from "./FormFieldsList";
 import FieldsSidebar from "./FieldsSidebar";
 import FormSettings from "./FormSettings";
 import AccessControl from "../form-builder/AccessControl";
-import { Form, FormField } from "@/types/form";
+import { Form, FormField, ScoreRange } from "@/types/form";
 
 interface FormBuilderTabsProps {
   formData: Partial<Form>;
@@ -27,7 +27,10 @@ interface FormBuilderTabsProps {
   formId?: string;
   allowedUserName?: string;
   setAllowedUserName?: (name: string) => void;
-  // Removed scoring-related props: externalScoreRanges, isScoringEnabled, onToggleFormScoring, onSaveScoreRanges
+  onToggleFormScoring?: (enabled: boolean) => void;
+  onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
+  externalScoreRanges?: ScoreRange[];
+  isScoringEnabled?: boolean;
 }
 
 const FormBuilderTabs = ({
@@ -49,7 +52,10 @@ const FormBuilderTabs = ({
   formId,
   allowedUserName = "",
   setAllowedUserName = () => {},
-  // Removed scoring-related parameters
+  onToggleFormScoring,
+  onSaveScoreRanges,
+  externalScoreRanges,
+  isScoringEnabled,
 }: FormBuilderTabsProps) => {
 
   return (
@@ -95,7 +101,11 @@ const FormBuilderTabs = ({
           onHttpConfigChange={onHttpConfigChange}
           formFields={formData.fields || []}
           formId={formId}
-          // Removed scoring related props
+          showTotalScore={formData.showTotalScore}
+          onToggleFormScoring={onToggleFormScoring}
+          onSaveScoreRanges={onSaveScoreRanges}
+          externalScoreRanges={externalScoreRanges}
+          isScoringEnabled={isScoringEnabled}
         />
       </TabsContent>
       

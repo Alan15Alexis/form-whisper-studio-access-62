@@ -30,7 +30,10 @@ const FormBuilder = () => {
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
     handleHttpConfigChange,
-    // Removed scoring related variables and functions
+    handleToggleFormScoring,
+    handleSaveScoreRanges,
+    scoreRanges,
+    isScoringEnabled
   } = useFormBuilder(id);
 
   return (
@@ -63,7 +66,10 @@ const FormBuilder = () => {
             formId={id}
             allowedUserName={allowedUserName}
             setAllowedUserName={setAllowedUserName}
-            // Removed scoring related props
+            onToggleFormScoring={handleToggleFormScoring}
+            onSaveScoreRanges={handleSaveScoreRanges}
+            externalScoreRanges={scoreRanges}
+            isScoringEnabled={isScoringEnabled}
           />
         </DragDropContext>
       </div>
