@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { Form, FormField, ScoreRange } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
@@ -95,7 +96,7 @@ export const createFormOperation = (
         allowViewOwnResponses: newForm.allowViewOwnResponses,
         allowEditOwnResponses: newForm.allowEditOwnResponses,
         httpConfig: newForm.httpConfig,
-        showTotalScore: newForm.showTotalScore, 
+        showTotalScore: newForm.showTotalScore === true, // Ensure this is explicitly a boolean
         scoreRanges: scoreRanges, // Explicitly store score ranges in the config
         hasFieldsWithNumericValues: fieldsWithValues
       };
@@ -238,7 +239,7 @@ export const updateFormOperation = (
         .maybeSingle();
 
       if (existingForm) {
-        // Update existing form
+        // Update existing form - ensure configuration is explicitly set
         const { data, error } = await supabase
           .from('formulario_construccion')
           .update({

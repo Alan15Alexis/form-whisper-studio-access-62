@@ -7,7 +7,7 @@ import { Form, FormField, HttpConfig, ScoreRange } from "@/types/form";
 import { toast } from "@/components/ui/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
 import { useDragAndDrop } from "./form-builder/useDragAndDrop";
-import { addInvitedUser, checkInvitedUserExists } from "@/integrations/supabase/client";
+import { addInvitedUser, checkInvitedUserExists, supabase } from "@/integrations/supabase/client";
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
@@ -99,6 +99,48 @@ export const useFormBuilder = (formId?: string) => {
     }
   }, [formId, isEditMode, getForm, navigate]);
 
+  // Update Supabase directly with scoring configuration
+  const updateSupabaseFormScoring = async (formTitle: string, showTotalScore: boolean, scoreRanges: ScoreRange[]) => {
+    try {
+      // First check if the form exists in Supabase by title
+      const { data: existingForm } = await supabase
+        .from('formulario_construccion')
+        .select('id, configuracion')
+        .eq('titulo', formTitle)
+        .maybeSingle();
+
+      if (existingForm) {
+        // Get current configuration or create new one
+        const currentConfig = existingForm.configuracion || {};
+        
+        // Update scoring configuration directly
+        const updatedConfig = {
+          ...currentConfig,
+          showTotalScore: showTotalScore,
+          scoreRanges: scoreRanges
+        };
+        
+        console.log("Updating Supabase form scoring directly:", updatedConfig);
+        
+        // Update just the configuration column
+        const { error } = await supabase
+          .from('formulario_construccion')
+          .update({
+            configuracion: updatedConfig
+          })
+          .eq('id', existingForm.id);
+          
+        if (error) {
+          console.error("Error updating form scoring in Supabase:", error);
+        } else {
+          console.log("Form scoring updated in Supabase successfully");
+        }
+      }
+    } catch (error) {
+      console.error("Error updating form scoring in Supabase:", error);
+    }
+  };
+
   const handleTitleChange = (title: string) => {
     setFormData(prev => ({ ...prev, title }));
   };
@@ -144,16 +186,10 @@ export const useFormBuilder = (formId?: string) => {
         scoreRanges: enabled ? [...scoreRanges] : [] // Also update the direct scoreRanges property
       };
     });
-    
-    // FIX: Don't save changes immediately when toggling scoring
-    // This allows users to configure ranges before saving
-    // setTimeout(() => {
-    //   handleSubmit(true);
-    // }, 200);
   };
 
   // Enhanced function to explicitly save score ranges
-  const handleSaveScoreRanges = (newScoreRanges: ScoreRange[]) => {
+  const handleSaveScoreRanges = async (newScoreRanges: ScoreRange[]) => {
     console.log("Saving score ranges:", JSON.stringify(newScoreRanges));
     
     // Store the ranges locally for future use
@@ -191,9 +227,27 @@ export const useFormBuilder = (formId?: string) => {
     });
     
     // Save the form with updated score ranges
-    setTimeout(() => {
-      handleSubmit(true);
-    }, 200);
+    try {
+      // Update Supabase directly first to ensure configuration is saved properly
+      if (formData.title) {
+        await updateSupabaseFormScoring(formData.title, isScoringEnabled, newScoreRanges);
+      }
+      
+      // Then use the regular save mechanism
+      await handleSubmit(true);
+      
+      toast({
+        title: 'Rangos de puntuación guardados',
+        description: 'Los rangos de puntuación se han guardado correctamente',
+      });
+    } catch (error) {
+      console.error("Error saving score ranges:", error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron guardar los rangos de puntuación',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {

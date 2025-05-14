@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -195,11 +196,6 @@ const FormSettings = ({
     
     // Update the flags
     setHasUnsavedRanges(false);
-    
-    toast({
-      title: "Cambios guardados",
-      description: "La configuración de puntuación ha sido guardada correctamente",
-    });
   };
 
   // Handle toggle of scoring feature
@@ -214,6 +210,14 @@ const FormSettings = ({
     // Call the parent handler to update globally
     if (onToggleFormScoring) {
       onToggleFormScoring(enabled);
+    }
+    
+    // If enabling scoring and we have ranges, save them immediately
+    if (enabled && scoreRanges.length > 0) {
+      // Use setTimeout to ensure state is updated before saving
+      setTimeout(() => {
+        saveScoreRanges();
+      }, 100);
     }
   };
 
