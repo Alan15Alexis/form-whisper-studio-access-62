@@ -1,27 +1,40 @@
+
 // Update import for toast
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
 import { Form, FormField } from '@/types/form';
 import { toast } from '@/hooks/toast';
 
-interface Params {
-  id: string;
+interface UseFormBuilderParams {
+  id?: string;
 }
 
-export const useFormBuilder = () => {
-  const { id } = useParams<Params>();
+export const useFormBuilder = (id?: string) => {
+  const params = useParams<{ id: string }>();
+  const formId = id || params.id;
   const navigate = useNavigate();
   const { forms, createForm, updateForm, getForm } = useForm();
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<Partial<Form>>({});
+  const [allowedUserEmail, setAllowedUserEmail] = useState('');
+  const [allowedUserName, setAllowedUserName] = useState('');
+  const [scoreRanges, setScoreRanges] = useState<any[]>([]);
+  const [isScoringEnabled, setIsScoringEnabled] = useState(false);
 
-  useState(() => {
-    if (id) {
+  useEffect(() => {
+    if (formId) {
       setIsLoading(true);
-      const existingForm = getForm(id);
+      const existingForm = getForm(formId);
       if (existingForm) {
         setForm(existingForm);
+        setFormData(existingForm);
+        
+        // Set scoring state based on form configuration
+        setIsScoringEnabled(!!existingForm.showTotalScore);
+        setScoreRanges(existingForm.scoreRanges || []);
       } else {
         toast({
           title: 'Form not found',
@@ -32,13 +45,140 @@ export const useFormBuilder = () => {
       }
       setIsLoading(false);
     } else {
+      // Initialize empty form data for new form
+      setFormData({
+        title: '',
+        description: '',
+        fields: [],
+        isPrivate: false,
+        allowedUsers: [],
+      });
       setIsLoading(false);
     }
-  }, [id, forms, navigate, getForm]);
+  }, [formId, getForm, navigate]);
+
+  const isEditMode = Boolean(formId);
+
+  const handleTitleChange = (title: string) => {
+    setFormData(prev => ({ ...prev, title }));
+  };
+
+  const handleDescriptionChange = (description: string) => {
+    setFormData(prev => ({ ...prev, description }));
+  };
+
+  const handlePrivateChange = (isPrivate: boolean) => {
+    setFormData(prev => ({ ...prev, isPrivate }));
+  };
+
+  const handleToggleFormScoring = (enabled: boolean) => {
+    setIsScoringEnabled(enabled);
+    setFormData(prev => ({ ...prev, showTotalScore: enabled }));
+  };
+
+  const handleSaveScoreRanges = (ranges: any[]) => {
+    setScoreRanges(ranges);
+    setFormData(prev => ({ ...prev, scoreRanges: ranges }));
+  };
+
+  const updateField = (id: string, updatedField: FormField) => {
+    setFormData(prev => ({
+      ...prev,
+      fields: (prev.fields || []).map(field =>
+        field.id === id ? updatedField : field
+      ),
+    }));
+  };
+
+  const removeField = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      fields: (prev.fields || []).filter(field => field.id !== id),
+    }));
+  };
+
+  const addField = (fieldType: string) => {
+    const newField: FormField = {
+      id: crypto.randomUUID(),
+      type: fieldType as any,
+      label: '',
+      required: false,
+      options: fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox' ? [
+        { id: crypto.randomUUID(), label: 'Option 1', value: 'option_1' },
+        { id: crypto.randomUUID(), label: 'Option 2', value: 'option_2' }
+      ] : undefined
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      fields: [...(prev.fields || []), newField],
+    }));
+  };
+
+  const addAllowedUser = () => {
+    if (!allowedUserEmail) return;
+
+    setFormData(prev => ({
+      ...prev,
+      allowedUsers: [...(prev.allowedUsers || []), allowedUserEmail],
+    }));
+    setAllowedUserEmail('');
+    setAllowedUserName('');
+  };
+
+  const removeAllowedUser = (email: string) => {
+    setFormData(prev => ({
+      ...prev,
+      allowedUsers: (prev.allowedUsers || []).filter(user => user !== email),
+    }));
+  };
+
+  const handleAllowViewOwnResponsesChange = (allow: boolean) => {
+    setFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
+  };
+
+  const handleAllowEditOwnResponsesChange = (allow: boolean) => {
+    setFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
+  };
+
+  const handleFormColorChange = (color: string) => {
+    setFormData(prev => ({ ...prev, formColor: color }));
+  };
+
+  const handleHttpConfigChange = (config: any) => {
+    setFormData(prev => ({ ...prev, httpConfig: config }));
+  };
+
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const reorderedFields = Array.from(formData.fields || []);
+    const [movedField] = reorderedFields.splice(result.source.index, 1);
+    reorderedFields.splice(result.destination.index, 0, movedField);
+
+    setFormData(prev => ({
+      ...prev,
+      fields: reorderedFields,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setIsSaving(true);
+    
+    try {
+      if (isEditMode && formId) {
+        await handleUpdateForm(formId, formData);
+      } else {
+        await handleCreateForm(formData);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleCreateForm = async (formData: Partial<Form>) => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
       const newForm = await createForm(formData);
       navigate(`/form/${newForm.id}`);
       toast({
@@ -52,13 +192,13 @@ export const useFormBuilder = () => {
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
       await updateForm(id, formData);
       toast({
         title: 'Form updated',
@@ -71,14 +211,39 @@ export const useFormBuilder = () => {
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   return {
     form,
     isLoading,
+    isSaving,
+    formData,
+    isEditMode,
+    allowedUserEmail,
+    allowedUserName,
+    scoreRanges,
+    isScoringEnabled,
+    setAllowedUserEmail,
+    setAllowedUserName,
+    handleTitleChange,
+    handleDescriptionChange,
+    handlePrivateChange,
+    handleToggleFormScoring,
+    handleSaveScoreRanges,
+    updateField,
+    removeField,
+    addField,
+    addAllowedUser,
+    removeAllowedUser,
+    handleDragEnd,
+    handleAllowViewOwnResponsesChange,
+    handleAllowEditOwnResponsesChange,
+    handleFormColorChange,
+    handleHttpConfigChange,
+    handleSubmit,
     handleCreateForm,
-    handleUpdateForm,
+    handleUpdateForm
   };
 };

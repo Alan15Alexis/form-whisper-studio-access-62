@@ -39,10 +39,10 @@ const FormBuilder = () => {
   // Log the form data for debugging
   console.log("FormBuilder - Current form data:", {
     id: id,
-    showTotalScore: formData.showTotalScore,
-    scoreConfig: formData.scoreConfig,
-    scoreRanges: formData.scoreRanges,
-    fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
+    showTotalScore: formData?.showTotalScore,
+    scoreConfig: formData?.scoreConfig,
+    scoreRanges: formData?.scoreRanges,
+    fieldsWithRanges: formData?.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
     externalScoreRanges: scoreRanges,
     isScoringEnabled: isScoringEnabled
   });
@@ -52,14 +52,14 @@ const FormBuilder = () => {
       <div className="container py-8">
         <FormBuilderHeader
           isEditMode={isEditMode}
-          formTitle={formData.title || ''}
+          formTitle={formData?.title || ''}
           isSaving={isSaving}
           onSave={handleSubmit}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <FormBuilderTabs
-            formData={formData}
+            formData={formData || {}}
             onTitleChange={handleTitleChange}
             onDescriptionChange={handleDescriptionChange}
             onPrivateChange={handlePrivateChange}

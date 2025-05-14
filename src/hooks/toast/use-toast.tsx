@@ -1,163 +1,79 @@
 
 import * as React from "react";
-import {
-  ToastProvider as ToastProviderPrimitive,
-  ToastViewport,
-  Toast as ToastPrimitive,
-  type ToastActionElement as ToastActionElementType,
-} from "@radix-ui/react-toast";
-import { ToastComponent } from "./toast-component";
-import {
-  dispatch,
-  addToRemoveQueue,
-  genId,
-  toastTimeouts,
-  listeners,
-  memoryState,
-} from "./toast-store";
-import { Toast, ToastContextState } from "./types";
+import { useState, useEffect } from "react";
 
-// Create context for toast
-const ToastContext = React.createContext<{
-  toasts: Toast[];
-  toast: (props: Omit<Toast, "id">) => {
-    id: string;
-    dismiss: () => void;
-    update: (props: Partial<Omit<Toast, "id">>) => void;
-  };
-  dismiss: (toastId: string) => void;
-}>({
-  toasts: [],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  toast: () => ({
-    id: "",
-    dismiss: () => null,
-    update: () => null,
-  }),
-  dismiss: () => null,
-});
+import { toastStore, useToastStore } from "./toast-store";
+import { type ToastProps, type Toast, type ToastActionElement } from "./types";
 
-// Provider component
-export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, setState] = React.useState<ToastContextState>(memoryState);
+// Custom implementation that doesn't rely on ToastActionElement from radix-ui
+// Define ToastActionElement type locally if needed
+type CustomToastActionElement = React.ReactElement<{
+  altText: string;
+  onClick: () => void;
+}>;
 
-  React.useEffect(() => {
-    listeners.push(setState);
-    return () => {
-      const index = listeners.indexOf(setState);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    };
-  }, [state]);
+const TOAST_REMOVE_DELAY = 1000000;
 
-  return (
-    <ToastContext.Provider
-      value={{
-        toasts: state.toasts,
-        toast: (props) => {
-          const id = genId();
-          const update = (props: Partial<Omit<Toast, "id">>) =>
-            dispatch({
-              type: "UPDATE_TOAST",
-              toast: { ...props },
-              toastId: id,
-            });
-
-          const dismiss = () => dispatch({ type: "REMOVE_TOAST", toastId: id });
-
-          dispatch({
-            type: "ADD_TOAST",
-            toast: {
-              ...props,
-              id,
-              onOpenChange: (open) => {
-                if (!open) dismiss();
-              },
-            },
-          });
-
-          return {
-            id,
-            dismiss,
-            update,
-          };
-        },
-        dismiss: (toastId: string) => dispatch({ type: "REMOVE_TOAST", toastId }),
-      }}
-    >
-      {children}
-    </ToastContext.Provider>
-  );
-};
-
-// Hook for using toast
 export const useToast = () => {
-  const { toasts, toast, dismiss } = React.useContext(ToastContext);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  return React.useMemo(
-    () => ({
-      toasts,
-      toast: (props: {
-        title?: React.ReactNode;
-        description?: React.ReactNode;
-        action?: React.ReactNode;
-        variant?: "default" | "destructive";
-        className?: string;
-        onOpenChange?: (open: boolean) => void;
-      }) => toast(props),
-      dismiss: (toastId?: string) => {
-        if (toastId) {
-          dismiss(toastId);
-          if (toastTimeouts.has(toastId)) {
-            clearTimeout(toastTimeouts.get(toastId));
-            toastTimeouts.delete(toastId);
-          }
-        } else {
-          dispatch({ type: "REMOVE_TOAST", toastId: "all" });
+  useEffect(() => {
+    return toastStore.subscribe((state) => {
+      setToasts(state.toasts);
+    });
+  }, []);
 
-          // Clear all timeouts
-          for (const [toastId, timeout] of toastTimeouts.entries()) {
-            clearTimeout(timeout);
-            toastTimeouts.delete(toastId);
-          }
-        }
-      },
-    }),
-    [toasts, toast, dismiss]
-  );
+  function toast(props: ToastProps) {
+    const id = crypto.randomUUID();
+    const update = (props: ToastProps) =>
+      toastStore.setState((state) => ({
+        toasts: state.toasts.map((toast) =>
+          toast.id === id ? { ...toast, ...props } : toast
+        ),
+      }));
+    const dismiss = () =>
+      toastStore.setState((state) => ({
+        toasts: state.toasts.filter((toast) => toast.id !== id),
+      }));
+    toastStore.setState((state) => ({
+      toasts: [
+        ...state.toasts,
+        { ...props, id, dismiss, update },
+      ],
+    }));
+    return {
+      id,
+      dismiss,
+      update,
+    };
+  }
+
+  return {
+    toast,
+    toasts,
+    dismiss: (id: string) =>
+      toastStore.setState((state) => ({
+        toasts: state.toasts.filter((toast) => toast.id !== id),
+      })),
+  };
 };
 
-// Toast function to create toasts
-export function toast(props: { 
-  title?: React.ReactNode; 
-  description?: React.ReactNode;
-  action?: React.ReactNode;
-  variant?: "default" | "destructive";
-  className?: string;
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const id = genId();
+export function toast(props: ToastProps) {
+  const id = crypto.randomUUID();
+  const update = (props: ToastProps) =>
+    toastStore.setState((state) => ({
+      toasts: state.toasts.map((toast) =>
+        toast.id === id ? { ...toast, ...props } : toast
+      ),
+    }));
+  const dismiss = () =>
+    toastStore.setState((state) => ({
+      toasts: state.toasts.filter((toast) => toast.id !== id),
+    }));
 
-  const update = (props: Partial<Omit<Toast, "id">>) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props },
-      toastId: id,
-    });
-
-  const dismiss = () => dispatch({ type: "REMOVE_TOAST", toastId: id });
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      onOpenChange: (open) => {
-        if (!open) dismiss();
-      },
-    },
-  });
+  toastStore.setState((state) => ({
+    toasts: [...state.toasts, { ...props, id, dismiss, update }],
+  }));
 
   return {
     id,
@@ -166,29 +82,64 @@ export function toast(props: {
   };
 }
 
-// Toast UI components
-export const Toaster = React.forwardRef<
-  React.ElementRef<typeof ToastProviderPrimitive>,
-  React.ComponentPropsWithoutRef<typeof ToastProviderPrimitive>
->(({ ...props }, ref) => {
-  const { toasts } = useToast();
+export const Toaster = () => {
+  const { toasts } = useToastStore();
 
   return (
-    <ToastProviderPrimitive ref={ref} {...props}>
-      {toasts.map(({ id, title, description, action, ...props }) => {
-        return (
-          <ToastComponent
-            key={id}
-            {...props}
-            title={title}
-            description={description}
-            action={action}
-          />
-        );
-      })}
-      <ToastViewport />
-    </ToastProviderPrimitive>
+    <div
+      className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
+    >
+      {toasts.map(({ id, title, description, action, ...props }) => (
+        <div
+          key={id}
+          className="group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border border-slate-200 p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full bg-white dark:border-slate-800 dark:bg-slate-950"
+        >
+          <div className="grid gap-1">
+            {title && <div className="text-sm font-semibold">{title}</div>}
+            {description && (
+              <div className="text-sm opacity-90">{description}</div>
+            )}
+          </div>
+          {action}
+          <button
+            className="absolute right-2 top-2 rounded-md p-1 text-slate-950/50 opacity-0 transition-opacity hover:text-slate-950 focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 dark:text-slate-50/50 dark:hover:text-slate-50"
+            onClick={() => {
+              toastStore.setState((state) => ({
+                toasts: state.toasts.filter((toast) => toast.id !== id),
+              }));
+            }}
+          >
+            <span className="sr-only">Close</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6L6 18" />
+              <path d="M6 6L18 18" />
+            </svg>
+          </button>
+        </div>
+      ))}
+    </div>
   );
-});
+};
 
-Toaster.displayName = "Toaster";
+export const ToastProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  return (
+    <>
+      {children}
+      <Toaster />
+    </>
+  );
+};
