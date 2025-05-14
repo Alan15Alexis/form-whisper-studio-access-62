@@ -37,8 +37,14 @@ export function useToast() {
 }
 
 // Toast function to create toasts
-// Fixed to properly type the props parameter to match the Toast interface
-export function toast(props: Omit<Toast, "id">) {
+export function toast(props: { 
+  title?: React.ReactNode; 
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive";
+  className?: string;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const id = genId();
 
   const update = (props: Partial<Omit<Toast, "id">>) =>

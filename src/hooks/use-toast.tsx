@@ -91,7 +91,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
-// Fixed type definitions to use ReactNode correctly
+// Fixed type definitions to use React.ReactNode correctly
 interface ToastProps1 {
   id: string;
   title?: React.ReactNode;
@@ -210,7 +210,13 @@ function dispatch(action: Action) {
 }
 
 // Fixed toast function to properly type the props parameter
-function toast(props: Omit<ToastProps1, "id">) {
+function toast(props: { 
+  title?: React.ReactNode; 
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive";
+  onOpenChange?: (open: boolean) => void;
+}) {
   const id = genId();
 
   const update = (props: Partial<Omit<ToastProps1, "id">>) =>
