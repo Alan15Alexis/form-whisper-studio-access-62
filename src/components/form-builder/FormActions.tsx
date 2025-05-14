@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 interface FormActionsProps {
   isSaving: boolean;
@@ -10,7 +11,13 @@ interface FormActionsProps {
 const FormActions = ({ isSaving, onSave }: FormActionsProps) => {
   return (
     <Button 
-      onClick={onSave}
+      onClick={() => {
+        onSave();
+        toast({
+          title: "Guardando formulario",
+          description: "Guardando todos los cambios del formulario...",
+        });
+      }}
       disabled={isSaving} 
       className="btn-primary px-6 py-2 rounded-md shadow-sm hover:shadow transition-all"
     >

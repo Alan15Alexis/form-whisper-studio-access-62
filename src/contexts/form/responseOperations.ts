@@ -1,116 +1,72 @@
-import { v4 as uuidv4 } from 'uuid';
-import { FormResponse } from '@/types/form';
-import { toast } from "@/hooks/use-toast";
+import { Form, FormResponse } from '@/types/form';
+import { processFormData, saveFormResponseToDatabase, formatResponsesWithLabels } from '@/utils/formResponseUtils';
 
+// Submit form response operation
 export const submitFormResponseOperation = (
-  getForm: (id: string) => any,
-  setResponses: React.Dispatch<React.SetStateAction<any[]>>,
-  user: { email: string } | null,
+  getForm: (id: string) => Form | undefined,
+  setResponses: React.Dispatch<React.SetStateAction<FormResponse[]>>,
+  currentUser: { email: string } | null,
   apiEndpoint: string
 ) => {
   return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
-    // Use form from location if provided, otherwise fetch it
-    const form = formFromLocation || getForm(formId);
-    if (!form) {
-      toast({
-        title: 'Error',
-        description: 'Form not found',
-        variant: 'destructive',
-      });
-      throw new Error('Form not found');
-    }
-
-    // Create response object
-    const responseId = uuidv4();
-    const response: FormResponse = {
-      id: responseId,
-      formId,
-      responses: data,
-      submittedBy: user?.email,
-      submittedAt: new Date().toISOString()
-    };
-
     try {
-      console.log('Submitting form response:', response);
-      
-      // Save response to local state
-      setResponses(prev => [...prev, response]);
-      
-      // If the form has HTTP config enabled, send data to external API
-      if (form.httpConfig && form.httpConfig.enabled && form.httpConfig.url) {
-        try {
-          const { url, method, headers, body } = form.httpConfig;
-          
-          // Parse headers
-          const headersObj = headers?.reduce((acc, h) => {
-            if (h.key && h.value) {
-              acc[h.key] = h.value;
-            }
-            return acc;
-          }, {} as Record<string, string>) || {};
-          
-          // Replace placeholder in body with actual response data
-          let parsedBody = body;
-          try {
-            const bodyObj = JSON.parse(body);
-            
-            // If body contains "respuesta" key, replace with form response data
-            if (bodyObj && typeof bodyObj === 'object' && 'id_del_elemento' in bodyObj) {
-              bodyObj.id_del_elemento = response;
-              parsedBody = JSON.stringify(bodyObj);
-            }
-          } catch (e) {
-            console.error('Error parsing HTTP body:', e);
-          }
-          
-          console.log('Sending HTTP request:', {
-            url,
-            method,
-            headers: headersObj,
-            body: parsedBody
-          });
-          
-          // Make HTTP request
-          const httpResponse = await fetch(url, {
-            method,
-            headers: {
-              'Content-Type': 'application/json',
-              ...headersObj
-            },
-            body: method === 'POST' ? parsedBody : undefined
-          });
-          
-          // Save last response to form
-          const httpData = await httpResponse.text();
-          console.log('HTTP response:', httpResponse.status, httpData);
-        } catch (error) {
-          console.error('HTTP request error:', error);
-        }
+      // Get the form using the provided formId
+      const form = formFromLocation || getForm(formId);
+      if (!form) {
+        throw new Error('Form not found');
       }
+
+      // Get user email (for anonymous users, use a placeholder)
+      const userEmail = currentUser?.email || 'anonymous@user.com';
+
+      console.log("Processing form response submission:");
+      console.log("- Form ID:", formId);
+      console.log("- User:", userEmail);
+      console.log("- Data length:", Object.keys(data).length);
+
+      // Process form data (handle file uploads, etc.)
+      const processedData = await processFormData(form, data, userEmail, formId);
       
-      toast({
-        title: 'Form submitted',
-        description: 'Your response has been submitted successfully',
-        variant: 'default',
-      });
+      // Format responses to use labels instead of IDs
+      const formattedResponses = formatResponsesWithLabels(form.fields, processedData);
       
-      return response;
+      // Create the response object
+      const formResponse: FormResponse = {
+        id: crypto.randomUUID(),
+        formId,
+        formTitle: form.title,
+        userId: currentUser?.email || 'anonymous',
+        userEmail: userEmail,
+        submittedAt: new Date().toISOString(),
+        data: processedData,
+        formattedData: formattedResponses
+      };
+      
+      // Save the response locally
+      setResponses(prev => [...prev, formResponse]);
+
+      // Save to database (Supabase and MySQL)
+      await saveFormResponseToDatabase(form, formId, userEmail, formattedResponses, apiEndpoint);
+      
+      return formResponse;
     } catch (error) {
       console.error('Error submitting form response:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
-        variant: 'destructive',
-      });
       throw error;
     }
   };
 };
 
-export const getFormResponsesOperation = (
-  responses: any[]
-) => {
-  return (formId: string): any[] => {
+// Get form responses operation
+export const getFormResponsesOperation = (responses: FormResponse[]) => {
+  return (formId: string, userEmail?: string): FormResponse[] => {
+    if (userEmail) {
+      // If userEmail is provided, filter by both formId and userEmail
+      return responses.filter(
+        response => response.formId === formId && response.userEmail === userEmail
+      );
+    }
+    
+    // Otherwise, just filter by formId
     return responses.filter(response => response.formId === formId);
   };
 };
