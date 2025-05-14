@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -9,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle, Save, ArrowDown } from "lucide-react";
+import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -58,10 +59,10 @@ const FormSettings = ({
   formFields = [],
   formId = "",
   showTotalScore = false,
-  onToggleFormScoring,
-  onSaveScoreRanges,
+  onToggleFormScoring = () => {},
+  onSaveScoreRanges = () => {},
   externalScoreRanges = [],
-  isScoringEnabled = false,
+  isScoringEnabled = false
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -76,86 +77,284 @@ const FormSettings = ({
 }`,
   };
 
-  // For scoring section
+  const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
+
+  // Initialize score ranges from props or existing fields
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
-  const [isExpanded, setIsExpanded] = useState(true);
   
-  // Initialize with default or existing score ranges
+  // Track if there are unsaved changes to score ranges
+  const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
+
+  // Debug logs to track state
+  console.log("FormSettings - showTotalScore prop:", showTotalScore);
+  console.log("FormSettings - external score ranges:", externalScoreRanges);
+  console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
+  
+  // Init state from props or fields
   useEffect(() => {
-    // If external score ranges are provided, use them
+    console.log("Setting score ranges from externalScoreRanges:", externalScoreRanges);
+    console.log("Current showTotalScore value:", showTotalScore);
+    console.log("Current isScoringEnabled value:", isScoringEnabled);
+    
+    // First priority: use externally provided score ranges if available
     if (externalScoreRanges && externalScoreRanges.length > 0) {
       setScoreRanges([...externalScoreRanges]);
-    } 
-    // Otherwise, if scoring is enabled but no ranges exist, create default one
-    else if (isScoringEnabled && scoreRanges.length === 0) {
-      setScoreRanges([{ min: 0, max: 10, message: "" }]);
+      return;
     }
-  }, [externalScoreRanges, isScoringEnabled]);
-
-  const handleToggleScoring = (enabled: boolean) => {
-    if (onToggleFormScoring) {
-      onToggleFormScoring(enabled);
+    
+    // Second priority: look for ranges in fields if scoring is enabled
+    if ((showTotalScore || isScoringEnabled) && formFields && formFields.length > 0) {
+      const fieldWithRanges = formFields.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
       
-      // If enabling scoring and no ranges exist, add a default one
-      if (enabled && scoreRanges.length === 0) {
-        setScoreRanges([{ min: 0, max: 10, message: "" }]);
+      if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
+        console.log("Setting score ranges from fields:", fieldWithRanges.scoreRanges);
+        setScoreRanges([...fieldWithRanges.scoreRanges]);
+        return;
       }
     }
-  };
+    
+    // If no ranges found and we're toggling on scoring, create a default range
+    if ((showTotalScore || isScoringEnabled) && scoreRanges.length === 0) {
+      console.log("Creating default score range");
+      setScoreRanges([{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }]);
+    }
+  }, [externalScoreRanges, formFields, showTotalScore, isScoringEnabled]);
+  
+  // Better sync local state with props
+  useEffect(() => {
+    // Reset unsaved changes flag when props change
+    setHasUnsavedRanges(false);
+  }, [showTotalScore, isScoringEnabled]);
 
-  const handleAddScoreRange = () => {
+  // Score range management functions
+  const addScoreRange = () => {
+    if (scoreRanges.length === 0) {
+      // First range
+      const newRanges = [
+        { min: 0, max: 10, message: "Mensaje para puntuación 0-10" }
+      ];
+      setScoreRanges(newRanges);
+      setHasUnsavedRanges(true);
+      
+      toast({
+        title: "Rango añadido",
+        description: `Se añadió un nuevo rango de puntuación: 0-10`,
+      });
+      return;
+    }
+    
     const lastRange = scoreRanges[scoreRanges.length - 1];
     const newMin = lastRange ? lastRange.max + 1 : 0;
     const newMax = newMin + 10;
     
-    setScoreRanges([...scoreRanges, { min: newMin, max: newMax, message: "" }]);
-  };
-
-  const handleRemoveScoreRange = (index: number) => {
-    const newRanges = [...scoreRanges];
-    newRanges.splice(index, 1);
+    const newRanges = [
+      ...scoreRanges, 
+      { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
+    ];
+    
     setScoreRanges(newRanges);
+    setHasUnsavedRanges(true);
+    
+    toast({
+      title: "Rango añadido",
+      description: `Se añadió un nuevo rango de puntuación: ${newMin}-${newMax}`,
+    });
   };
 
-  const updateScoreRange = (index: number, field: keyof ScoreRange, value: any) => {
-    const newRanges = [...scoreRanges];
-    newRanges[index] = { ...newRanges[index], [field]: value };
-    setScoreRanges(newRanges);
+  const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
+    if (!scoreRanges[index]) return;
+    
+    const updatedRanges = [...scoreRanges];
+    updatedRanges[index] = { 
+      ...updatedRanges[index], 
+      [field]: typeof value === 'string' ? value : Number(value)
+    };
+    setScoreRanges(updatedRanges);
+    setHasUnsavedRanges(true);
   };
 
-  const handleSaveScoreRanges = () => {
-    // Validate ranges before saving
-    const hasInvalidRanges = scoreRanges.some(range => 
-      range.min === undefined || 
-      range.max === undefined || 
-      range.min > range.max
-    );
+  const removeScoreRange = (index: number) => {
+    const updatedRanges = scoreRanges.filter((_, i) => i !== index);
+    setScoreRanges(updatedRanges);
+    setHasUnsavedRanges(true);
+    
+    toast({
+      title: "Rango eliminado",
+      description: "El rango de puntuación ha sido eliminado",
+    });
+  };
 
-    if (hasInvalidRanges) {
-      toast({
-        title: "Rangos inválidos",
-        description: "Asegúrate de que los valores mínimos sean menores que los máximos.",
-        variant: "destructive",
+  // Save score ranges directly to Supabase - updated to separate fields from config
+  const directlySaveScoreRangesToSupabase = async (formTitle: string, ranges: ScoreRange[]) => {
+    try {
+      // First check if the form exists in Supabase by title
+      console.log("Checking for form in Supabase:", formTitle);
+      const { data: existingForm, error: queryError } = await supabase
+        .from('formulario_construccion')
+        .select('id, configuracion, preguntas, titulo')
+        .eq('titulo', formTitle)
+        .maybeSingle();
+      
+      if (queryError) {
+        console.error("Error querying form:", queryError);
+        return false;
+      }
+      
+      if (!existingForm) {
+        console.error("Form not found in database:", formTitle);
+        return false;
+      }
+      
+      console.log("Found form in database:", existingForm);
+      
+      // Get current configuration or create new one
+      const currentConfig = existingForm.configuracion || {};
+      
+      // FIXED: Create a deep copy of the ranges array to avoid reference issues
+      const rangesCopy = JSON.parse(JSON.stringify(ranges));
+      
+      // Update scoring configuration - IMPORTANT: Set exact values for both flags
+      const updatedConfig = {
+        ...currentConfig,
+        showTotalScore: isScoringEnabled === true, // Ensure boolean value
+        scoreRanges: rangesCopy, // Use the deep copied array
+        // Add additional fields to preserve existing configuration
+        isPrivate: currentConfig.isPrivate || false,
+        formColor: currentConfig.formColor || '#3b82f6',
+        allowViewOwnResponses: currentConfig.allowViewOwnResponses || false,
+        allowEditOwnResponses: currentConfig.allowEditOwnResponses || false,
+        httpConfig: currentConfig.httpConfig || null,
+      };
+      
+      console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
+      
+      // Get current fields and remove scoreRanges from them
+      const currentFields = existingForm.preguntas || [];
+      const fieldsWithoutRanges = currentFields.map(field => {
+        // Use destructuring with rest operator to exclude scoreRanges
+        const { scoreRanges, ...fieldWithoutRanges } = field;
+        return fieldWithoutRanges;
       });
-      return;
+      
+      console.log("Fields without score ranges:", JSON.stringify(fieldsWithoutRanges));
+      
+      // Update both the configuration and questions columns
+      const { error: updateError } = await supabase
+        .from('formulario_construccion')
+        .update({
+          configuracion: updatedConfig,
+          preguntas: fieldsWithoutRanges // Update fields without score ranges
+        })
+        .eq('id', existingForm.id);
+        
+      if (updateError) {
+        console.error("Error updating form scoring in Supabase:", updateError);
+        return false;
+      }
+      
+      console.log("Score ranges saved successfully to Supabase!");
+      return true;
+    } catch (error) {
+      console.error("Error saving score ranges to Supabase:", error);
+      return false;
+    }
+  };
+
+  // Save score ranges explicitly when the save button is clicked
+  const saveScoreRanges = async () => {
+    if (!onSaveScoreRanges) return;
+    
+    console.log("Saving score ranges with toggle state:", isScoringEnabled);
+    console.log("Ranges to save:", JSON.stringify(scoreRanges));
+    
+    // Get current form title
+    let formTitle = '';
+    try {
+      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
+      if (titleInput) {
+        formTitle = titleInput.value;
+      } else {
+        const h1Element = document.querySelector('h1.text-3xl');
+        if (h1Element) {
+          formTitle = h1Element.textContent || '';
+        }
+      }
+    } catch (error) {
+      console.error("Error getting form title:", error);
     }
 
-    // Check for overlapping ranges
-    const sortedRanges = [...scoreRanges].sort((a, b) => a.min - b.min);
-    for (let i = 0; i < sortedRanges.length - 1; i++) {
-      if (sortedRanges[i].max >= sortedRanges[i + 1].min) {
+    console.log("Got form title for saving ranges:", formTitle);
+      
+    if (formTitle) {
+      // FIXED: Create a deep copy of the scoreRanges to avoid any reference issues
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+      const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
+      
+      if (saved) {
+        // Update the flags
+        setHasUnsavedRanges(false);
+        
         toast({
-          title: "Rangos superpuestos",
-          description: "Los rangos de puntuación no deben superponerse.",
-          variant: "destructive",
+          title: "Rangos guardados",
+          description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
         });
-        return;
       }
     }
+    
+    // Also call the parent handler to update globally
+    // FIXED: Pass a deep copy of the score ranges
+    const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+    onSaveScoreRanges(scoreRangesCopy);
+    
+    // Update the flags
+    setHasUnsavedRanges(false);
+  };
 
-    // Save the ranges
-    if (onSaveScoreRanges) {
-      onSaveScoreRanges([...scoreRanges]);
+  // Handle toggle of scoring feature
+  const handleToggleScoringFeature = async (enabled: boolean) => {
+    console.log("Toggle scoring feature called with:", enabled);
+    
+    // Call the parent handler to update globally
+    if (onToggleFormScoring) {
+      onToggleFormScoring(enabled);
+    }
+    
+    // If toggling on and no ranges exist yet, add a default range
+    if (enabled && scoreRanges.length === 0) {
+      addScoreRange();
+    }
+    
+    // Get current form title (same as in saveScoreRanges)
+    let formTitle = '';
+    try {
+      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
+      if (titleInput) {
+        formTitle = titleInput.value;
+      } else {
+        const h1Element = document.querySelector('h1.text-3xl');
+        if (h1Element) {
+          formTitle = h1Element.textContent || '';
+        }
+      }
+    } catch (error) {
+      console.error("Error getting form title:", error);
+    }
+    
+    // Update Supabase directly with the toggle state
+    if (formTitle) {
+      // FIXED: Create a deep copy of the scoreRanges to avoid any reference issues
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+      await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
+    }
+    
+    // If enabling scoring and we have ranges, save them immediately
+    if (enabled && scoreRanges.length > 0) {
+      // Use setTimeout to ensure state is updated before saving
+      setTimeout(() => {
+        saveScoreRanges();
+      }, 100);
     }
   };
 
@@ -209,6 +408,151 @@ const FormSettings = ({
         </div>
       </Card>
 
+      {/* Scoring Card */}
+      <Card className="p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-medium mb-4">Puntuación y Resultados</h3>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Switch
+              id="show-total-score"
+              checked={isScoringEnabled} 
+              onCheckedChange={handleToggleScoringFeature}
+              disabled={!hasFieldsWithNumericValues}
+              className="data-[state=checked]:bg-[#686df3]"
+            />
+            <div>
+              <Label htmlFor="show-total-score" className="text-lg font-medium">Mostrar puntuación total</Label>
+              <p className="text-sm text-gray-500">
+                {hasFieldsWithNumericValues 
+                  ? "Muestra la puntuación total al finalizar el formulario" 
+                  : "Para activar, configura valores numéricos en al menos un campo"}
+              </p>
+            </div>
+          </div>
+
+          {!hasFieldsWithNumericValues && (
+            <div className="p-4 bg-primary/5 rounded-md text-sm">
+              <p className="font-medium">Para habilitar la puntuación total:</p>
+              <ol className="list-decimal ml-5 mt-2 space-y-1">
+                <li>Ve a la pestaña "Campos"</li>
+                <li>Selecciona un campo y haz clic en el ícono de configuración</li>
+                <li>Activa "Habilitar valores numéricos"</li>
+                <li>Asigna valores numéricos a las opciones</li>
+              </ol>
+            </div>
+          )}
+          
+          {/* Score Ranges Configuration - Solo mostrar cuando isScoringEnabled está activo */}
+          {isScoringEnabled && (
+            <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addScoreRange}
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" /> Añadir rango
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant={hasUnsavedRanges ? "default" : "outline"}
+                    size="sm"
+                    onClick={saveScoreRanges}
+                    className="flex items-center gap-1"
+                  >
+                    <Save className="h-4 w-4" /> Guardar cambios
+                  </Button>
+                </div>
+              </div>
+              
+              {scoreRanges.length === 0 && (
+                <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No hay rangos definidos. Los rangos permiten mostrar mensajes personalizados según la puntuación obtenida.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="space-y-3">
+                {scoreRanges.map((range, index) => (
+                  <div key={index} className="p-3 border rounded-md bg-background">
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <Label htmlFor={`min-${index}`}>Mínimo</Label>
+                        <Input
+                          id={`min-${index}`}
+                          type="number"
+                          value={range.min}
+                          onChange={(e) => updateScoreRange(index, 'min', Number(e.target.value))}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`max-${index}`}>Máximo</Label>
+                        <Input
+                          id={`max-${index}`}
+                          type="number"
+                          value={range.max}
+                          onChange={(e) => updateScoreRange(index, 'max', Number(e.target.value))}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor={`message-${index}`}>Mensaje</Label>
+                      <Input
+                        id={`message-${index}`}
+                        value={range.message}
+                        onChange={(e) => updateScoreRange(index, 'message', e.target.value)}
+                        className="mt-1"
+                        placeholder="Mensaje que se mostrará para este rango de puntuación"
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 text-red-500 hover:text-red-700"
+                      onClick={() => removeScoreRange(index)}
+                    >
+                      <Trash className="h-4 w-4 mr-1" /> Eliminar
+                    </Button>
+                  </div>
+                ))}
+
+                {scoreRanges.length === 0 && (
+                  <div className="text-center p-4">
+                    <p className="text-sm text-muted-foreground italic">
+                      No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addScoreRange}
+                      className="mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {hasUnsavedRanges && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                  ¡Tienes cambios sin guardar! Haz clic en "Guardar cambios" para aplicar la configuración de puntuación.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+      
       {/* Access to Responses Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Acceso a Respuestas</h3>
@@ -244,119 +588,6 @@ const FormSettings = ({
               </p>
             </div>
           </div>
-        </div>
-      </Card>
-      
-      {/* Scoring and Results Card */}
-      <Card className="p-6 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium">Puntuación y Resultados</h3>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            <ArrowDown className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-          </Button>
-        </div>
-        
-        <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Switch
-              id="show-total-score"
-              checked={isScoringEnabled}
-              onCheckedChange={handleToggleScoring}
-            />
-            <div>
-              <Label htmlFor="show-total-score" className="text-lg font-medium">
-                Mostrar puntuación total
-              </Label>
-              <p className="text-sm text-gray-500">
-                Si está activo, se mostrará la puntuación total al finalizar el formulario.
-              </p>
-            </div>
-          </div>
-
-          {isScoringEnabled && isExpanded && (
-            <div className="pt-4">
-              <h4 className="text-md font-medium mb-3">Rangos de puntuación</h4>
-              
-              {scoreRanges.length === 0 ? (
-                <Alert variant="default" className="mb-4 bg-yellow-50 text-yellow-800 border-yellow-200">
-                  <AlertDescription>
-                    No hay rangos de puntuación definidos. Agrega al menos uno para mostrar mensajes personalizados.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-6">
-                  {scoreRanges.map((range, index) => (
-                    <div key={index} className="p-4 border rounded-md bg-slate-50 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor={`min-${index}`} className="mb-1 block">Puntuación mínima</Label>
-                          <Input
-                            id={`min-${index}`}
-                            type="number"
-                            value={range.min}
-                            onChange={(e) => updateScoreRange(index, 'min', parseInt(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`max-${index}`} className="mb-1 block">Puntuación máxima</Label>
-                          <Input
-                            id={`max-${index}`}
-                            type="number"
-                            value={range.max}
-                            onChange={(e) => updateScoreRange(index, 'max', parseInt(e.target.value))}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor={`message-${index}`} className="mb-1 block">Mensaje para este rango</Label>
-                        <Input
-                          id={`message-${index}`}
-                          value={range.message || ''}
-                          onChange={(e) => updateScoreRange(index, 'message', e.target.value)}
-                          placeholder="Ej: Buen trabajo, has obtenido una puntuación media."
-                        />
-                      </div>
-                      
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveScoreRange(index)}
-                        disabled={scoreRanges.length === 1}
-                      >
-                        <Trash className="h-4 w-4 mr-1" /> Eliminar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="flex flex-col gap-4 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddScoreRange}
-                  className="flex items-center"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Añadir rango
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleSaveScoreRanges}
-                  className="flex items-center"
-                >
-                  <Save className="h-4 w-4 mr-1" /> Guardar cambios
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </Card>
       

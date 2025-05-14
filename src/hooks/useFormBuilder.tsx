@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -76,11 +77,11 @@ export const useFormBuilder = (formId?: string) => {
         // Extract score ranges from the form's scoreConfig
         if (form.scoreConfig && form.scoreConfig.ranges && form.scoreConfig.ranges.length > 0) {
           console.log("Loading score ranges from scoreConfig:", form.scoreConfig.ranges);
-          setScoreRanges(JSON.parse(JSON.stringify(form.scoreConfig.ranges)));
+          setScoreRanges(form.scoreConfig.ranges);
         } else if (form.scoreRanges && form.scoreRanges.length > 0) {
           // Backward compatibility: check for direct scoreRanges property
           console.log("Loading score ranges from direct scoreRanges property:", form.scoreRanges);
-          setScoreRanges(JSON.parse(JSON.stringify(form.scoreRanges)));
+          setScoreRanges(form.scoreRanges);
         } else {
           // Default empty array if no ranges found
           setScoreRanges([]);
@@ -119,7 +120,8 @@ export const useFormBuilder = (formId?: string) => {
       // Get current configuration or create new one
       let currentConfig = existingForm.configuracion || {};
       
-      // Create a deep copy of scoreRangesData to avoid reference issues
+      // CRITICAL FIX: Make sure we set the showTotalScore as true/false explicitly
+      // FIXED: Create a deep copy of scoreRangesData to avoid reference issues
       const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRangesData));
       
       const updatedConfig = {
@@ -186,7 +188,7 @@ export const useFormBuilder = (formId?: string) => {
       const updatedFields = prev.fields?.map(field => {
         if (field.hasNumericValues && enabled) {
           // For fields with numeric values, apply scoreRanges
-          // Create a deep copy of scoreRanges to avoid reference issues
+          // FIXED: Create a deep copy of scoreRanges to avoid reference issues
           return { ...field, scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) };
         } 
         else if (!enabled) {
@@ -204,18 +206,18 @@ export const useFormBuilder = (formId?: string) => {
         // Also update scoreConfig for consistency
         scoreConfig: {
           enabled: enabled,
-          // Create a deep copy of scoreRanges to avoid reference issues
+          // FIXED: Create a deep copy of scoreRanges to avoid reference issues
           ranges: enabled ? JSON.parse(JSON.stringify(scoreRanges)) : []
         },
-        // Create a deep copy of scoreRanges to avoid reference issues
+        // FIXED: Create a deep copy of scoreRanges to avoid reference issues
         scoreRanges: enabled ? JSON.parse(JSON.stringify(scoreRanges)) : [] // Also update the direct scoreRanges property
       };
     });
     
-    // Also save the toggle state directly to Supabase immediately
+    // CRITICAL FIX: Also save the toggle state directly to Supabase immediately
     if (formData.title) {
       console.log("Saving toggle state directly to Supabase:", enabled);
-      // Create a deep copy of scoreRanges to avoid reference issues
+      // FIXED: Create a deep copy of scoreRanges to avoid reference issues
       const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
       await saveSettingsDirectlyToSupabase(formData.title, enabled, scoreRangesCopy);
     }
@@ -225,7 +227,7 @@ export const useFormBuilder = (formId?: string) => {
   const handleSaveScoreRanges = async (newScoreRanges: ScoreRange[]) => {
     console.log("Saving score ranges:", JSON.stringify(newScoreRanges));
     
-    // Create a deep copy of newScoreRanges to avoid reference issues
+    // FIXED: Create a deep copy of newScoreRanges to avoid reference issues
     const newScoreRangesCopy = JSON.parse(JSON.stringify(newScoreRanges));
     
     // Store the ranges locally for future use
@@ -262,7 +264,7 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // Save the form with updated score ranges directly to Supabase first
+    // CRITICAL FIX: Save the form with updated score ranges directly to Supabase first
     if (formData.title) {
       console.log("Saving score ranges directly to Supabase before general save");
       const success = await saveSettingsDirectlyToSupabase(
@@ -438,7 +440,7 @@ export const useFormBuilder = (formId?: string) => {
     setIsSaving(true);
 
     try {
-      // Ensure scoreRanges and showTotalScore are properly set before saving
+      // CRITICAL FIX: Ensure scoreRanges and showTotalScore are properly set before saving
       // Make an explicit copy to avoid reference issues
       const formToSave: Partial<Form> = {
         ...formData,
@@ -467,7 +469,7 @@ export const useFormBuilder = (formId?: string) => {
         formToSave.fields = updatedFields;
       }
       
-      // Before using the update/create operations, save directly to Supabase
+      // CRITICAL FIX: Before using the update/create operations, save directly to Supabase
       // to ensure the configuration is properly saved
       if (formData.title) {
         await saveSettingsDirectlyToSupabase(

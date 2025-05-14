@@ -1,136 +1,79 @@
 
-// I need to inspect how this file is used before updating it
-// This is a temporary fix to resolve the build errors
-
-import React, { useState } from 'react';
-import { Draggable, Droppable } from 'react-beautiful-dnd';
-import { Form as FormType, FormField } from '@/types/form';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import FormQuestion from '../form-view/FormQuestion';
-import FieldConfigDrawer from './FieldConfigDrawer';
-import { useAuth } from '@/contexts/AuthContext';
+import { FormField, Form } from "@/types/form";
+import FormFieldEditor from "@/components/FormFieldEditor";
+import { Droppable, Draggable } from "react-beautiful-dnd";
+import { cn } from "@/lib/utils";
 
 interface FormFieldsListProps {
-  formData: Partial<FormType>;
+  formData: Partial<Form>;
   updateField: (id: string, updatedField: FormField) => void;
   removeField: (id: string) => void;
+  onToggleFormScoring?: (enabled: boolean) => void;
+  formShowTotalScore?: boolean;
 }
 
-const FormFieldsList = ({ formData, updateField, removeField }: FormFieldsListProps) => {
-  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { currentUser } = useAuth();
-
-  const handleEditField = (fieldId: string) => {
-    setActiveFieldId(fieldId);
-    setIsDrawerOpen(true);
-  };
-
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    setActiveFieldId(null);
-  };
-
-  const activeField = formData.fields?.find(field => field.id === activeFieldId);
-
-  // Fixed build issue by ensuring we pass the correct props
-  const onUpdateField = (updatedField: FormField) => {
-    if (activeFieldId) {
-      updateField(activeFieldId, updatedField);
-    }
-  };
-
-  const onRemoveField = () => {
-    if (activeFieldId) {
-      removeField(activeFieldId);
-      handleCloseDrawer();
-    }
-  };
-
+const FormFieldsList = ({ 
+  formData, 
+  updateField, 
+  removeField,
+  onToggleFormScoring,
+  formShowTotalScore
+}: FormFieldsListProps) => {
+  console.log("FormFieldsList - formShowTotalScore:", formShowTotalScore);
+  
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h3 className="text-lg font-medium">Campos del Formulario</h3>
-
-      {(!formData.fields || formData.fields.length === 0) ? (
-        <Card className="p-6 text-center">
-          <p className="text-gray-500">
-            No hay campos en este formulario. Agrega un campo usando los botones de la derecha.
-          </p>
-        </Card>
-      ) : (
-        <Droppable droppableId="fields">
-          {(provided) => (
-            <div
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-              className="space-y-4"
-            >
-              {formData.fields?.map((field, index) => (
+      
+      <Droppable droppableId="FORM_FIELDS">
+        {(provided, snapshot) => (
+          <div
+            {...provided.droppableProps}
+            ref={provided.innerRef}
+            className={cn(
+              "space-y-4 min-h-[200px] p-4 rounded-lg",
+              snapshot.isDraggingOver && "bg-primary/5"
+            )}
+          >
+            {formData.fields && formData.fields.length > 0 ? (
+              formData.fields.map((field, index) => (
                 <Draggable key={field.id} draggableId={field.id} index={index}>
-                  {(provided) => (
+                  {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                      {...provided.dragHandleProps}
                     >
-                      <div className="flex items-center gap-2 border-b bg-gray-50 p-2 rounded-t-lg">
-                        <div
-                          {...provided.dragHandleProps}
-                          className="cursor-grab px-2 py-1 text-gray-500 hover:text-gray-700"
-                        >
-                          ⁝⁝
-                        </div>
-                        <span className="text-gray-600 text-sm flex-grow">
-                          {field.label || "Sin título"}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditField(field.id)}
-                          className="text-xs"
-                        >
-                          Editar
-                        </Button>
-                      </div>
-
-                      <div className="p-4">
-                        {/* Fix 1: Update the props to match FormQuestion's expected props */}
-                        <FormQuestion 
-                          field={field}
-                          value={{}}
-                          onChange={() => {}}
-                          isFirstQuestion={false}
-                          isLastQuestion={false}
-                          handlePrevious={() => {}}
-                          handleNext={() => {}}
-                          handleSubmit={() => {}}
-                          isSubmitting={false}
-                          isAdminPreview={true}
-                          isEditMode={false}
-                          title="Vista previa"
-                        />
-                      </div>
+                      <FormFieldEditor
+                        field={field}
+                        onChange={(updatedField) => updateField(field.id, updatedField)}
+                        onDelete={() => removeField(field.id)}
+                        isDragging={snapshot.isDragging}
+                        formShowTotalScore={formShowTotalScore}
+                        onToggleFormScoring={onToggleFormScoring}
+                      />
                     </div>
                   )}
                 </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      )}
-
-      {activeField && isDrawerOpen && (
-        // Fix 2: Update the props to match FieldConfigDrawer's expected props
-        <FieldConfigDrawer
-          isOpen={isDrawerOpen}
-          onClose={handleCloseDrawer}
-          field={activeField}
-          onUpdate={onUpdateField}
-          formHasScoring={!!formData.showTotalScore}
-          onToggleFormScoring={() => {}}
-        />
+              ))
+            ) : (
+              <div className="text-center py-8 border rounded-lg border-dashed">
+                <p className="text-gray-500">Arrastra campos desde la barra lateral para comenzar</p>
+              </div>
+            )}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+      
+      {formShowTotalScore && formData.fields && formData.fields.some(f => f.hasNumericValues) && (
+        <div className="mt-4 p-4 border rounded-lg bg-secondary/10">
+          <h3 className="font-medium">Puntuación Total</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Este formulario mostrará la puntuación total y los mensajes personalizados 
+            según las respuestas seleccionadas.
+          </p>
+        </div>
       )}
     </div>
   );
