@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { useForm } from "@/contexts/form"; // Keep the original import name
+import { useForm } from "@/contexts/form";
 import { Form, FormField, HttpConfig, ScoreRange } from "@/types/form";
 import { toast } from "@/hooks/use-toast";
 import { useFormFields } from "./form-builder/useFormFields";
@@ -11,7 +10,7 @@ import { addInvitedUser, checkInvitedUserExists, supabase } from "@/integrations
 
 export const useFormBuilder = (formId?: string) => {
   const navigate = useNavigate();
-  const { getForm, createForm, updateForm } = useForm(); // Use the original imported name
+  const { getForm, createForm, updateForm } = useForm();
   const isEditMode = !!formId;
 
   const [formData, setFormData] = useState<Partial<Form>>({
@@ -25,15 +24,13 @@ export const useFormBuilder = (formId?: string) => {
       enabled: false,
       ranges: []
     },
-    scoreRanges: [] // Initialize the property
+    scoreRanges: []
   });
 
   const [allowedUserEmail, setAllowedUserEmail] = useState<string>('');
   const [allowedUserName, setAllowedUserName] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  // Store score ranges separately to ensure they're preserved even when toggling scoring
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
-  // Add state to track scoring being enabled
   const [isScoringEnabled, setIsScoringEnabled] = useState<boolean>(false);
 
   // Add new field function
@@ -71,19 +68,16 @@ export const useFormBuilder = (formId?: string) => {
         console.log("Loaded form data:", form);
         console.log("Form has showTotalScore:", form.showTotalScore);
         
-        // Update our local state for scoring enabled - Fix: Use boolean conversion to ensure proper type
         setIsScoringEnabled(form.showTotalScore === true);
         
-        // Extract score ranges from the form's scoreConfig
-        if (form.scoreConfig && form.scoreConfig.ranges && form.scoreConfig.ranges.length > 0) {
+        // Extract score ranges from the most reliable source
+        if (form.scoreConfig?.ranges && form.scoreConfig.ranges.length > 0) {
           console.log("Loading score ranges from scoreConfig:", form.scoreConfig.ranges);
-          setScoreRanges(form.scoreConfig.ranges);
+          setScoreRanges(JSON.parse(JSON.stringify(form.scoreConfig.ranges)));
         } else if (form.scoreRanges && form.scoreRanges.length > 0) {
-          // Backward compatibility: check for direct scoreRanges property
           console.log("Loading score ranges from direct scoreRanges property:", form.scoreRanges);
-          setScoreRanges(form.scoreRanges);
+          setScoreRanges(JSON.parse(JSON.stringify(form.scoreRanges)));
         } else {
-          // Default empty array if no ranges found
           setScoreRanges([]);
         }
       } else {
@@ -97,7 +91,7 @@ export const useFormBuilder = (formId?: string) => {
     }
   }, [formId, isEditMode, getForm, navigate]);
 
-  // New function: direct Supabase update to ensure settings are saved
+  // Enhanced direct Supabase update function with improved error handling and validation
   const saveSettingsDirectlyToSupabase = async (formTitle: string, showTotalScore: boolean, scoreRangesData: ScoreRange[]) => {
     try {
       // Find the form by title
@@ -117,32 +111,34 @@ export const useFormBuilder = (formId?: string) => {
         return false;
       }
       
-      // Get current configuration or create new one
-      let currentConfig = existingForm.configuracion || {};
+      // Deep clone to avoid reference issues
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRangesData || []));
       
-      // CRITICAL FIX: Make sure we set the showTotalScore as true/false explicitly
-      // FIXED: Create a deep copy of scoreRangesData to avoid reference issues
-      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRangesData));
+      // Ensure deep clones for all objects
+      let currentConfig = existingForm.configuracion 
+        ? JSON.parse(JSON.stringify(existingForm.configuracion)) 
+        : {};
       
       const updatedConfig = {
         ...currentConfig,
-        showTotalScore: showTotalScore === true, // Ensure it's a boolean
-        scoreRanges: scoreRangesCopy // Use the deep copy
+        showTotalScore: showTotalScore === true,
+        scoreRanges: scoreRangesCopy 
       };
       
-      console.log("Saving directly to Supabase - updatedConfig:", JSON.stringify(updatedConfig));
-      console.log("showTotalScore value being saved:", showTotalScore === true);
+      console.log("DIRECT UPDATE - saveSettingsDirectlyToSupabase:");
+      console.log("Form title:", formTitle);
+      console.log("showTotalScore value:", showTotalScore);
       console.log("scoreRanges being saved:", JSON.stringify(scoreRangesCopy));
+      console.log("Complete updated config:", JSON.stringify(updatedConfig));
       
-      // Get current fields and ensure scoreRanges are removed before saving
+      // Ensure fields don't have score ranges directly in them before saving
       const currentFields = existingForm.preguntas || [];
       const fieldsWithoutRanges = currentFields.map(field => {
-        // Use destructuring to remove scoreRanges property
         const { scoreRanges, ...fieldWithoutRanges } = field;
         return fieldWithoutRanges;
       });
       
-      // Update the database record
+      // Update the database record with explicit data
       const { error: updateError } = await supabase
         .from('formulario_construccion')
         .update({
@@ -156,10 +152,10 @@ export const useFormBuilder = (formId?: string) => {
         return false;
       }
       
-      console.log("Form settings saved successfully!");
+      console.log("Form settings saved successfully to Supabase!");
       return true;
     } catch (error) {
-      console.error("Error saving form settings:", error);
+      console.error("Exception in saveSettingsDirectlyToSupabase:", error);
       return false;
     }
   };
@@ -176,23 +172,21 @@ export const useFormBuilder = (formId?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   };
 
-  // Toggle form scoring function - only updates state locally, doesn't save immediately
+  // Toggle form scoring function with immediate Supabase update
   const handleToggleFormScoring = async (enabled: boolean) => {
     console.log("Toggle form scoring called with:", enabled);
     
-    // Update local tracking state
     setIsScoringEnabled(enabled);
     
+    // Deep clone score ranges for safety
+    const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+    
     setFormData(prev => {
-      // Create a copy of fields to update
       const updatedFields = prev.fields?.map(field => {
         if (field.hasNumericValues && enabled) {
-          // For fields with numeric values, apply scoreRanges
-          // FIXED: Create a deep copy of scoreRanges to avoid reference issues
-          return { ...field, scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) };
+          return { ...field, scoreRanges: JSON.parse(JSON.stringify(scoreRangesCopy)) };
         } 
         else if (!enabled) {
-          // If disabling scoring, remove score ranges
           const { scoreRanges, ...fieldWithoutRanges } = field;
           return fieldWithoutRanges;
         }
@@ -203,48 +197,63 @@ export const useFormBuilder = (formId?: string) => {
         ...prev, 
         showTotalScore: enabled,
         fields: updatedFields,
-        // Also update scoreConfig for consistency
         scoreConfig: {
           enabled: enabled,
-          // FIXED: Create a deep copy of scoreRanges to avoid reference issues
-          ranges: enabled ? JSON.parse(JSON.stringify(scoreRanges)) : []
+          ranges: enabled ? JSON.parse(JSON.stringify(scoreRangesCopy)) : []
         },
-        // FIXED: Create a deep copy of scoreRanges to avoid reference issues
-        scoreRanges: enabled ? JSON.parse(JSON.stringify(scoreRanges)) : [] // Also update the direct scoreRanges property
+        scoreRanges: enabled ? JSON.parse(JSON.stringify(scoreRangesCopy)) : []
       };
     });
     
-    // CRITICAL FIX: Also save the toggle state directly to Supabase immediately
+    // Save to Supabase immediately with additional logging
     if (formData.title) {
-      console.log("Saving toggle state directly to Supabase:", enabled);
-      // FIXED: Create a deep copy of scoreRanges to avoid reference issues
-      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-      await saveSettingsDirectlyToSupabase(formData.title, enabled, scoreRangesCopy);
+      console.log("DIRECT ACTION - Saving toggle state to Supabase:", enabled);
+      console.log("With score ranges:", JSON.stringify(scoreRangesCopy));
+      const success = await saveSettingsDirectlyToSupabase(formData.title, enabled, scoreRangesCopy);
+      
+      if (success) {
+        console.log("Successfully saved scoring toggle state to Supabase");
+      } else {
+        console.error("Failed to save scoring toggle state to Supabase");
+        toast({
+          title: 'Error',
+          description: 'No se pudo guardar la configuración de puntuación',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
-  // Enhanced function to explicitly save score ranges
+  // Enhanced function to explicitly save score ranges with better error handling
   const handleSaveScoreRanges = async (newScoreRanges: ScoreRange[]) => {
     console.log("Saving score ranges:", JSON.stringify(newScoreRanges));
     
-    // FIXED: Create a deep copy of newScoreRanges to avoid reference issues
+    if (!newScoreRanges || newScoreRanges.length === 0) {
+      console.warn("Attempted to save empty score ranges");
+      toast({
+        title: 'Advertencia',
+        description: 'No hay rangos de puntuación para guardar',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Deep clone to avoid reference issues
     const newScoreRangesCopy = JSON.parse(JSON.stringify(newScoreRanges));
     
-    // Store the ranges locally for future use
+    // Update local state
     setScoreRanges(newScoreRangesCopy);
     
-    // Update all fields with numeric values to include these score ranges
+    // Update form data with explicit boolean flag and cloned arrays
     setFormData(prev => {
-      // First ensure showTotalScore is set to true
+      // First ensure showTotalScore is set correctly
       const updatedFormData = { 
         ...prev, 
-        showTotalScore: isScoringEnabled, // Use our tracked state instead of hardcoded true
-        // Update scoreConfig to ensure it's saved to the database
+        showTotalScore: isScoringEnabled, 
         scoreConfig: {
-          enabled: isScoringEnabled, // Use our tracked state instead of hardcoded true
+          enabled: isScoringEnabled,
           ranges: [...newScoreRangesCopy]
         },
-        // Also set the direct scoreRanges property
         scoreRanges: [...newScoreRangesCopy]
       };
       
@@ -257,33 +266,38 @@ export const useFormBuilder = (formId?: string) => {
         return field;
       });
       
-      // Return updated form data with modified fields
       return {
         ...updatedFormData,
-        fields: updatedFields
+        fields: updatedFields || []
       };
     });
     
-    // CRITICAL FIX: Save the form with updated score ranges directly to Supabase first
+    // CRITICAL: Save directly to Supabase with explicit values before the regular save operation
     if (formData.title) {
-      console.log("Saving score ranges directly to Supabase before general save");
+      console.log("DIRECT ACTION - Saving score ranges directly to Supabase");
+      console.log("Form title:", formData.title);
+      console.log("isScoringEnabled:", isScoringEnabled);
+      console.log("Score ranges to save:", JSON.stringify(newScoreRangesCopy));
+      
       const success = await saveSettingsDirectlyToSupabase(
         formData.title,
-        isScoringEnabled, // Use tracked state for showTotalScore
+        isScoringEnabled,
         newScoreRangesCopy
       );
       
       if (success) {
         toast({
           title: 'Rangos de puntuación guardados',
-          description: 'Los rangos de puntuación se han guardado correctamente',
+          description: 'Los rangos de puntuación se han guardado correctamente en la base de datos',
+          variant: 'default',
         });
       } else {
         toast({
           title: 'Error',
-          description: 'No se pudieron guardar los rangos de puntuación',
+          description: 'No se pudieron guardar los rangos de puntuación en la base de datos',
           variant: 'destructive'
         });
+        return; // Stop here if direct save failed
       }
     }
     
@@ -292,6 +306,11 @@ export const useFormBuilder = (formId?: string) => {
       await handleSubmit(true);
     } catch (error) {
       console.error("Error in regular save mechanism:", error);
+      toast({
+        title: 'Error',
+        description: 'Se produjo un error al guardar los cambios',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -311,102 +330,7 @@ export const useFormBuilder = (formId?: string) => {
     setFormData(prev => ({ ...prev, httpConfig: config }));
   };
 
-  const updateField = (id: string, updatedField: FormField) => {
-    const updatedFields = formData.fields?.map(field => 
-      field.id === id ? { ...updatedField } : field
-    ) || [];
-    
-    setFormData(prev => ({
-      ...prev,
-      fields: updatedFields
-    }));
-  };
-
-  const removeField = (id: string) => {
-    const updatedFields = formData.fields?.filter(field => field.id !== id) || [];
-    setFormData(prev => ({
-      ...prev,
-      fields: updatedFields
-    }));
-  };
-
-  const addAllowedUser = async () => {
-    if (!allowedUserEmail || allowedUserEmail.trim() === '') {
-      toast({
-        title: 'Email required',
-        description: 'Please enter an email address',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(allowedUserEmail)) {
-      toast({
-        title: 'Invalid email',
-        description: 'Please enter a valid email address',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Check if already in the form's allowed users list
-    if (formData.allowedUsers?.includes(allowedUserEmail.toLowerCase())) {
-      toast({
-        title: 'Already added',
-        description: 'This email is already in this form\'s allowed users list',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      // Add to the form's allowed users list
-      const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail.toLowerCase()];
-      setFormData(prev => ({ 
-        ...prev, 
-        allowedUsers: updatedAllowedUsers 
-      }));
-      
-      // Add to Supabase usuario_invitado table if not already exists
-      // The updated addInvitedUser function will handle checking if the user already exists
-      const nombre = allowedUserName.trim() || 'Usuario Invitado';
-      await addInvitedUser(nombre, allowedUserEmail.toLowerCase());
-      
-      // Clear inputs
-      setAllowedUserEmail('');
-      setAllowedUserName('');
-      
-      toast({
-        title: 'User added',
-        description: `${allowedUserEmail} has been added to allowed users`,
-      });
-    } catch (error) {
-      console.error('Error adding invited user:', error);
-      toast({
-        title: 'Error',
-        description: 'Could not add user to the database',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const removeAllowedUser = (email: string) => {
-    const updatedAllowedUsers = formData.allowedUsers?.filter(user => user !== email) || [];
-    setFormData(prev => ({ 
-      ...prev, 
-      allowedUsers: updatedAllowedUsers 
-    }));
-    
-    toast({
-      title: 'User removed',
-      description: `${email} has been removed from allowed users`,
-    });
-  };
-
   const handleSubmit = async (skipValidation = false) => {
-    // Skip validation if explicitly requested (e.g., when saving score ranges)
     if (!skipValidation) {
       if (!formData.title || formData.title.trim() === '') {
         toast({
@@ -440,37 +364,36 @@ export const useFormBuilder = (formId?: string) => {
     setIsSaving(true);
 
     try {
-      // CRITICAL FIX: Ensure scoreRanges and showTotalScore are properly set before saving
-      // Make an explicit copy to avoid reference issues
-      const formToSave: Partial<Form> = {
+      // Make an explicit deep copy of all data to prevent any reference issues
+      const formToSave: Partial<Form> = JSON.parse(JSON.stringify({
         ...formData,
-        // Explicitly set the showTotalScore as a boolean with our tracking state
         showTotalScore: isScoringEnabled,
         scoreConfig: {
           enabled: isScoringEnabled,
-          ranges: [...scoreRanges]
+          ranges: scoreRanges
         },
-        scoreRanges: [...scoreRanges] // Also save direct scoreRanges property
-      };
+        scoreRanges: scoreRanges
+      }));
       
-      console.log("Final form saving, showTotalScore:", formToSave.showTotalScore);
-      console.log("Final form saving, scoreConfig:", JSON.stringify(formToSave.scoreConfig));
-      console.log("Final form saving, scoreRanges:", JSON.stringify(formToSave.scoreRanges));
+      console.log("Final form saving:");
+      console.log("- showTotalScore:", formToSave.showTotalScore);
+      console.log("- scoreRanges:", JSON.stringify(formToSave.scoreRanges));
+      console.log("- scoreConfig:", JSON.stringify(formToSave.scoreConfig));
       
-      // Apply score ranges to fields that have numeric values
+      // Apply score ranges to fields with numeric values using deep clones
       if (formToSave.showTotalScore && scoreRanges.length > 0) {
-        const updatedFields = formToSave.fields?.map(field => {
+        formToSave.fields = formToSave.fields?.map(field => {
           if (field.hasNumericValues) {
-            return { ...field, scoreRanges: [...scoreRanges] };
+            return { 
+              ...field, 
+              scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) 
+            };
           }
           return field;
         });
-        
-        formToSave.fields = updatedFields;
       }
       
-      // CRITICAL FIX: Before using the update/create operations, save directly to Supabase
-      // to ensure the configuration is properly saved
+      // CRITICAL: Save directly to Supabase before using update/create operations
       if (formData.title) {
         await saveSettingsDirectlyToSupabase(
           formData.title,
@@ -482,7 +405,7 @@ export const useFormBuilder = (formId?: string) => {
       if (isEditMode && formId) {
         await updateForm(formId, formToSave);
         
-        // Update local states after successful save to maintain consistency
+        // Update local states after successful save
         setIsScoringEnabled(formToSave.showTotalScore === true);
         
         if (!skipValidation) {
@@ -521,21 +444,115 @@ export const useFormBuilder = (formId?: string) => {
     handlePrivateChange,
     handleToggleFormScoring,
     handleSaveScoreRanges,
-    updateField,
-    removeField,
+    updateField: (id: string, updatedField: FormField) => {
+      const updatedFields = formData.fields?.map(field => 
+        field.id === id ? { ...updatedField } : field
+      ) || [];
+      
+      setFormData(prev => ({
+        ...prev,
+        fields: updatedFields
+      }));
+    },
+    removeField: (id: string) => {
+      const updatedFields = formData.fields?.filter(field => field.id !== id) || [];
+      setFormData(prev => ({
+        ...prev,
+        fields: updatedFields
+      }));
+    },
     addField,
-    addAllowedUser,
-    removeAllowedUser,
+    addAllowedUser: async () => {
+      if (!allowedUserEmail || allowedUserEmail.trim() === '') {
+        toast({
+          title: 'Email required',
+          description: 'Please enter an email address',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(allowedUserEmail)) {
+        toast({
+          title: 'Invalid email',
+          description: 'Please enter a valid email address',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check if already in the form's allowed users list
+      if (formData.allowedUsers?.includes(allowedUserEmail.toLowerCase())) {
+        toast({
+          title: 'Already added',
+          description: 'This email is already in this form\'s allowed users list',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      try {
+        // Add to the form's allowed users list
+        const updatedAllowedUsers = [...(formData.allowedUsers || []), allowedUserEmail.toLowerCase()];
+        setFormData(prev => ({ 
+          ...prev, 
+          allowedUsers: updatedAllowedUsers 
+        }));
+        
+        // Add to Supabase usuario_invitado table if not already exists
+        // The updated addInvitedUser function will handle checking if the user already exists
+        const nombre = allowedUserName.trim() || 'Usuario Invitado';
+        await addInvitedUser(nombre, allowedUserEmail.toLowerCase());
+        
+        // Clear inputs
+        setAllowedUserEmail('');
+        setAllowedUserName('');
+        
+        toast({
+          title: 'User added',
+          description: `${allowedUserEmail} has been added to allowed users`,
+        });
+      } catch (error) {
+        console.error('Error adding invited user:', error);
+        toast({
+          title: 'Error',
+          description: 'Could not add user to the database',
+          variant: 'destructive'
+        });
+      }
+    },
+    removeAllowedUser: (email: string) => {
+      const updatedAllowedUsers = formData.allowedUsers?.filter(user => user !== email) || [];
+      setFormData(prev => ({ 
+        ...prev, 
+        allowedUsers: updatedAllowedUsers 
+      }));
+      
+      toast({
+        title: 'User removed',
+        description: `${email} has been removed from allowed users`,
+      });
+    },
     handleSubmit,
     setAllowedUserEmail,
     setAllowedUserName,
     handleDragEnd,
-    handleAllowViewOwnResponsesChange,
-    handleAllowEditOwnResponsesChange,
-    handleFormColorChange,
-    handleHttpConfigChange,
-    scoreRanges, // Expose score ranges to components
-    isScoringEnabled // Expose scoring enabled state
+    handleAllowViewOwnResponsesChange: (allow: boolean) => {
+      setFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
+    },
+    handleAllowEditOwnResponsesChange: (allow: boolean) => {
+      setFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
+    },
+    handleFormColorChange: (color: string) => {
+      setFormData(prev => ({ ...prev, formColor: color }));
+    },
+    handleHttpConfigChange: (config: HttpConfig) => {
+      setFormData(prev => ({ ...prev, httpConfig: config }));
+    },
+    scoreRanges,
+    isScoringEnabled
   };
 };
 
