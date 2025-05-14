@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -8,7 +7,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { toast } from "@/hooks/toast";
+import { toast } from "@/hooks/use-toast";
 import { useForm } from "@/contexts/form";
 import { authenticateInvitedUser, validateInvitedUser } from "@/integrations/supabase/client";
 

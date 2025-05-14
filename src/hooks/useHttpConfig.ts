@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { toast } from '@/hooks/toast';
+import { toast } from '@/hooks/use-toast';
 import { validateUrl, sendHttpRequest } from '@/utils/http-utils';
 import { HttpConfig, FormField } from '@/types/form';
 
