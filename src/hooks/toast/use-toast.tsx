@@ -1,9 +1,10 @@
 
 import * as React from "react";
 import {
-  ToastActionElement,
   ToastProvider as ToastProviderPrimitive,
   ToastViewport,
+  Toast as ToastPrimitive,
+  type ToastActionElement as ToastActionElementType,
 } from "@radix-ui/react-toast";
 import { ToastComponent } from "./toast-component";
 import {
@@ -128,8 +129,8 @@ export const useToast = () => {
 };
 
 // Toast function to create toasts
-export function toast(props: {
-  title?: React.ReactNode;
+export function toast(props: { 
+  title?: React.ReactNode; 
   description?: React.ReactNode;
   action?: React.ReactNode;
   variant?: "default" | "destructive";
@@ -173,7 +174,7 @@ export const Toaster = React.forwardRef<
   const { toasts } = useToast();
 
   return (
-    <ToastProviderPrimitive ref={ref} {...props}>
+    <ToastProviderPrimitive {...props}>
       {toasts.map(({ id, title, description, action, ...props }) => {
         return (
           <ToastComponent
