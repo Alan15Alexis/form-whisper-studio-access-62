@@ -1,4 +1,4 @@
 
-import { Toaster as ToastPrimitive } from "@/hooks/toast/toast-component";
+import { Toaster } from "@/hooks/toast/use-toast";
 
-export const Toaster = ToastPrimitive;
+export { Toaster };

@@ -56,3 +56,7 @@ export const ToastComponent = React.forwardRef<
 });
 
 ToastComponent.displayName = "Toast";
+
+// Export the Toaster component from the use-toast.tsx file
+export { Toaster } from "./use-toast";
+
