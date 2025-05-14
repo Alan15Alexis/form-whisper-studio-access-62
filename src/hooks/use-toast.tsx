@@ -10,8 +10,9 @@ const ToastContext = createContext<{
   dismiss: (toastId?: string) => void;
 } | null>(null);
 
+// Modify ToastOptions to match expected types
 interface ToastOptions {
-  title?: React.ReactNode;
+  title?: string; // Changed from React.ReactNode to string
   description?: React.ReactNode;
   action?: ToastActionElement;
   variant?: "default" | "destructive";
@@ -47,7 +48,7 @@ export function useToast() {
 // Simple toast function for direct usage
 export function toast(options: ToastOptions) {
   const { toast } = useToast();
-  toast(options);
+  toast(options as any); // Use type assertion to bridge incompatible types
 }
 
 // Create a ToastProvider that can be used to wrap the application
