@@ -174,7 +174,7 @@ export const Toaster = React.forwardRef<
   const { toasts } = useToast();
 
   return (
-    <ToastProviderPrimitive {...props}>
+    <ToastProviderPrimitive ref={ref} {...props}>
       {toasts.map(({ id, title, description, action, ...props }) => {
         return (
           <ToastComponent
