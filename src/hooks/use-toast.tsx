@@ -32,7 +32,7 @@ const toastVariants = cva(
   }
 );
 
-// Fix the ToastProps interface to avoid type conflicts
+// Fixed ToastProps interface to avoid type conflicts
 export interface ToastProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
@@ -99,14 +99,14 @@ export type ToastActionProps = {
 };
 
 // Define clean ToastProps1 interface to avoid conflicts
-type ToastProps1 = {
+interface ToastProps1 {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
   variant?: "default" | "destructive";
   onOpenChange?: (open: boolean) => void;
-};
+}
 
 const TOAST_LIMIT = 5;
 const TOAST_REMOVE_DELAY = 5000;
