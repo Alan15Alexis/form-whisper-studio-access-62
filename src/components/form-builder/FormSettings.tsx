@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -40,7 +42,7 @@ interface FormSettingsProps {
   onToggleFormScoring?: (enabled: boolean) => void;
   onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
   externalScoreRanges?: ScoreRange[];
-  isScoringEnabled?: boolean; // Added this prop to receive scoring state
+  isScoringEnabled?: boolean;
 }
 
 const FormSettings = ({
@@ -60,7 +62,7 @@ const FormSettings = ({
   onToggleFormScoring = () => {},
   onSaveScoreRanges = () => {},
   externalScoreRanges = [],
-  isScoringEnabled = false // Default to false if not provided
+  isScoringEnabled = false
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -83,6 +85,7 @@ const FormSettings = ({
   // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
 
+  // Debug logs to track state
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
   console.log("FormSettings - external score ranges:", externalScoreRanges);
   console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
@@ -183,14 +186,87 @@ const FormSettings = ({
     });
   };
 
+  // Save score ranges directly to Supabase
+  const directlySaveScoreRangesToSupabase = async (formTitle: string, ranges: ScoreRange[]) => {
+    try {
+      // First check if the form exists in Supabase by title
+      console.log("Checking for form in Supabase:", formTitle);
+      const { data: existingForm, error: queryError } = await supabase
+        .from('formulario_construccion')
+        .select('id, configuracion, titulo')
+        .eq('titulo', formTitle)
+        .maybeSingle();
+      
+      if (queryError) {
+        console.error("Error querying form:", queryError);
+        return false;
+      }
+      
+      if (!existingForm) {
+        console.error("Form not found in database:", formTitle);
+        return false;
+      }
+      
+      console.log("Found form in database:", existingForm);
+      
+      // Get current configuration or create new one
+      const currentConfig = existingForm.configuracion || {};
+      
+      // Update scoring configuration
+      const updatedConfig = {
+        ...currentConfig,
+        showTotalScore: isScoringEnabled,
+        scoreRanges: ranges
+      };
+      
+      console.log("Updating Supabase form scoring directly:", JSON.stringify(updatedConfig));
+      
+      // Update the configuration column
+      const { error: updateError } = await supabase
+        .from('formulario_construccion')
+        .update({
+          configuracion: updatedConfig
+        })
+        .eq('id', existingForm.id);
+        
+      if (updateError) {
+        console.error("Error updating form scoring in Supabase:", updateError);
+        return false;
+      }
+      
+      console.log("Score ranges saved successfully to Supabase!");
+      return true;
+    } catch (error) {
+      console.error("Error saving score ranges to Supabase:", error);
+      return false;
+    }
+  };
+
   // Save score ranges explicitly when the save button is clicked
-  const saveScoreRanges = () => {
+  const saveScoreRanges = async () => {
     if (!onSaveScoreRanges) return;
     
     console.log("Saving score ranges with toggle state:", isScoringEnabled);
     console.log("Ranges to save:", JSON.stringify(scoreRanges));
     
-    // Only if scoring is enabled, save the ranges too
+    // First attempt to save directly to Supabase
+    const formTitle = formId ? 
+      document.querySelector('input[placeholder="Título del formulario"]')?.getAttribute('value') || '' : '';
+      
+    if (formTitle) {
+      const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRanges);
+      if (saved) {
+        // Update the flags
+        setHasUnsavedRanges(false);
+        
+        toast({
+          title: "Rangos guardados",
+          description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
+        });
+      }
+    }
+    
+    // Also call the parent handler to update globally
     onSaveScoreRanges(scoreRanges);
     
     // Update the flags
@@ -325,7 +401,7 @@ const FormSettings = ({
                     size="sm"
                     onClick={saveScoreRanges}
                     className="flex items-center gap-1"
-                    disabled={!hasUnsavedRanges} // Disable if no changes to save
+                    disabled={!hasUnsavedRanges}
                   >
                     <Save className="h-4 w-4" /> Guardar cambios
                   </Button>
