@@ -49,6 +49,22 @@ const FormQuestion = ({
     borderColor: formColor
   } : {};
 
+  // Handlers para manejar los eventos de clic explícitamente
+  const handlePreviousClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handlePrevious();
+  };
+
+  const handleNextClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleNext();
+  };
+
+  const handleSubmitClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleSubmit(e as any);
+  };
+
   return (
     <Card style={cardStyle} className="mb-6">
       <CardHeader>
@@ -87,8 +103,9 @@ const FormQuestion = ({
       
       <CardFooter className="flex justify-between pt-4">
         <Button
+          type="button"
           variant="outline"
-          onClick={handlePrevious}
+          onClick={handlePreviousClick}
           disabled={isFirstQuestion}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -98,7 +115,8 @@ const FormQuestion = ({
         <div>
           {isLastQuestion ? (
             <Button
-              onClick={handleSubmit}
+              type="button"
+              onClick={handleSubmitClick}
               disabled={isSubmitting}
               style={buttonStyle}
             >
@@ -116,7 +134,8 @@ const FormQuestion = ({
             </Button>
           ) : (
             <Button
-              onClick={handleNext}
+              type="button"
+              onClick={handleNextClick}
               style={buttonStyle}
             >
               Siguiente

@@ -10,9 +10,18 @@ interface FormHeaderProps {
 }
 
 const FormHeader = ({ currentQuestion, totalQuestions, onBackClick }: FormHeaderProps) => {
+  const handleBackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onBackClick();
+  };
+
   return (
     <div className="mb-6 flex justify-between items-center">
-      <Button variant="outline" onClick={onBackClick}>
+      <Button 
+        type="button"
+        variant="outline" 
+        onClick={handleBackClick}
+      >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Volver
       </Button>
