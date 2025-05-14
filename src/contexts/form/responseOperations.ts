@@ -34,9 +34,7 @@ export const submitFormResponseOperation = (
       const formResponse: FormResponse = {
         id: crypto.randomUUID(),
         formId,
-        formTitle: form.title,
         userId: currentUser?.email || 'anonymous',
-        userEmail: userEmail,
         submittedAt: new Date().toISOString(),
         data: processedData,
         formattedData: formattedResponses
@@ -62,7 +60,7 @@ export const getFormResponsesOperation = (responses: FormResponse[]) => {
     if (userEmail) {
       // If userEmail is provided, filter by both formId and userEmail
       return responses.filter(
-        response => response.formId === formId && response.userEmail === userEmail
+        response => response.formId === formId && response.userId === userEmail
       );
     }
     

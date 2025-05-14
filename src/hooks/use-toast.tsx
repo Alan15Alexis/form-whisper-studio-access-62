@@ -40,7 +40,7 @@ export interface ToastProps
   action?: React.ReactNode;
 }
 
-const Toast1 = React.forwardRef<
+const ToastComponent = React.forwardRef<
   React.ElementRef<typeof Toast>,
   ToastProps
 >(({ className, variant, title, description, action, ...props }, ref) => {
@@ -66,7 +66,7 @@ const Toast1 = React.forwardRef<
   );
 });
 
-Toast1.displayName = "Toast";
+ToastComponent.displayName = "Toast";
 
 type ToasterProps = React.ComponentPropsWithoutRef<typeof ToastViewport>;
 
@@ -76,7 +76,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <ToastProvider>
       {toasts.map(({ id, title, description, action, ...props }) => (
-        <Toast1
+        <ToastComponent
           key={id}
           title={title}
           description={description}
@@ -89,23 +89,24 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
-interface ToastActionElement {
-  altText?: string;
-  action: React.ReactNode;
-}
+type ToastActionElementType = React.ReactElement<typeof ToastAction>;
 
-export type ToastActionProps = ToastActionElement;
+export type ToastActionProps = {
+  altText?: string;
+  action: ToastActionElementType;
+};
 
 type ToastProps1 = {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
-  action?: ToastActionElement;
+  action?: React.ReactNode;
   variant?: "default" | "destructive";
+  onOpenChange?: (open: boolean) => void;
 };
 
 const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 5000;
 
 let count = 0;
 
