@@ -1,6 +1,8 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { FormResponse } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
+import { calculateTotalScore } from '@/hooks/form-builder/useFormScoring';
 
 export const submitFormResponseOperation = (
   getForm: (id: string) => any,
@@ -20,18 +22,74 @@ export const submitFormResponseOperation = (
       throw new Error('Form not found');
     }
 
-    // Create response object
+    // Calculate scores for questions with numeric values
+    const questionScores: Record<string, number> = {};
+    let totalScore = 0;
+    
+    if (form.enableScoring || form.showTotalScore) {
+      // Calculate score for each field with numeric values
+      form.fields.forEach(field => {
+        if (!field.hasNumericValues) return;
+        
+        const response = data[field.id];
+        if (response === undefined || response === null) return;
+        
+        // Skip file uploads, images, drawings and signatures - they don't contribute to score
+        if (field.type === 'image-upload' || field.type === 'file-upload' || 
+            field.type === 'drawing' || field.type === 'signature') {
+          return;
+        }
+        
+        let fieldScore = 0;
+        
+        if (field.type === 'checkbox' && Array.isArray(response)) {
+          // For checkboxes, sum numeric values of all selected options
+          response.forEach(value => {
+            const option = field.options?.find(opt => opt.value === value);
+            if (option && option.numericValue !== undefined) {
+              fieldScore += option.numericValue;
+            }
+          });
+        } else if (field.type === 'yesno') {
+          // For Yes/No fields, find the corresponding option
+          const isYes = response === true || response === "true" || response === "yes" || response === "sí";
+          const option = field.options?.[isYes ? 0 : 1]; // Assuming Yes is index 0 and No is index 1
+          if (option && option.numericValue !== undefined) {
+            fieldScore = option.numericValue;
+          }
+        } else if (field.type === 'radio' || field.type === 'select' || field.type === 'image-select') {
+          // For single selections and image selections
+          const option = field.options?.find(opt => opt.value === response);
+          if (option && option.numericValue !== undefined) {
+            fieldScore = option.numericValue;
+          }
+        } else if (field.type === 'star-rating' || field.type === 'opinion-scale') {
+          // For direct numeric ratings
+          const numValue = parseInt(response);
+          if (!isNaN(numValue)) {
+            fieldScore = numValue;
+          }
+        }
+        
+        questionScores[field.id] = fieldScore;
+        totalScore += fieldScore;
+      });
+    }
+
+    // Create response object with scores
     const responseId = uuidv4();
     const response: FormResponse = {
       id: responseId,
       formId,
       responses: data,
       submittedBy: user?.email,
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      questionScores: questionScores,
+      totalScore: totalScore
     };
 
     try {
-      console.log('Submitting form response:', response);
+      console.log('Submitting form response with scores:', response);
       
       // Save response to local state
       setResponses(prev => [...prev, response]);

@@ -1,5 +1,6 @@
+
 import { FormResponse } from '@/types/form';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { sendHttpRequest, validateFormResponses } from '@/utils/http-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { processFileUpload } from './fileUploadUtils';
@@ -143,7 +144,9 @@ export const processFormData = async (
 // Format responses to use labels instead of IDs
 export const formatResponsesWithLabels = (
   formFields: any[],
-  processedData: Record<string, any>
+  processedData: Record<string, any>,
+  questionScores?: Record<string, number>,
+  totalScore?: number
 ): Record<string, any> => {
   const formattedResponses: Record<string, any> = {};
   
@@ -153,8 +156,18 @@ export const formatResponsesWithLabels = (
       if (processedData[field.id] !== undefined) {
         const label = field.label || `Pregunta ${field.id.substring(0, 5)}`;
         formattedResponses[label] = processedData[field.id];
+        
+        // Add score for this field if available
+        if (questionScores && questionScores[field.id] !== undefined) {
+          formattedResponses[`${label} - Puntos`] = questionScores[field.id];
+        }
       }
     });
+  }
+  
+  // Add total score if available
+  if (totalScore !== undefined) {
+    formattedResponses['Puntaje Total'] = totalScore;
   }
   
   return formattedResponses;
@@ -166,11 +179,21 @@ export const saveFormResponseToDatabase = async (
   formId: string,
   userEmail: string,
   formattedResponses: Record<string, any>,
+  questionScores: Record<string, number> | undefined,
+  totalScore: number | undefined,
   apiEndpoint: string
 ): Promise<void> => {
   try {
     // Get admin email (form creator)
     const adminEmail = form.createdBy || form.ownerId || null;
+    
+    // Format responses with labels and scores
+    const responsesWithScores = formatResponsesWithLabels(
+      form.fields, 
+      formattedResponses,
+      questionScores,
+      totalScore
+    );
     
     // Check if this user already has a response for this form
     // This handles the edit case
@@ -186,7 +209,7 @@ export const saveFormResponseToDatabase = async (
       await supabase
         .from('formulario')
         .update({
-          respuestas: formattedResponses,
+          respuestas: responsesWithScores,
           estatus: true // Confirm it's still complete
         })
         .eq('id', existingData[0].id);
@@ -200,7 +223,7 @@ export const saveFormResponseToDatabase = async (
           nombre_formulario: form.title || 'Untitled Form',
           nombre_invitado: userEmail,  // Ensure we use the correct user email
           nombre_administrador: adminEmail || null,
-          respuestas: formattedResponses,
+          respuestas: responsesWithScores,
           estatus: true // Set the status to true for completed forms
         });
 
@@ -212,10 +235,11 @@ export const saveFormResponseToDatabase = async (
       // Prepare data for MySQL submission
       const mysqlData = {
         form_id: formId,
-        responses: JSON.stringify(formattedResponses),
+        responses: JSON.stringify(responsesWithScores),
         submitted_by: userEmail, // Ensure we use the correct user email
         form_title: form.title || 'Untitled Form',
-        estatus: true // Add status field here too for MySQL
+        estatus: true, // Add status field here too for MySQL
+        total_score: totalScore
       };
       
       // Send to MySQL API endpoint

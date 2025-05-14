@@ -1,3 +1,4 @@
+
 export type FormFieldType = 
   // Essential fields
   | 'text' 
@@ -122,6 +123,8 @@ export interface FormResponse {
   responses: Record<string, any>;
   submittedBy?: string;
   submittedAt: string;
+  questionScores?: Record<string, number>; // Add field for individual question scores
+  totalScore?: number; // Add field for total score
 }
 
 export interface User {

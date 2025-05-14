@@ -5,7 +5,7 @@ import { FormField } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { ExternalLink, FileIcon } from "lucide-react";
 
@@ -13,27 +13,39 @@ interface FormSuccessProps {
   formValues: Record<string, any>;
   fields: FormField[];
   showTotalScore?: boolean;
+  questionScores?: Record<string, number>;
+  totalScore?: number;
 }
 
-const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) => {
+const FormSuccess = ({ formValues, fields, showTotalScore, questionScores, totalScore }: FormSuccessProps) => {
   const navigate = useNavigate();
   const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
   const [displayValues, setDisplayValues] = useState<Record<string, any>>(formValues);
   
-  const currentScore = calculateTotalScore(formValues, fields || []);
+  // Either use the passed totalScore or calculate it if not provided
+  const currentScore = totalScore !== undefined ? totalScore : calculateTotalScore(formValues, fields || []);
   const scoreFeedback = getScoreFeedback(currentScore, fields || []);
   const showScore = shouldShowScoreCard(fields || [], showTotalScore);
 
-  console.log("FormSuccess render:", { showTotalScore, currentScore, scoreFeedback, showScore });
+  console.log("FormSuccess render:", { 
+    showTotalScore, 
+    currentScore, 
+    scoreFeedback, 
+    showScore,
+    questionScores,
+    totalScore: totalScore
+  });
   
   // Debug scores and feedback in more detail
   useEffect(() => {
     console.log("Form values:", formValues);
     console.log("Form fields:", fields);
+    console.log("Question scores:", questionScores);
+    console.log("Total score:", totalScore);
     console.log("Score feedback:", scoreFeedback);
     console.log("Show total score flag:", showTotalScore);
     console.log("Fields with numeric values:", fields?.filter(f => f.hasNumericValues));
-  }, [formValues, fields, scoreFeedback, showTotalScore]);
+  }, [formValues, fields, scoreFeedback, showTotalScore, questionScores, totalScore]);
   
   // Helper function to check if value is a file URL
   const isFileUrl = (value: any): boolean => {
@@ -116,6 +128,34 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
     
   console.log("Found file fields to display:", fileFields.length);
   
+  // Helper to render individual question scores if available
+  const renderQuestionScores = () => {
+    if (!questionScores || Object.keys(questionScores).length === 0) return null;
+    
+    return (
+      <div className="mt-4 space-y-2">
+        <h4 className="font-medium text-sm text-gray-700">Puntuación por pregunta:</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {Object.entries(questionScores).map(([fieldId, score]) => {
+            const field = fields?.find(f => f.id === fieldId);
+            if (!field) return null;
+            
+            return (
+              <div key={fieldId} className="flex justify-between items-center p-2 bg-gray-50 rounded border">
+                <span className="text-sm truncate max-w-[70%]" title={field.label}>
+                  {field.label}
+                </span>
+                <Badge variant="outline" className="bg-primary/10">
+                  {score}
+                </Badge>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div className="container max-w-3xl mx-auto py-8">
       <Card className="shadow-md">
@@ -137,6 +177,8 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
                   {currentScore}
                 </Badge>
               </div>
+              
+              {renderQuestionScores()}
               
               {scoreFeedback && (
                 <div className="mt-4 p-4 bg-background rounded border text-center">
