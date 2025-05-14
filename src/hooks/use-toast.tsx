@@ -32,6 +32,7 @@ const toastVariants = cva(
   }
 );
 
+// Fix the ToastProps interface to avoid type conflicts
 export interface ToastProps
   extends React.ComponentPropsWithoutRef<typeof Toast>,
     VariantProps<typeof toastVariants> {
@@ -96,6 +97,7 @@ export type ToastActionProps = {
   action: ToastActionElementType;
 };
 
+// Define clean ToastProps1 interface to avoid conflicts
 type ToastProps1 = {
   id: string;
   title?: React.ReactNode;
