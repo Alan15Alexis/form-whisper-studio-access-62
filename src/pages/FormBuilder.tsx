@@ -51,16 +51,10 @@ const FormBuilder = () => {
     );
   }
 
-  // Log the form data for debugging
-  console.log("FormBuilder - Current form data:", {
-    id: id,
-    showTotalScore: formData.showTotalScore,
-    scoreConfig: formData.scoreConfig,
-    scoreRanges: formData.scoreRanges,
-    fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
-    externalScoreRanges: scoreRanges,
-    isScoringEnabled: isScoringEnabled
-  });
+  // We now ensure formData exists before trying to access its properties
+  const showTotalScore = formData.showTotalScore || false;
+  const scoreConfig = formData.scoreConfig || {};
+  const formScoreRanges = formData.scoreRanges || [];
 
   return (
     <Layout>

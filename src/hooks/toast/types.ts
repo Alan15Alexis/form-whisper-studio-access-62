@@ -22,3 +22,9 @@ export interface ToastProps {
   action?: ToastActionElementType;
   variant?: "default" | "destructive" | "success";
 }
+
+// Add the missing export for ToastActionProps
+export interface ToastActionProps {
+  altText: string;
+  onClick: () => void;
+}
