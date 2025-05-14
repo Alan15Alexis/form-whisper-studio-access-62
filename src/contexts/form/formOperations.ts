@@ -54,7 +54,7 @@ export const createFormOperation = (
       ownerId: currentUserId || 'unknown',
       formColor: formData.formColor || '#3b82f6',
       allowViewOwnResponses: formData.allowViewOwnResponses || false,
-      allowEditOwnResponses: formData.allowEditOwnResponsesChange || false,
+      allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
       showTotalScore: formData.showTotalScore || false,
       scoreConfig: {

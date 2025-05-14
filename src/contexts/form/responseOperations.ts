@@ -11,7 +11,7 @@ export const submitFormResponseOperation = (
   user: { email: string } | null,
   apiEndpoint: string
 ) => {
-  return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<boolean> => {
+  return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
     // Use form from location if provided, otherwise fetch it
     const form = formFromLocation || getForm(formId);
     if (!form) {
@@ -20,12 +20,12 @@ export const submitFormResponseOperation = (
         description: 'Form not found',
         variant: 'destructive',
       });
-      return false;
+      throw new Error('Form not found');
     }
 
     // Create response object
     const responseId = uuidv4();
-    const response = {
+    const response: FormResponse = {
       id: responseId,
       formId,
       responses: data,
@@ -85,7 +85,7 @@ export const submitFormResponseOperation = (
         variant: 'default',
       });
       
-      return true;
+      return response;
     } catch (error) {
       console.error('Error submitting form response:', error);
       toast({
@@ -93,7 +93,7 @@ export const submitFormResponseOperation = (
         description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: 'destructive',
       });
-      return false;
+      throw error;
     }
   };
 };
