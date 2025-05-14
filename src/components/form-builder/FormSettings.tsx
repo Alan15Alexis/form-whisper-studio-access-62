@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -83,8 +82,6 @@ const FormSettings = ({
   
   // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
-  // Track if there are unsaved scoring toggle changes
-  const [hasUnsavedToggle, setHasUnsavedToggle] = useState<boolean>(false);
 
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
   console.log("FormSettings - external score ranges:", externalScoreRanges);
@@ -125,7 +122,7 @@ const FormSettings = ({
   // Better sync local state with props
   useEffect(() => {
     // Reset unsaved changes flag when props change
-    setHasUnsavedToggle(false);
+    setHasUnsavedRanges(false);
   }, [showTotalScore, isScoringEnabled]);
 
   // Score range management functions

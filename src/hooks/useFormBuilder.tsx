@@ -71,8 +71,8 @@ export const useFormBuilder = (formId?: string) => {
         console.log("Loaded form data:", form);
         console.log("Form has showTotalScore:", form.showTotalScore);
         
-        // Update our local state for scoring enabled
-        setIsScoringEnabled(!!form.showTotalScore);
+        // Update our local state for scoring enabled - Fix: Use boolean conversion to ensure proper type
+        setIsScoringEnabled(form.showTotalScore === true);
         
         // Extract score ranges from the form's scoreConfig
         if (form.scoreConfig && form.scoreConfig.ranges && form.scoreConfig.ranges.length > 0) {
@@ -145,10 +145,11 @@ export const useFormBuilder = (formId?: string) => {
       };
     });
     
-    // Save changes immediately when toggling scoring
-    setTimeout(() => {
-      handleSubmit(true);
-    }, 200);
+    // FIX: Don't save changes immediately when toggling scoring
+    // This allows users to configure ranges before saving
+    // setTimeout(() => {
+    //   handleSubmit(true);
+    // }, 200);
   };
 
   // Enhanced function to explicitly save score ranges
@@ -370,6 +371,9 @@ export const useFormBuilder = (formId?: string) => {
       
       if (isEditMode && formId) {
         await updateForm(formId, formToSave);
+        
+        // Update local states after successful save to maintain consistency
+        setIsScoringEnabled(formToSave.showTotalScore === true);
         
         if (!skipValidation) {
           toast({
