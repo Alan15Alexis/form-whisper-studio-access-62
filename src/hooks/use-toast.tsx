@@ -1,72 +1,92 @@
 
-import { Toaster as Sonner } from "sonner";
-import { createContext, useContext } from "react";
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
+import * as React from "react";
+import type { ToastActionElement } from "@/components/ui/toast";
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider as ToastProviderUI,
+  ToastTitle,
+  ToastViewport,
+} from "@/components/ui/toast";
 
-type ToasterProps = React.ComponentProps<typeof Sonner>;
+// Define the toast context
+type ToastProps = React.ComponentPropsWithoutRef<typeof Toast> & {
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+};
 
-const ToastContext = createContext<{
-  toast: (props: ToastProps) => void;
-  dismiss: (toastId?: string) => void;
-} | null>(null);
-
-// Modify ToastOptions to match expected types
 interface ToastOptions {
-  title?: string; // Changed from React.ReactNode to string
+  title?: string;
   description?: React.ReactNode;
   action?: ToastActionElement;
   variant?: "default" | "destructive";
   duration?: number;
 }
 
+type ToastContextType = {
+  toast: (options: ToastOptions) => void;
+  dismiss: (toastId?: string) => void;
+  toasts: ToastProps[];
+};
+
+const ToastContext = React.createContext<ToastContextType | null>(null);
+
 export function useToast() {
-  const context = useContext(ToastContext);
+  const context = React.useContext(ToastContext);
   
   if (!context) {
-    // Create fallback functions if no context is found
-    const toast = (options: ToastOptions) => {
-      console.log("Toast fallback:", options);
-    };
-    
-    const dismiss = (toastId?: string) => {
-      console.log("Dismiss toast fallback:", toastId);
-    };
-    
-    return {
-      toast,
-      dismiss,
-      toasts: [],
-    };
+    throw new Error("useToast must be used within a ToastProvider");
   }
   
-  return {
-    ...context,
-    toasts: [], // Simulate the toasts array for compatibility
-  };
+  return context;
 }
 
 // Simple toast function for direct usage
 export function toast(options: ToastOptions) {
-  const { toast } = useToast();
-  toast(options as any); // Use type assertion to bridge incompatible types
+  try {
+    const { toast } = useToast();
+    toast(options as any);
+  } catch (error) {
+    console.error("Error using toast:", error);
+    // Fallback just logs to console if no provider
+    console.log("Toast (fallback):", options);
+  }
 }
 
 // Create a ToastProvider that can be used to wrap the application
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const toasts: ToastProps[] = [];
-  
-  const toast = (props: ToastProps) => {
-    console.log("Toast:", props);
-    // In a real implementation, this would add a toast to the UI
-  };
-  
-  const dismiss = (toastId?: string) => {
-    console.log("Dismiss toast:", toastId);
-    // In a real implementation, this would remove a toast from the UI
-  };
-  
+  const [toasts, setToasts] = React.useState<ToastProps[]>([]);
+
+  const toast = React.useCallback((options: ToastOptions) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    const newToast = {
+      id,
+      ...options,
+    };
+
+    setToasts((prevToasts) => [...prevToasts, newToast as ToastProps]);
+    
+    return id;
+  }, []);
+
+  const dismiss = React.useCallback((toastId?: string) => {
+    setToasts((prevToasts) => 
+      toastId 
+        ? prevToasts.filter((toast) => toast.id !== toastId)
+        : []
+    );
+  }, []);
+
+  const contextValue = React.useMemo(
+    () => ({ toast, dismiss, toasts }),
+    [toast, dismiss, toasts]
+  );
+
   return (
-    <ToastContext.Provider value={{ toast, dismiss }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
     </ToastContext.Provider>
   );
