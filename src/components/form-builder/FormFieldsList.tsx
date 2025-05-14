@@ -95,12 +95,20 @@ const FormFieldsList = ({ formData, updateField, removeField }: FormFieldsListPr
                       </div>
 
                       <div className="p-4">
+                        {/* Fix 1: Update the props to match FormQuestion's expected props */}
                         <FormQuestion 
-                          field={field} 
-                          formValues={{}} 
-                          onChange={() => {}} 
-                          errors={{}} 
-                          isPreview={true} 
+                          field={field}
+                          value={{}}
+                          onChange={() => {}}
+                          isFirstQuestion={false}
+                          isLastQuestion={false}
+                          handlePrevious={() => {}}
+                          handleNext={() => {}}
+                          handleSubmit={() => {}}
+                          isSubmitting={false}
+                          isAdminPreview={true}
+                          isEditMode={false}
+                          title="Vista previa"
                         />
                       </div>
                     </div>
@@ -114,12 +122,14 @@ const FormFieldsList = ({ formData, updateField, removeField }: FormFieldsListPr
       )}
 
       {activeField && isDrawerOpen && (
+        // Fix 2: Update the props to match FieldConfigDrawer's expected props
         <FieldConfigDrawer
           isOpen={isDrawerOpen}
           onClose={handleCloseDrawer}
           field={activeField}
-          updateField={onUpdateField}
-          removeField={onRemoveField}
+          onUpdate={onUpdateField}
+          formHasScoring={!!formData.showTotalScore}
+          onToggleFormScoring={() => {}}
         />
       )}
     </div>
