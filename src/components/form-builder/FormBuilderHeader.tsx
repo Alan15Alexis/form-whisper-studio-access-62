@@ -15,15 +15,10 @@ interface FormBuilderHeaderProps {
 const FormBuilderHeader = ({ isSaving, isEditMode, onSave, formTitle }: FormBuilderHeaderProps) => {
   const navigate = useNavigate();
 
-  const handleBackClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate("/dashboard-admin");
-  };
-
   return (
     <div className="mb-6 flex justify-between items-center">
       <div className="flex items-center gap-4">
-        <Button type="button" variant="outline" onClick={handleBackClick}>
+        <Button variant="outline" onClick={() => navigate("/dashboard-admin")}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <h1 className="text-xl font-semibold">{formTitle || 'New Form'}</h1>

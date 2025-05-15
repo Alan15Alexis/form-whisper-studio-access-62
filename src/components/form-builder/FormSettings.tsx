@@ -84,40 +84,12 @@ const FormSettings = ({
   
   // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
-  // Track form title
-  const [formTitle, setFormTitle] = useState<string>("");
 
   // Debug logs to track state
   console.log("FormSettings - Component Rendered");
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
   console.log("FormSettings - external score ranges:", JSON.stringify(externalScoreRanges));
   console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
-  
-  // Get form title on load
-  useEffect(() => {
-    if (formId) {
-      const getFormTitle = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('formulario_construccion')
-            .select('titulo')
-            .eq('id', formId)
-            .maybeSingle();
-          
-          if (data && data.titulo) {
-            console.log("Got form title:", data.titulo);
-            setFormTitle(data.titulo);
-          } else if (error) {
-            console.error("Error fetching form title:", error);
-          }
-        } catch (error) {
-          console.error("Exception fetching form title:", error);
-        }
-      };
-      
-      getFormTitle();
-    }
-  }, [formId]);
   
   // Init state from props or fields
   useEffect(() => {
@@ -235,24 +207,18 @@ const FormSettings = ({
     });
   };
 
-  // Enhanced function to save score ranges directly to Supabase with better validation
-  const directlySaveScoreRangesToSupabase = async (titulo: string, ranges: ScoreRange[], enabled: boolean) => {
+  // Enhanced function to save score ranges directly to Supabase
+  const directlySaveScoreRangesToSupabase = async (formTitle: string, ranges: ScoreRange[]) => {
     console.log("DIRECT ACTION - directlySaveScoreRangesToSupabase");
-    console.log("Form title:", titulo);
+    console.log("Form title:", formTitle);
     console.log("Ranges to save:", JSON.stringify(ranges));
-    console.log("Is scoring enabled:", enabled);
-    
-    if (!titulo) {
-      console.error("No form title provided");
-      return false;
-    }
     
     try {
       // First check if the form exists in Supabase by title
       const { data: existingForm, error: queryError } = await supabase
         .from('formulario_construccion')
         .select('id, configuracion, preguntas, titulo')
-        .eq('titulo', titulo)
+        .eq('titulo', formTitle)
         .maybeSingle();
       
       if (queryError) {
@@ -261,7 +227,7 @@ const FormSettings = ({
       }
       
       if (!existingForm) {
-        console.error("Form not found in database:", titulo);
+        console.error("Form not found in database:", formTitle);
         return false;
       }
       
@@ -277,50 +243,33 @@ const FormSettings = ({
       // Update scoring configuration with explicit boolean value
       const updatedConfig = {
         ...currentConfig,
-        showTotalScore: enabled === true, // Force boolean
+        showTotalScore: isScoringEnabled === true, // Force boolean
         scoreRanges: rangesCopy,
         // Preserve other configuration fields
-        isPrivate: currentConfig.isPrivate !== undefined ? currentConfig.isPrivate : isPrivate,
-        formColor: currentConfig.formColor || formColor || '#3b82f6',
-        allowViewOwnResponses: currentConfig.allowViewOwnResponses !== undefined ? 
-          currentConfig.allowViewOwnResponses : allowViewOwnResponses,
-        allowEditOwnResponses: currentConfig.allowEditOwnResponses !== undefined ?
-          currentConfig.allowEditOwnResponses : allowEditOwnResponses,
-        httpConfig: currentConfig.httpConfig || httpConfig || null,
+        isPrivate: currentConfig.isPrivate || false,
+        formColor: currentConfig.formColor || '#3b82f6',
+        allowViewOwnResponses: currentConfig.allowViewOwnResponses || false,
+        allowEditOwnResponses: currentConfig.allowEditOwnResponses || false,
+        httpConfig: currentConfig.httpConfig || null,
         hasFieldsWithNumericValues: hasFieldsWithNumericValues
       };
       
       console.log("Updating Supabase form with config:", JSON.stringify(updatedConfig));
       
-      // Get current fields and ensure they have score ranges if needed
-      let currentFields = existingForm.preguntas ? 
-        JSON.parse(JSON.stringify(existingForm.preguntas)) : [];
-      
-      // If scoring is enabled, ensure fields with numeric values have score ranges
-      if (enabled && rangesCopy.length > 0) {
-        currentFields = currentFields.map(field => {
-          if (field.hasNumericValues) {
-            return { ...field, scoreRanges: rangesCopy };
-          }
-          const { scoreRanges, ...fieldWithoutRanges } = field;
-          return fieldWithoutRanges;
-        });
-      } else {
-        // If scoring is disabled, remove score ranges from all fields
-        currentFields = currentFields.map(field => {
-          const { scoreRanges, ...fieldWithoutRanges } = field;
-          return fieldWithoutRanges;
-        });
-      }
-      
-      console.log("Prepared fields for update:", JSON.stringify(currentFields).substring(0, 100) + "...");
+      // Get current fields and remove scoreRanges from them
+      const currentFields = existingForm.preguntas || [];
+      const fieldsWithoutRanges = currentFields.map(field => {
+        // Use destructuring to explicitly remove scoreRanges property
+        const { scoreRanges, ...fieldWithoutRanges } = field;
+        return fieldWithoutRanges;
+      });
       
       // Update both configuration and questions columns
       const { error: updateError } = await supabase
         .from('formulario_construccion')
         .update({
           configuracion: updatedConfig,
-          preguntas: currentFields
+          preguntas: fieldsWithoutRanges
         })
         .eq('id', existingForm.id);
         
@@ -339,8 +288,6 @@ const FormSettings = ({
 
   // Enhanced function to save score ranges with better error handling
   const saveScoreRanges = async () => {
-    console.log("saveScoreRanges called");
-    
     if (!onSaveScoreRanges) {
       console.error("onSaveScoreRanges callback is not defined");
       return;
@@ -358,110 +305,67 @@ const FormSettings = ({
     console.log("Saving score ranges with current state:");
     console.log("- isScoringEnabled:", isScoringEnabled);
     console.log("- Ranges to save:", JSON.stringify(scoreRanges));
-    console.log("- Form ID:", formId);
-    console.log("- Form title from state:", formTitle);
     
+    // Get current form title from formId instead of DOM elements
+    if (!formId) {
+      toast({
+        title: "Error",
+        description: "No se encontró un ID de formulario",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Use the form title from state if available
-      if (formTitle) {
-        console.log("Using form title from state:", formTitle);
-        
-        // Create a deep copy of the scoreRanges
-        const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-        console.log("DIRECT ACTION - Saving score ranges directly to Supabase");
-        const saved = await directlySaveScoreRangesToSupabase(
-          formTitle, 
-          scoreRangesCopy,
-          isScoringEnabled === true
-        );
-        
-        if (saved) {
-          setHasUnsavedRanges(false);
-          
-          toast({
-            title: "Rangos guardados",
-            description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
-            variant: "default",
-          });
-          
-          // Call the parent handler with a deep copy
-          onSaveScoreRanges(scoreRangesCopy);
-        } else {
-          toast({
-            title: "Error",
-            description: "No se pudieron guardar los rangos de puntuación",
-            variant: "destructive",
-          });
-        }
+      // First try to get the form by ID
+      const { data: formData, error } = await supabase
+        .from('formulario_construccion')
+        .select('titulo')
+        .eq('id', formId)
+        .maybeSingle();
+
+      if (error || !formData) {
+        console.error("Error fetching form:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo obtener la información del formulario",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formTitle = formData.titulo;
+      console.log("Got form title for saving ranges:", formTitle);
+      
+      if (!formTitle) {
+        toast({
+          title: "Error",
+          description: "El formulario no tiene título",
+          variant: "destructive",
+        });
         return;
       }
       
-      // If we don't have a form title yet, try to get it from the formId
-      if (formId) {
-        const { data: formData, error } = await supabase
-          .from('formulario_construccion')
-          .select('titulo')
-          .eq('id', formId)
-          .maybeSingle();
-
-        if (error || !formData) {
-          console.error("Error fetching form:", error);
-          toast({
-            title: "Error",
-            description: "No se pudo obtener la información del formulario",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const fetchedTitle = formData.titulo;
-        console.log("Got form title for saving ranges:", fetchedTitle);
+      // Create a deep copy of the scoreRanges
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+      console.log("DIRECT ACTION - Saving score ranges directly to Supabase");
+      const saved = await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
+      
+      if (saved) {
+        setHasUnsavedRanges(false);
         
-        if (!fetchedTitle) {
-          toast({
-            title: "Error",
-            description: "El formulario no tiene título",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // Update the state for future use
-        setFormTitle(fetchedTitle);
-        
-        // Create a deep copy of the scoreRanges
-        const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-        console.log("DIRECT ACTION - Saving score ranges directly to Supabase");
-        const saved = await directlySaveScoreRangesToSupabase(
-          fetchedTitle, 
-          scoreRangesCopy,
-          isScoringEnabled === true
-        );
-        
-        if (saved) {
-          setHasUnsavedRanges(false);
-          
-          toast({
-            title: "Rangos guardados",
-            description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
-            variant: "default",
-          });
-          
-          // Call the parent handler with a deep copy
-          onSaveScoreRanges(scoreRangesCopy);
-        } else {
-          toast({
-            title: "Error",
-            description: "No se pudieron guardar los rangos de puntuación",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Rangos guardados",
+          description: "Los rangos de puntuación se han guardado correctamente en la base de datos",
+          variant: "default",
+        });
       } else {
         toast({
           title: "Error",
-          description: "No se encontró un ID de formulario",
+          description: "No se pudieron guardar los rangos de puntuación",
           variant: "destructive",
         });
+        return; // Stop if direct save failed
       }
     } catch (error) {
       console.error("Error saving score ranges:", error);
@@ -470,7 +374,15 @@ const FormSettings = ({
         description: "Ocurrió un error al guardar los rangos de puntuación",
         variant: "destructive",
       });
+      return;
     }
+    
+    // Call the parent handler with a deep copy
+    const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+    onSaveScoreRanges(scoreRangesCopy);
+    
+    // Reset unsaved changes flag
+    setHasUnsavedRanges(false);
   };
 
   // Handle toggle of scoring feature with improved logging
@@ -488,99 +400,59 @@ const FormSettings = ({
       addScoreRange();
     }
     
-    // Try to save directly to the database
+    // If we don't have a formId, we can't save directly to Supabase
+    if (!formId) {
+      console.error("No formId provided, cannot save directly to Supabase");
+      return;
+    }
+
     try {
-      const title = formTitle;
-      
-      if (title) {
-        console.log("Using stored form title for toggle:", title);
-        
-        // Deep clone to avoid reference issues
-        const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-        console.log("DIRECT ACTION - Saving toggle state directly to Supabase");
-        
-        const success = await directlySaveScoreRangesToSupabase(title, scoreRangesCopy, enabled);
-        
-        if (!success) {
-          toast({
-            title: "Error",
-            description: "No se pudo guardar la configuración de puntuación",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Configuración guardada",
-            description: "La configuración de puntuación se ha guardado correctamente",
-            variant: "default",
-          });
-        }
-        
-        // If enabling scoring and we have ranges, save them immediately
-        if (enabled && scoreRanges.length > 0) {
-          // Use setTimeout to ensure state is updated before saving
-          setTimeout(() => {
-            console.log("Auto-saving score ranges after enabling scoring");
-            saveScoreRanges();
-          }, 100);
-        }
-      } else if (formId) {
-        // Try to get the title
-        const { data: formData, error } = await supabase
-          .from('formulario_construccion')
-          .select('titulo')
-          .eq('id', formId)
-          .maybeSingle();
-          
-        if (error || !formData) {
-          console.error("Error fetching form title for toggle:", error);
-          toast({
-            title: "Error",
-            description: "No se pudo obtener la información del formulario",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        const fetchedTitle = formData.titulo;
-        console.log("Got form title for toggle:", fetchedTitle);
-        
-        if (fetchedTitle) {
-          setFormTitle(fetchedTitle);
-          
-          const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-          const success = await directlySaveScoreRangesToSupabase(fetchedTitle, scoreRangesCopy, enabled);
-          
-          if (!success) {
-            toast({
-              title: "Error",
-              description: "No se pudo guardar la configuración de puntuación",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Configuración guardada",
-              description: "La configuración de puntuación se ha guardado correctamente",
-              variant: "default",
-            });
-          }
-          
-          // If enabling scoring and we have ranges, save them immediately
-          if (enabled && scoreRanges.length > 0) {
-            // Use setTimeout to ensure state is updated before saving
-            setTimeout(() => {
-              console.log("Auto-saving score ranges after enabling scoring");
-              saveScoreRanges();
-            }, 100);
-          }
-        }
+      // Get form title from formId
+      const { data: formData, error } = await supabase
+        .from('formulario_construccion')
+        .select('titulo')
+        .eq('id', formId)
+        .maybeSingle();
+
+      if (error || !formData) {
+        console.error("Error fetching form:", error);
+        return;
       }
+
+      const formTitle = formData.titulo;
+      
+      if (!formTitle) {
+        console.error("Form has no title");
+        return;
+      }
+      
+      console.log("Got form title for toggle:", formTitle);
+      
+      // Deep clone to avoid reference issues
+      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
+      console.log("DIRECT ACTION - Saving toggle state directly to Supabase");
+      
+      const success = await directlySaveScoreRangesToSupabase(formTitle, scoreRangesCopy);
+      
+      if (!success) {
+        toast({
+          title: "Error",
+          description: "No se pudo guardar la configuración de puntuación",
+          variant: "destructive",
+        });
+      }
+      
+      // If enabling scoring and we have ranges, save them immediately
+      if (enabled && scoreRanges.length > 0) {
+        // Use setTimeout to ensure state is updated before saving
+        setTimeout(() => {
+          console.log("Auto-saving score ranges after enabling scoring");
+          saveScoreRanges();
+        }, 100);
+      }
+      
     } catch (error) {
       console.error("Error saving toggle state:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo guardar la configuración de puntuación",
-        variant: "destructive",
-      });
     }
   };
 

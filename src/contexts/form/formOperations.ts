@@ -1,6 +1,7 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { Form, FormField, ScoreRange } from '@/types/form';
-import { toast } from "@/hooks/toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to ensure all fields with numeric values have the specified score ranges

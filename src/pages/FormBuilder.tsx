@@ -36,25 +36,16 @@ const FormBuilder = () => {
     isScoringEnabled 
   } = useFormBuilder(id);
 
-  // Add a safety check to ensure formData is not undefined before rendering
-  if (!formData) {
-    return (
-      <Layout>
-        <div className="container py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-gray-500">
-              Loading form data...
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  // We now ensure formData exists before trying to access its properties
-  const showTotalScore = formData.showTotalScore || false;
-  const scoreConfig = formData.scoreConfig || {};
-  const formScoreRanges = formData.scoreRanges || [];
+  // Log the form data for debugging
+  console.log("FormBuilder - Current form data:", {
+    id: id,
+    showTotalScore: formData.showTotalScore,
+    scoreConfig: formData.scoreConfig,
+    scoreRanges: formData.scoreRanges,
+    fieldsWithRanges: formData.fields?.some(f => f.scoreRanges && f.scoreRanges.length > 0),
+    externalScoreRanges: scoreRanges,
+    isScoringEnabled: isScoringEnabled
+  });
 
   return (
     <Layout>
