@@ -1,103 +1,71 @@
 
-import { v4 as uuidv4 } from 'uuid';
-import { FormResponse } from '@/types/form';
-import { toast } from "@/hooks/use-toast";
-import { processFormData, formatResponsesWithLabels, saveFormResponseToDatabase } from '@/utils/formResponseUtils';
+import { Form, FormResponse } from '@/types/form';
+import { processFormData, saveFormResponseToDatabase, formatResponsesWithLabels } from '@/utils/formResponseUtils';
 
+// Submit form response operation
 export const submitFormResponseOperation = (
-  getForm: (id: string) => any,
-  setResponses: React.Dispatch<React.SetStateAction<any[]>>,
+  getForm: (id: string) => Form | undefined,
+  setResponses: React.Dispatch<React.SetStateAction<FormResponse[]>>,
   currentUser: { email: string } | null,
   apiEndpoint: string
 ) => {
   return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
-    console.log('=== STARTING FORM SUBMISSION ===');
-    console.log('Form ID:', formId);
-    console.log('Current User:', currentUser);
-    console.log('Form Data:', data);
-    
-    // Use form from location if provided, otherwise fetch it
-    const form = formFromLocation || getForm(formId);
-    if (!form) {
-      console.error('Form not found');
-      toast({
-        title: 'Error',
-        description: 'Form not found',
-        variant: 'destructive',
-      });
-      throw new Error('Form not found');
-    }
-
-    console.log('Form found:', form.title);
-
-    // Get user email from various sources
-    const userEmail = currentUser?.email || localStorage.getItem('userEmail') || 'anonymous';
-    console.log('User email for submission:', userEmail);
-
     try {
-      console.log('Processing form data...');
-      // Process file uploads and other data
+      // Get the form using the provided formId
+      const form = formFromLocation || getForm(formId);
+      if (!form) {
+        throw new Error('Form not found');
+      }
+
+      // Get user email (for anonymous users, use a placeholder)
+      const userEmail = currentUser?.email || 'anonymous@user.com';
+
+      console.log("Processing form response submission:");
+      console.log("- Form ID:", formId);
+      console.log("- User:", userEmail);
+      console.log("- Data length:", Object.keys(data).length);
+
+      // Process form data (handle file uploads, etc.)
       const processedData = await processFormData(form, data, userEmail, formId);
-      console.log('Processed data:', processedData);
-
-      // Format responses with labels for database storage
+      
+      // Format responses to use labels instead of IDs
       const formattedResponses = formatResponsesWithLabels(form.fields, processedData);
-      console.log('Formatted responses for database:', formattedResponses);
-
-      // Create response object for local state
-      const responseId = uuidv4();
-      const response: FormResponse = {
-        id: responseId,
+      
+      // Create the response object - Using the correct FormResponse type properties
+      const formResponse: FormResponse = {
+        id: crypto.randomUUID(),
         formId,
-        responses: processedData,
-        submittedBy: userEmail,
-        submittedAt: new Date().toISOString()
+        submittedBy: currentUser?.email || 'anonymous',
+        submittedAt: new Date().toISOString(),
+        data: processedData,
+        formattedData: formattedResponses
       };
-
-      console.log('Response object created:', response);
-
-      // Save response to local state first
-      setResponses(prev => {
-        const updated = [...prev, response];
-        console.log('Updated local responses:', updated.length);
-        return updated;
-      });
-
-      // Save to database (Supabase + MySQL)
-      console.log('Saving to database...');
-      await saveFormResponseToDatabase(
-        form,
-        formId,
-        userEmail,
-        formattedResponses,
-        apiEndpoint
-      );
-
-      console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===');
       
-      toast({
-        title: 'Formulario enviado',
-        description: 'Su respuesta ha sido guardada correctamente',
-        variant: 'default',
-      });
+      // Save the response locally
+      setResponses(prev => [...prev, formResponse]);
+
+      // Save to database (Supabase and MySQL)
+      await saveFormResponseToDatabase(form, formId, userEmail, formattedResponses, apiEndpoint);
       
-      return response;
+      return formResponse;
     } catch (error) {
-      console.error('=== FORM SUBMISSION ERROR ===', error);
-      toast({
-        title: 'Error al enviar formulario',
-        description: error instanceof Error ? error.message : 'Por favor intenta nuevamente más tarde',
-        variant: 'destructive',
-      });
+      console.error('Error submitting form response:', error);
       throw error;
     }
   };
 };
 
-export const getFormResponsesOperation = (
-  responses: any[]
-) => {
-  return (formId: string): any[] => {
+// Get form responses operation
+export const getFormResponsesOperation = (responses: FormResponse[]) => {
+  return (formId: string, userEmail?: string): FormResponse[] => {
+    if (userEmail) {
+      // If userEmail is provided, filter by both formId and submittedBy
+      return responses.filter(
+        response => response.formId === formId && response.submittedBy === userEmail
+      );
+    }
+    
+    // Otherwise, just filter by formId
     return responses.filter(response => response.formId === formId);
   };
 };

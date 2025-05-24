@@ -13,7 +13,7 @@ import { Form as FormType } from "@/types/form";
 export function useFormResponses(form: FormType | null) {
   const { id } = useParams();
   const { submitFormResponse } = useForm();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser } = useAuth();
   const location = useLocation();
   const isEditMode = location.state?.editMode || new URLSearchParams(location.search).get('edit') === 'true';
   const navigate = useNavigate();
@@ -88,21 +88,11 @@ export function useFormResponses(form: FormType | null) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('=== FORM SUBMISSION STARTED ===');
-    console.log('Form:', form?.title);
-    console.log('Current User:', currentUser);
-    console.log('Is Authenticated:', isAuthenticated);
-    console.log('Form Responses:', formResponses);
-    
-    if (!form || !id) {
-      console.error('Missing form or ID');
-      return;
-    }
+    if (!form || !id) return;
     
     // Check if the current user is an admin in preview mode
     // Admins cannot submit responses in preview mode, show a toast instead
     if (isAuthenticated && currentUser?.role === "admin") {
-      console.log('Admin in preview mode, blocking submission');
       toast({
         title: "Vista previa",
         description: "Esto es solo una vista previa, no se puede responder formulario desde esta vista",
@@ -117,7 +107,6 @@ export function useFormResponses(form: FormType | null) {
       .map(field => field.label || `Campo #${field.id}`);
     
     if (missingFields.length > 0) {
-      console.log('Missing required fields:', missingFields);
       toast({
         title: "Campos requeridos faltantes",
         description: `Por favor completa los siguientes campos: ${missingFields.join(", ")}`,
@@ -129,7 +118,38 @@ export function useFormResponses(form: FormType | null) {
     setIsSubmitting(true);
     
     try {
-      console.log("Submitting form responses with submitFormResponse function...");
+      console.log("Submitting form responses:", formResponses);
+      console.log("Form fields:", form.fields);
+      
+      // Check if we have any file fields and log them
+      const fileFields = form.fields.filter(field => 
+        field.type === 'image-upload' || 
+        field.type === 'file-upload' || 
+        field.type === 'drawing' || 
+        field.type === 'signature'
+      );
+      
+      if (fileFields.length > 0) {
+        console.log(`Form has ${fileFields.length} file fields:`, fileFields.map(f => f.id));
+        
+        // Log if any of these fields have values in the responses
+        fileFields.forEach(field => {
+          const value = formResponses[field.id];
+          if (value) {
+            if (typeof value === 'string' && value.startsWith('data:')) {
+              console.log(`Field ${field.id} has base64 data`);
+            } else if (value instanceof File) {
+              console.log(`Field ${field.id} has File: ${value.name}, ${value.type}, ${value.size}`);
+            } else if (typeof value === 'string') {
+              console.log(`Field ${field.id} has string value:`, value.substring(0, 100) + '...');
+            } else {
+              console.log(`Field ${field.id} has value of type:`, typeof value);
+            }
+          } else {
+            console.log(`Field ${field.id} has no value`);
+          }
+        });
+      }
       
       // Pass the form from location to the submit function to ensure we have the form data
       const result = await submitFormResponse(id, formResponses, form);
@@ -149,7 +169,7 @@ export function useFormResponses(form: FormType | null) {
       }, 5000); // Extended to 5 seconds to give more time to see file uploads in the success screen
       
     } catch (error) {
-      console.error("=== FORM SUBMISSION ERROR ===", error);
+      console.error("Error submitting form:", error);
       toast({
         title: "Error al enviar respuesta",
         description: error instanceof Error ? error.message : "Por favor intenta nuevamente más tarde",
@@ -171,6 +191,8 @@ export function useFormResponses(form: FormType | null) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
+
+  const { isAuthenticated } = useAuth();
   
   return {
     formResponses,

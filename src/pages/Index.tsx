@@ -1,131 +1,151 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { FileText, Users, Settings, ArrowRight, ClipboardCheck } from "lucide-react";
 import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, LogIn } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { toast } from "@/hooks/toast";
+import { useForm } from "@/contexts/form";
+import { authenticateInvitedUser, validateInvitedUser } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const {
+    isAuthenticated,
+    isAdmin,
+    login
+  } = useAuth();
+  const {
+    forms,
+    isUserAllowed
+  } = useForm();
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
 
-  const features = [
-    {
-      icon: <FileText className="h-8 w-8 text-blue-600" />,
-      title: "Creación de Formularios",
-      description: "Crea formularios personalizados con múltiples tipos de campos y opciones avanzadas."
-    },
-    {
-      icon: <Users className="h-8 w-8 text-green-600" />,
-      title: "Gestión de Usuarios",
-      description: "Administra usuarios invitados y controla el acceso a formularios privados."
-    },
-    {
-      icon: <ClipboardCheck className="h-8 w-8 text-purple-600" />,
-      title: "Recolección de Respuestas",
-      description: "Recopila y analiza respuestas con herramientas de visualización integradas."
-    },
-    {
-      icon: <Settings className="h-8 w-8 text-orange-600" />,
-      title: "Configuración Avanzada",
-      description: "Personaliza formularios con puntuación, colores y configuraciones HTTP."
+  // Default form to check against (first form in the list)
+  const defaultFormId = forms.length > 0 ? forms[0].id : "1";
+
+  const handleContinue = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      toast({
+        title: "Error",
+        description: "Por favor, ingresa un correo electrónico válido",
+        variant: "destructive"
+      });
+      return;
     }
-  ];
 
-  return (
-    <Layout hideNav>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        {/* Hero Section */}
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center max-w-4xl mx-auto">
-            <Badge variant="outline" className="mb-4">
-              Plataforma de Formularios
-            </Badge>
-            <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              Crea, Comparte y Analiza
-              <span className="block text-blue-600">Formularios Inteligentes</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Una solución completa para crear formularios personalizados, 
-              gestionar usuarios y recopilar datos de manera eficiente.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                onClick={() => navigate("/login")}
-                className="text-lg px-8 py-3"
-              >
-                Comenzar Ahora
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => navigate("/register")}
-                className="text-lg px-8 py-3"
-              >
-                Registrarse
-              </Button>
-            </div>
-          </div>
-        </div>
+    setIsValidating(true);
+    try {
+      // Check if user is in the invited users table - this is the primary validation
+      const isInvited = await validateInvitedUser(email);
 
-        {/* Features Section */}
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Características Principales
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Descubre todas las herramientas que necesitas para crear 
-              formularios profesionales y gestionar respuestas eficientemente.
-            </p>
-          </div>
+      // Log detailed information for debugging
+      console.log("Access validation results:", {
+        email,
+        isInvitedUser: isInvited,
+        standardAccessCheck: isUserAllowed(defaultFormId, email)
+      });
+
+      if (isInvited) {
+        toast({
+          title: "Acceso concedido",
+          description: "Redirigiendo a formularios asignados..."
+        });
+
+        // Use authenticateInvitedUser instead of login to get the user data properly
+        const userData = await authenticateInvitedUser(email);
+        
+        if (userData) {
+          // Directly set the user in localStorage to bypass authentication issues
+          localStorage.setItem('currentUser', JSON.stringify(userData));
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <div className="flex justify-center mb-4">
-                    {feature.icon}
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-sm leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+          // Also store email separately for easier access
+          localStorage.setItem('userEmail', email);
+          
+          // Force immediate navigation to Assigned Forms page
+          window.location.href = '/assigned-forms';
+        } else {
+          toast({
+            title: "Error de autenticación",
+            description: "No se pudo iniciar sesión con el correo proporcionado",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Acceso denegado",
+          description: "Tu correo no está registrado en nuestra lista de usuarios invitados",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error validating access:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al verificar el acceso",
+        variant: "destructive"
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
-        {/* CTA Section */}
-        <div className="bg-blue-600 text-white py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-4">
-              ¿Listo para crear tu primer formulario?
-            </h2>
-            <p className="text-xl mb-8 opacity-90">
-              Únete a miles de usuarios que ya confían en nuestra plataforma.
-            </p>
-            <Button 
-              size="lg"
-              variant="secondary"
-              onClick={() => navigate("/login")}
-              className="text-lg px-8 py-3"
-            >
-              Empezar Gratis
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+  return <Layout hideNav>
+      {/* Custom Header */}
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div>
+            <a href="https://beed.studio" target="_blank" rel="noopener noreferrer">
+              <img src="/lovable-uploads/90fe245b-54ef-4362-85ea-387a90015ebb.png" alt="Beed" className="h-8" width="192" height="32" />
+            </a>
+          </div>
+          <div>
+            <Link to="/login">
+              <Button variant="ghost" className="flex items-center gap-2">
+                <LogIn className="h-5 w-5" />
+                <span className="hidden sm:inline">Admin Login</span>
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
-    </Layout>
-  );
+
+      {/* Main Content */}
+      <div className="pt-16 min-h-screen flex flex-col items-center justify-center">
+        <div className="container mx-auto px-4 flex-1 flex flex-col items-center justify-center">
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.6
+        }} className="w-full max-w-md">
+            <Card className="shadow-lg border border-gray-100">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold text-slate-950">¡Responde ahora mismo!</CardTitle>
+                <CardDescription>Por favor ingresa tu correo para continuar</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mt-2 space-y-4">
+                  <Input type="email" placeholder="correo@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full" />
+                  <Button className="w-full" onClick={handleContinue} disabled={isValidating}>
+                    {isValidating ? "Validando..." : "Continuar"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    </Layout>;
 };
 
 export default Index;
