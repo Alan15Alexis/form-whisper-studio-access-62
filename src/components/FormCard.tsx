@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { Eye, Edit, Trash2, Share, BarChart3, Copy, ExternalLink } from "lucide-react";
 import { Form } from "@/types/form";
-import { useForm } from "@/contexts/form/FormContext";
+import { Link, useNavigate } from "react-router-dom";
+import { BarChart, Edit, Share, Trash, Eye } from "lucide-react";
+import { useForm } from "@/contexts/form";
 import { format } from "date-fns";
-import { toast } from "@/components/ui/use-toast";
 import ShareFormDialog from "./ShareFormDialog";
 import ViewResponseDialog from "./ViewResponseDialog";
 import {
@@ -118,7 +118,7 @@ const FormCard = ({ form }: FormCardProps) => {
               onClick={() => setIsViewResponsesOpen(true)} 
               title="Ver respuestas"
             >
-              <BarChart3 className="h-4 w-4" />
+              <BarChart className="h-4 w-4" />
             </Button>
             
             <Button 
@@ -137,7 +137,7 @@ const FormCard = ({ form }: FormCardProps) => {
               className="text-destructive"
               title="Eliminar"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash className="h-4 w-4" />
             </Button>
           </div>
           

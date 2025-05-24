@@ -1,137 +1,187 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useForm } from "@/contexts/form/FormContext";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
+import FormCard from "@/components/FormCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Form } from "@/types/form";
-import FormCard from "@/components/FormCard";
-import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 import { toast } from "@/components/ui/use-toast";
 
 const DashboardAdmin = () => {
-  const { forms, deleteForm, setForms } = useForm();
-  const { currentUser, logout } = useAuth();
+  const { forms, setForms } = useForm();
+  const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
-    if (!currentUser || currentUser.role !== "admin") {
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
       navigate("/login");
-    } else {
-      setLoading(false);
     }
-  }, [currentUser, navigate]);
+  }, [isAuthenticated, navigate]);
 
+  // Fetch forms from Supabase on component mount
   useEffect(() => {
-    const fetchForms = async () => {
+    const fetchFormsFromSupabase = async () => {
+      setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('formularios')
+        console.log("Fetching forms from Supabase...");
+        console.log("Current user email:", currentUser?.email);
+        
+        // Add admin filter to only fetch forms created by this admin
+        let query = supabase
+          .from('formulario_construccion')
           .select('*')
           .order('created_at', { ascending: false });
-
+          
+        // If user is logged in, filter by their email
+        if (currentUser?.email) {
+          query = query.eq('administrador', currentUser.email);
+        }
+        
+        const { data, error } = await query;
+        
         if (error) {
-          console.error("Error fetching forms:", error);
+          console.error('Error fetching forms:', error);
           toast({
-            title: "Error",
-            description: "Failed to fetch forms from database",
+            title: "Error al cargar formularios",
+            description: "No se pudieron cargar los formularios desde la base de datos",
             variant: "destructive",
           });
+          return;
         }
-
+        
         if (data) {
-          // Ensure each form has the correct structure
-          const validatedForms = data.map(form => ({
-            ...form,
-            fields: form.fields || [],
-            isPrivate: form.isPrivate !== undefined ? form.isPrivate : false,
-            allowViewOwnResponses: form.allowViewOwnResponses !== undefined ? form.allowViewOwnResponses : false,
-            allowEditOwnResponses: form.allowEditOwnResponses !== undefined ? form.allowEditOwnResponses : false,
-            enableScoring: form.enableScoring !== undefined ? form.enableScoring : false,
-            showTotalScore: form.showTotalScore !== undefined ? form.showTotalScore : false,
-            scoreConfig: form.scoreConfig || { passMark: 70 },
-            scoreRanges: form.scoreRanges || [],
-            httpConfig: form.httpConfig || { enabled: false, url: '', method: 'POST', headers: [], body: '' }
+          console.log("Forms fetched successfully:", data);
+          console.log("Current user:", currentUser);
+          console.log("Number of forms found:", data.length);
+          
+          // Transform Supabase data to match our Form interface
+          const transformedForms: Form[] = data.map(item => ({
+            id: uuidv4(), // Generate a unique ID for the client
+            title: item.titulo || 'Sin título',
+            description: item.descripcion || '',
+            fields: item.preguntas || [],
+            isPrivate: item.configuracion?.isPrivate || false,
+            allowedUsers: item.acceso || [],
+            createdAt: item.created_at || new Date().toISOString(),
+            updatedAt: item.created_at || new Date().toISOString(),
+            accessLink: uuidv4(), // Generate a unique access link
+            ownerId: currentUser?.id ? String(currentUser.id) : 'unknown', // Ensure ownerId is always a string
+            enableScoring: item.configuracion?.enableScoring || false,
+            formColor: item.configuracion?.formColor || undefined,
+            allowViewOwnResponses: item.configuracion?.allowViewOwnResponses || false,
+            allowEditOwnResponses: item.configuracion?.allowEditOwnResponses || false,
+            httpConfig: item.configuracion?.httpConfig || undefined,
           }));
-          setForms(validatedForms);
+          
+          console.log("Transformed forms:", transformedForms);
+          // Update forms in context
+          setForms(transformedForms);
         }
       } catch (error) {
-        console.error("Error fetching forms:", error);
+        console.error('Error in fetchFormsFromSupabase:', error);
         toast({
-          title: "Error",
-          description: "Failed to fetch forms",
+          title: "Error al cargar formularios",
+          description: "Ocurrió un error inesperado al cargar los formularios",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchForms();
-  }, [setForms]);
-
-  const handleDeleteForm = async (id: string) => {
-    try {
-      const confirmed = window.confirm("Are you sure you want to delete this form?");
-      if (!confirmed) return;
-
-      const success = await deleteForm(id);
-      if (success) {
-        toast({
-          title: "Form deleted",
-          description: "The form has been successfully deleted.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete the form.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting form:", error);
-      toast({
-        title: "Error",
-        description: "An error occurred while deleting the form.",
-        variant: "destructive",
-      });
+    
+    if (currentUser?.email) {
+      console.log("User is authenticated, fetching forms...");
+      fetchFormsFromSupabase();
+    } else {
+      console.log("User is not authenticated or email is missing");
+      setLoading(false);
     }
-  };
-
-  if (loading) {
-    return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </Layout>
-    );
-  }
+  }, [currentUser?.id, currentUser?.email, setForms]);
+  
+  // No need to filter by ownerId since we're already filtering by email in the query
+  const userForms = forms;
+  
+  // Filter by public/private status
+  const publicForms = userForms.filter(form => !form.isPrivate);
+  const privateForms = userForms.filter(form => form.isPrivate);
 
   return (
-    <Layout title="Dashboard Admin">
-      <div className="container py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <CardTitle className="text-2xl font-bold">
-            Welcome Admin!
-          </CardTitle>
-          <Button onClick={() => navigate("/forms/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create New Form
-          </Button>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {forms.map((form) => (
-            <FormCard
-              key={form.id}
-              form={form}
-              onDelete={handleDeleteForm}
-            />
-          ))}
-        </div>
+    <Layout title="Tus Formularios">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-medium">
+          Bienvenido, {currentUser?.name || currentUser?.email}
+        </h2>
+        <Button asChild>
+          <Link to="/forms/new">
+            Crear nuevo formulario
+          </Link>
+        </Button>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="all">Todos los formularios</TabsTrigger>
+            <TabsTrigger value="public">Formularios públicos</TabsTrigger>
+            <TabsTrigger value="private">Formularios privados</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all">
+            {userForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {userForms.map(form => (
+                  <FormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <p className="text-xl text-gray-500 mb-2">No tienes formularios creados</p>
+                <p className="text-gray-400">
+                  Crea tu primer formulario para comenzar.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="public">
+            {publicForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {publicForms.map(form => (
+                  <FormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 mb-2">No tienes formularios públicos</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="private">
+            {privateForms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {privateForms.map(form => (
+                  <FormCard key={form.id} form={form} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 mb-2">No tienes formularios privados</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </Layout>
   );
 };
