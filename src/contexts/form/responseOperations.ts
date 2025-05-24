@@ -1,6 +1,9 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { FormResponse } from '@/types/form';
 import { toast } from "@/hooks/use-toast";
+import { processFormData, formatResponsesWithLabels, saveFormResponseToDatabase } from '@/utils/formResponseUtils';
+import { MYSQL_API_ENDPOINT } from './initialState';
 
 export const submitFormResponseOperation = (
   getForm: (id: string) => any,
@@ -20,22 +23,39 @@ export const submitFormResponseOperation = (
       throw new Error('Form not found');
     }
 
-    // Create response object
-    const responseId = uuidv4();
-    const response: FormResponse = {
-      id: responseId,
-      formId,
-      responses: data,
-      submittedBy: user?.email,
-      submittedAt: new Date().toISOString()
-    };
+    // Get user email - try from user object, localStorage, or default
+    const userEmail = user?.email || localStorage.getItem('userEmail') || 'anonymous@example.com';
+    
+    console.log('Submitting form response for user:', userEmail);
+    console.log('Form data:', data);
 
     try {
-      console.log('Submitting form response:', response);
-      
-      // Save response to local state
+      // Process form data (handle file uploads, etc.)
+      const processedData = await processFormData(form, data, userEmail, formId);
+      console.log('Processed form data:', processedData);
+
+      // Format responses with labels for storage
+      const formattedResponses = formatResponsesWithLabels(form.fields, processedData);
+      console.log('Formatted responses:', formattedResponses);
+
+      // Create response object for local state
+      const responseId = uuidv4();
+      const response: FormResponse = {
+        id: responseId,
+        formId,
+        responses: processedData, // Use processed data with URLs
+        submittedBy: userEmail,
+        submittedAt: new Date().toISOString()
+      };
+
+      // Save response to local state first
       setResponses(prev => [...prev, response]);
-      
+      console.log('Response saved to local state');
+
+      // Save to database (Supabase and MySQL)
+      await saveFormResponseToDatabase(form, formId, userEmail, formattedResponses, MYSQL_API_ENDPOINT);
+      console.log('Response saved to database successfully');
+
       // If the form has HTTP config enabled, send data to external API
       if (form.httpConfig && form.httpConfig.enabled && form.httpConfig.url) {
         try {
@@ -89,8 +109,8 @@ export const submitFormResponseOperation = (
       }
       
       toast({
-        title: 'Form submitted',
-        description: 'Your response has been submitted successfully',
+        title: 'Formulario enviado',
+        description: 'Su respuesta ha sido enviada exitosamente',
         variant: 'default',
       });
       
@@ -99,7 +119,7 @@ export const submitFormResponseOperation = (
       console.error('Error submitting form response:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: error instanceof Error ? error.message : 'Ocurrió un error inesperado',
         variant: 'destructive',
       });
       throw error;

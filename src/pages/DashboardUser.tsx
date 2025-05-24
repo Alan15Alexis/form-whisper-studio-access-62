@@ -1,63 +1,49 @@
-
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { useForm } from "@/contexts/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useForm } from "@/contexts/form/FormContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { Form } from "@/types/form";
 import AssignedFormCard from "@/components/AssignedFormCard";
 
-const DashboardUser = () => {
-  const { forms, removeAllowedUser } = useForm();
-  const { currentUser, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  
+interface DashboardUserProps { }
+
+const DashboardUser: React.FC<DashboardUserProps> = () => {
+  const { forms } = useForm();
+  const { currentUser } = useAuth();
+  const [assignedForms, setAssignedForms] = useState<Form[]>([]);
+
   useEffect(() => {
-    // Si el usuario no está autenticado, redirigir al inicio
-    if (!isAuthenticated) {
-      navigate("/login");
+    if (currentUser) {
+      // Filter forms where the current user's email is in the allowedUsers array
+      const filteredForms = forms.filter(form =>
+        form.allowedUsers && form.allowedUsers.includes(currentUser.email)
+      );
+      setAssignedForms(filteredForms);
     }
-  }, [isAuthenticated, navigate]);
-  
-  // Get assigned forms for the user by filtering all forms where the user is allowed
-  const userAssignedForms = forms.filter(form => 
-    form.isPrivate && 
-    currentUser?.email && 
-    form.allowedUsers.includes(currentUser.email)
-  );
-  
-  // Función para ocultar un formulario (quitar el usuario de la lista de usuarios permitidos)
-  const handleHideForm = (formId: string) => {
-    if (currentUser?.email) {
-      removeAllowedUser(formId, currentUser.email);
-    }
-  };
+  }, [currentUser, forms]);
 
   return (
-    <Layout title="Mis Formularios Asignados">
-      <div className="mb-6">
-        <h2 className="text-lg text-gray-600">
-          Bienvenido, {currentUser?.name || currentUser?.email || "Usuario"}. Aquí están los formularios asignados a ti.
-        </h2>
+    <Layout title="Assigned Forms">
+      <div className="container py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Assigned Forms</CardTitle>
+            <CardDescription>
+              These are the forms assigned to you.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {assignedForms.length > 0 ? (
+              assignedForms.map((form) => (
+                <AssignedFormCard key={form.id} form={form} />
+              ))
+            ) : (
+              <p>No forms have been assigned to you yet.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-      
-      {userAssignedForms && userAssignedForms.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {userAssignedForms.map(form => (
-            <AssignedFormCard 
-              key={form.id} 
-              form={form} 
-              onRemove={handleHideForm} 
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <p className="text-xl text-gray-500 mb-2">No tienes formularios asignados</p>
-          <p className="text-gray-400">
-            Un administrador debe darte acceso a formularios.
-          </p>
-        </div>
-      )}
     </Layout>
   );
 };
