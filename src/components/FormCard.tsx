@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,7 +126,7 @@ const FormCard = ({ form, onEdit, onDelete }: FormCardProps) => {
 
       <ShareFormDialog 
         open={showShareDialog} 
-        onClose={() => setShowShareDialog(false)}
+        onOpenChange={setShowShareDialog}
         formId={form.id}
         formTitle={form.title}
         isPrivate={form.isPrivate}

@@ -110,17 +110,17 @@ export function useFormBuilder(id?: string) {
     setScoreRanges(ranges);
   };
 
-  const updateField = (index: number, field: FormField) => {
+  const updateField = (id: string, field: FormField) => {
     setFormData(prev => ({
       ...prev,
-      fields: prev.fields.map((f, i) => i === index ? field : f)
+      fields: prev.fields.map((f) => f.id === id ? field : f)
     }));
   };
 
-  const removeField = (index: number) => {
+  const removeField = (id: string) => {
     setFormData(prev => ({
       ...prev,
-      fields: prev.fields.filter((_, i) => i !== index)
+      fields: prev.fields.filter((f) => f.id !== id)
     }));
   };
 
@@ -164,6 +164,20 @@ export function useFormBuilder(id?: string) {
     setFormData(prev => ({ ...prev, fields: items }));
   };
 
+  const handleAddAllowedUser = async () => {
+    if (allowedUserEmail && id) {
+      await addAllowedUser(id, allowedUserEmail);
+      setAllowedUserEmail('');
+      setAllowedUserName('');
+    }
+  };
+
+  const handleRemoveAllowedUser = async (email: string) => {
+    if (id) {
+      await removeAllowedUser(id, email);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
       toast({
@@ -181,7 +195,7 @@ export function useFormBuilder(id?: string) {
         ...formData,
         scoreRanges,
         enableScoring: isScoringEnabled,
-        ownerId: currentUser?.id || '',
+        ownerId: String(currentUser?.id || ''),
         allowedUsers: isEditMode ? undefined : []
       };
 
@@ -226,8 +240,8 @@ export function useFormBuilder(id?: string) {
     updateField,
     removeField,
     addField,
-    addAllowedUser,
-    removeAllowedUser,
+    addAllowedUser: handleAddAllowedUser,
+    removeAllowedUser: handleRemoveAllowedUser,
     handleSubmit,
     setAllowedUserEmail,
     setAllowedUserName,
