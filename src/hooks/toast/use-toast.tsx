@@ -123,7 +123,7 @@ export const Toaster = () => {
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
-              strokeJoin="round"
+              strokeLinejoin="round"
             >
               <path d="M18 6L6 18" />
               <path d="M6 6L18 18" />
