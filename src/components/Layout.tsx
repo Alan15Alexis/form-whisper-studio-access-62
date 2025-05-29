@@ -37,7 +37,7 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
       {!hideNav && (
         <>
           {/* Desktop Navigation */}
-          <header className="border-b shadow-sm bg-white">
+          <header className="border-b shadow-sm bg-white relative z-50">
             <div className="container mx-auto px-4 py-3 flex justify-between items-center">
               <div className="flex items-center">
                 <a href="https://beed.studio" target="_blank" rel="noopener noreferrer">
@@ -108,7 +108,7 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
           
           {/* Mobile Navigation */}
           {menuOpen && (
-            <div className="md:hidden bg-white border-b shadow-md animate-fadeIn">
+            <div className="md:hidden bg-white border-b shadow-md animate-fadeIn relative z-40">
               <div className="container mx-auto px-4 py-3 flex flex-col space-y-2">
                 {navLinks.map((link) => {
                   // Omitir enlaces según condiciones (igual que escritorio)
