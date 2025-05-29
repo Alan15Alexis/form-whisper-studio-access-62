@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { toastStore } from "./toast-store";
 import { type ToastProps, type Toast } from "./types";
 
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 5000; // 5 segundos
 
 export const useToast = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -27,12 +27,19 @@ export const useToast = () => {
       toastStore.setState((state) => ({
         toasts: state.toasts.filter((toast) => toast.id !== id),
       }));
+    
     toastStore.setState((state) => ({
       toasts: [
         ...state.toasts,
         { ...props, id, dismiss, update },
       ],
     }));
+
+    // Auto dismiss después de 5 segundos
+    setTimeout(() => {
+      dismiss();
+    }, TOAST_REMOVE_DELAY);
+
     return {
       id,
       dismiss,
@@ -67,6 +74,11 @@ export function toast(props: ToastProps) {
     toasts: [...state.toasts, { ...props, id, dismiss, update }],
   }));
 
+  // Auto dismiss después de 5 segundos
+  setTimeout(() => {
+    dismiss();
+  }, TOAST_REMOVE_DELAY);
+
   return {
     id,
     dismiss,
@@ -83,6 +95,22 @@ export const Toaster = () => {
     });
   }, []);
 
+  const handleDragStart = (e: React.DragEvent, toastId: string) => {
+    e.dataTransfer.setData('text/plain', toastId);
+  };
+
+  const handleDragEnd = (e: React.DragEvent, toastId: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const dragDistance = Math.abs(e.clientX - rect.left);
+    
+    // Si se arrastra más de 100px, quitar el toast
+    if (dragDistance > 100) {
+      toastStore.setState((state) => ({
+        toasts: state.toasts.filter((toast) => toast.id !== toastId),
+      }));
+    }
+  };
+
   return (
     <div
       className={`fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] ${
@@ -92,7 +120,10 @@ export const Toaster = () => {
       {toasts.map(({ id, title, description, action, variant, ...props }) => (
         <div
           key={id}
-          className={`group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full ${
+          draggable
+          onDragStart={(e) => handleDragStart(e, id)}
+          onDragEnd={(e) => handleDragEnd(e, id)}
+          className={`group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all cursor-grab active:cursor-grabbing data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full ${
             variant === 'destructive' 
               ? 'border-red-500 bg-red-50 text-red-900 dark:bg-red-900 dark:text-red-50' 
               : variant === 'success'
