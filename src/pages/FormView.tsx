@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import FormField from "@/components/form-view/FormField";
 import FormAccess from "@/components/form-view/FormAccess";
 import FormSuccess from "@/components/form-view/FormSuccess";
+import FormScoreCard from "@/components/form-view/FormScoreCard";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormResponses } from "@/hooks/useFormResponses";
 import FormQuestion from "@/components/form-view/FormQuestion";
@@ -25,6 +26,7 @@ const FormView = () => {
     formResponses, 
     isSubmitting, 
     isSubmitSuccess, 
+    showScoreCard,
     currentQuestionIndex, 
     isEditMode,
     handleFieldChange, 
@@ -79,6 +81,19 @@ const FormView = () => {
     return (
       <Layout hideNav>
         <FormNotFound onBackClick={handleBackNavigation} />
+      </Layout>
+    );
+  }
+
+  // Show score card if enabled and form was just submitted
+  if (showScoreCard) {
+    return (
+      <Layout hideNav>
+        <FormScoreCard 
+          formValues={formResponses} 
+          fields={form.fields}
+          formTitle={form.title}
+        />
       </Layout>
     );
   }

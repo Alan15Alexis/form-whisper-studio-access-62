@@ -1,3 +1,4 @@
+
 import { FormResponse } from '@/types/form';
 import { toast } from "@/components/ui/use-toast";
 import { sendHttpRequest, validateFormResponses } from '@/utils/http-utils';
@@ -140,7 +141,7 @@ export const processFormData = async (
   return processedData;
 };
 
-// Format responses to use labels instead of IDs
+// Format responses to use labels instead of IDs and include numeric values
 export const formatResponsesWithLabels = (
   formFields: any[],
   processedData: Record<string, any>
@@ -152,12 +153,63 @@ export const formatResponsesWithLabels = (
     formFields.forEach(field => {
       if (processedData[field.id] !== undefined) {
         const label = field.label || `Pregunta ${field.id.substring(0, 5)}`;
-        formattedResponses[label] = processedData[field.id];
+        const fieldValue = processedData[field.id];
+        
+        // Store the regular response
+        formattedResponses[label] = fieldValue;
+        
+        // If this field has numeric values, also store the numeric value separately
+        if (field.hasNumericValues) {
+          const numericValue = calculateFieldNumericValue(field, fieldValue);
+          if (numericValue !== null && numericValue !== undefined) {
+            formattedResponses[`${label} (Valor Numérico)`] = numericValue;
+          }
+        }
       }
     });
   }
   
   return formattedResponses;
+};
+
+// Calculate numeric value for a specific field based on its response
+export const calculateFieldNumericValue = (field: any, response: any): number | null => {
+  if (!field.hasNumericValues || response === undefined || response === null) {
+    return null;
+  }
+  
+  // Skip file uploads, images, drawings and signatures - they don't contribute to score
+  if (field.type === 'image-upload' || field.type === 'file-upload' || 
+      field.type === 'drawing' || field.type === 'signature') {
+    return null;
+  }
+  
+  if (field.type === 'checkbox' && Array.isArray(response)) {
+    // For checkboxes, sum numeric values of all selected options
+    let total = 0;
+    response.forEach(value => {
+      const option = field.options?.find(opt => opt.value === value);
+      if (option && option.numericValue !== undefined) {
+        total += option.numericValue;
+      }
+    });
+    return total;
+  } else if (field.type === 'yesno') {
+    // For Yes/No fields, find the corresponding option
+    const isYes = response === true || response === "true" || response === "yes" || response === "sí";
+    const option = field.options?.[isYes ? 0 : 1]; // Assuming Yes is index 0 and No is index 1
+    return option?.numericValue ?? null;
+  } else if (field.type === 'radio' || field.type === 'select' || field.type === 'image-select') {
+    // For single selections and image selections
+    const option = field.options?.find(opt => opt.value === response);
+    return option?.numericValue ?? null;
+  } else if (field.type === 'star-rating' || field.type === 'opinion-scale') {
+    // For direct numeric ratings
+    const numValue = parseInt(response);
+    return !isNaN(numValue) ? numValue : null;
+  }
+  
+  return null;
 };
 
 // Save form response to database

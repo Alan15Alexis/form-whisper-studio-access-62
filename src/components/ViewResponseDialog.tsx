@@ -134,6 +134,11 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
            value.includes('respuestas-formulario'));
   };
   
+  // Helper function to check if this is a numeric value field
+  const isNumericValue = (key: string): boolean => {
+    return key.includes('(Valor Numérico)');
+  };
+  
   // Helper function to get the file name from URL
   const getFileNameFromUrl = (url: string): string => {
     try {
@@ -275,13 +280,13 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Respuestas del formulario: {formTitle}</DialogTitle>
           <DialogDescription>
             {adminView 
-              ? "Todas las respuestas recibidas para este formulario." 
-              : "Estas son las respuestas que enviaste para este formulario."}
+              ? "Todas las respuestas recibidas para este formulario, incluyendo valores numéricos." 
+              : "Estas son las respuestas que enviaste para este formulario, incluyendo valores numéricos."}
           </DialogDescription>
         </DialogHeader>
         
@@ -375,58 +380,74 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                 </div>
               )}
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-1/2">Pregunta</TableHead>
-                    <TableHead className="w-1/2">
-                      {showAllResponses ? "Todas las respuestas" : "Respuesta"}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {showAllResponses ? (
-                    // Display aggregated responses
-                    Object.entries(getAggregatedData()).map(([question, answersList]) => (
-                      <TableRow key={question}>
-                        <TableCell className="font-medium align-top">{question}</TableCell>
-                        <TableCell>
-                          <div className="space-y-2">
-                            {answersList.map((item, idx) => (
-                              <div key={idx} className="border-b pb-2 last:border-b-0 last:pb-0">
-                                <div className="text-sm">
-                                  {isFileUrl(item.answer) ? (
-                                    renderFilePreview(item.answer, question)
-                                  ) : (
-                                    typeof item.answer === 'object' ? JSON.stringify(item.answer) : String(item.answer)
-                                  )}
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-1/3">Pregunta</TableHead>
+                      <TableHead className="w-2/3">
+                        {showAllResponses ? "Todas las respuestas" : "Respuesta"}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {showAllResponses ? (
+                      // Display aggregated responses
+                      Object.entries(getAggregatedData()).map(([question, answersList]) => (
+                        <TableRow key={question} className={isNumericValue(question) ? "bg-blue-50" : ""}>
+                          <TableCell className="font-medium align-top">
+                            {question}
+                            {isNumericValue(question) && (
+                              <span className="block text-xs text-blue-600 mt-1">Valor numérico</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-2">
+                              {answersList.map((item, idx) => (
+                                <div key={idx} className="border-b pb-2 last:border-b-0 last:pb-0">
+                                  <div className="text-sm">
+                                    {isFileUrl(item.answer) ? (
+                                      renderFilePreview(item.answer, question)
+                                    ) : (
+                                      <span className={isNumericValue(question) ? "font-semibold text-blue-700" : ""}>
+                                        {typeof item.answer === 'object' ? JSON.stringify(item.answer) : String(item.answer)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {item.user} • {new Date(item.date).toLocaleString()}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {item.user} • {new Date(item.date).toLocaleString()}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    // Display individual response
-                    Object.entries(responseData).map(([question, answer]) => (
-                      <TableRow key={question}>
-                        <TableCell className="font-medium">{question}</TableCell>
-                        <TableCell>
-                          {isFileUrl(answer) ? (
-                            renderFilePreview(answer, question)
-                          ) : (
-                            typeof answer === 'object' ? JSON.stringify(answer) : String(answer)
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      // Display individual response
+                      Object.entries(responseData).map(([question, answer]) => (
+                        <TableRow key={question} className={isNumericValue(question) ? "bg-blue-50" : ""}>
+                          <TableCell className="font-medium">
+                            {question}
+                            {isNumericValue(question) && (
+                              <span className="block text-xs text-blue-600 mt-1">Valor numérico</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isFileUrl(answer) ? (
+                              renderFilePreview(answer, question)
+                            ) : (
+                              <span className={isNumericValue(question) ? "font-semibold text-blue-700" : ""}>
+                                {typeof answer === 'object' ? JSON.stringify(answer) : String(answer)}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
         </div>

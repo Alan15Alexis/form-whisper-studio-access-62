@@ -21,6 +21,7 @@ export function useFormResponses(form: FormType | null) {
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+  const [showScoreCard, setShowScoreCard] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
@@ -160,13 +161,23 @@ export function useFormResponses(form: FormType | null) {
         description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
       });
       
-      setIsSubmitSuccess(true);
+      // Check if we should show the score card before the success message
+      if (form.showTotalScore && form.fields.some(f => f.hasNumericValues)) {
+        setShowScoreCard(true);
+        // After 3 seconds, hide score card and show success
+        setTimeout(() => {
+          setShowScoreCard(false);
+          setIsSubmitSuccess(true);
+        }, 3000);
+      } else {
+        setIsSubmitSuccess(true);
+      }
 
-      // Redirigir después de 2 segundos para mostrar el mensaje de éxito
+      // Redirigir después de unos segundos para mostrar el mensaje de éxito
       setTimeout(() => {
         // Always redirect to assigned forms page
         navigate("/assigned-forms", { replace: true });
-      }, 5000); // Extended to 5 seconds to give more time to see file uploads in the success screen
+      }, form.showTotalScore ? 8000 : 5000); // More time if showing score card
       
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -198,6 +209,7 @@ export function useFormResponses(form: FormType | null) {
     formResponses,
     isSubmitting,
     isSubmitSuccess,
+    showScoreCard,
     currentQuestionIndex,
     uploadProgress,
     isEditMode,
@@ -205,6 +217,7 @@ export function useFormResponses(form: FormType | null) {
     handleSubmit,
     handleNext,
     handlePrevious,
-    setIsSubmitSuccess
+    setIsSubmitSuccess,
+    setShowScoreCard
   };
 }
