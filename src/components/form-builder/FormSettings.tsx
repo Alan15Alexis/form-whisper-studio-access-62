@@ -233,7 +233,7 @@ const FormSettings = ({
           <div className="flex items-center space-x-4">
             <Switch
               id="show-total-score"
-              checked={showTotalScore}
+              checked={!!showTotalScore}
               onCheckedChange={handleToggleScoringFeature}
               disabled={!hasFieldsWithNumericValues}
               className="data-[state=checked]:bg-[#686df3]"
