@@ -55,44 +55,56 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (formsData && formsData.length > 0) {
           // Convert Supabase data format to our form format
           const loadedForms = formsData.map(formData => {
-            // Extract score ranges and settings from configuration if they exist
-            const scoreRanges = formData.configuracion?.scoreRanges || [];
-            const hasNumericValues = formData.configuracion?.hasFieldsWithNumericValues || false;
-            const showTotalScore = formData.configuracion?.showTotalScore || false;
+            console.log(`Processing form "${formData.titulo}" with configuration:`, formData.configuracion);
             
-            console.log(`Loaded form "${formData.titulo}" with score ranges:`, scoreRanges);
-            console.log(`Form "${formData.titulo}" showTotalScore setting:`, showTotalScore);
+            // Extract configuration safely with proper fallbacks
+            const config = formData.configuracion || {};
+            const showTotalScore = Boolean(config.showTotalScore);
+            const scoreRanges = Array.isArray(config.scoreRanges) ? config.scoreRanges : [];
             
-            // Apply score ranges to all fields with numeric values
+            console.log(`Form "${formData.titulo}":`, {
+              showTotalScore,
+              scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges'
+            });
+            
+            // Process fields and apply score ranges if needed
             const processedFields = formData.preguntas?.map(field => {
               if (field.hasNumericValues && scoreRanges.length > 0 && showTotalScore) {
+                console.log(`Applying score ranges to field ${field.id || field.label}`);
                 return { ...field, scoreRanges: scoreRanges };
               }
               return field;
             }) || [];
             
-            return {
+            const convertedForm = {
               id: formData.id.toString(), // Convert bigint to string for consistency
               title: formData.titulo || 'Untitled Form',
               description: formData.descripcion || '',
               fields: processedFields,
-              isPrivate: formData.configuracion?.isPrivate || false,
+              isPrivate: Boolean(config.isPrivate),
               allowedUsers: formData.acceso || [],
               createdAt: formData.created_at,
               updatedAt: formData.created_at,
               accessLink: uuidv4(), // Generate new access link
               ownerId: formData.administrador || 'unknown',
-              formColor: formData.configuracion?.formColor || '#3b82f6',
-              allowViewOwnResponses: formData.configuracion?.allowViewOwnResponses || false,
-              allowEditOwnResponses: formData.configuracion?.allowEditOwnResponses || false,
-              httpConfig: formData.configuracion?.httpConfig,
+              formColor: config.formColor || '#3b82f6',
+              allowViewOwnResponses: Boolean(config.allowViewOwnResponses),
+              allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
+              httpConfig: config.httpConfig,
               showTotalScore: showTotalScore,
               scoreConfig: {
                 enabled: showTotalScore,
                 ranges: scoreRanges
               },
-              scoreRanges: scoreRanges // Also set direct scoreRanges property
+              scoreRanges: scoreRanges
             };
+            
+            console.log(`Final converted form "${convertedForm.title}":`, {
+              showTotalScore: convertedForm.showTotalScore,
+              scoreRanges: convertedForm.scoreRanges
+            });
+            
+            return convertedForm;
           });
           
           // Merge with existing forms from localStorage

@@ -1,4 +1,3 @@
-
 // Update import for toast
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -47,12 +46,27 @@ export const useFormBuilder = (id?: string) => {
       const existingForm = getForm(formId);
       
       if (existingForm) {
-        console.log("useFormBuilder - Found existing form:", existingForm.title);
-        console.log("useFormBuilder - Form showTotalScore:", existingForm.showTotalScore);
-        console.log("useFormBuilder - Form scoreRanges:", JSON.stringify(existingForm.scoreRanges));
+        console.log("useFormBuilder - Found existing form:", {
+          title: existingForm.title,
+          showTotalScore: existingForm.showTotalScore,
+          scoreRanges: existingForm.scoreRanges?.length || 0,
+          rawData: existingForm
+        });
         
-        setForm(existingForm);
-        setFormData(existingForm);
+        // Ensure we properly preserve the scoring data
+        const formWithScoring = {
+          ...existingForm,
+          showTotalScore: Boolean(existingForm.showTotalScore),
+          scoreRanges: Array.isArray(existingForm.scoreRanges) ? existingForm.scoreRanges : []
+        };
+        
+        console.log("useFormBuilder - Processed form with scoring:", {
+          showTotalScore: formWithScoring.showTotalScore,
+          scoreRanges: formWithScoring.scoreRanges
+        });
+        
+        setForm(formWithScoring);
+        setFormData(formWithScoring);
       } else {
         console.log("useFormBuilder - Form not found, redirecting to forms list");
         toast({
@@ -112,18 +126,20 @@ export const useFormBuilder = (id?: string) => {
         // Clear score ranges when disabling scoring
         scoreRanges: enabled ? prev.scoreRanges : []
       };
-      console.log("useFormBuilder - Updated formData showTotalScore to:", updated.showTotalScore);
-      console.log("useFormBuilder - Updated formData scoreRanges to:", JSON.stringify(updated.scoreRanges));
+      console.log("useFormBuilder - Updated formData:", {
+        showTotalScore: updated.showTotalScore,
+        scoreRanges: updated.scoreRanges
+      });
       return updated;
     });
   };
 
   const handleSaveScoreRanges = (ranges: any[]) => {
-    console.log("useFormBuilder - handleSaveScoreRanges called with:", JSON.stringify(ranges));
+    console.log("useFormBuilder - handleSaveScoreRanges called with:", ranges);
     
     setFormData(prev => {
       const updated = { ...prev, scoreRanges: ranges };
-      console.log("useFormBuilder - Updated formData scoreRanges to:", JSON.stringify(updated.scoreRanges));
+      console.log("useFormBuilder - Updated formData scoreRanges to:", updated.scoreRanges);
       return updated;
     });
   };
@@ -211,8 +227,10 @@ export const useFormBuilder = (id?: string) => {
 
   const handleSubmit = async () => {
     console.log("useFormBuilder - handleSubmit called");
-    console.log("useFormBuilder - Current formData showTotalScore:", formData.showTotalScore);
-    console.log("useFormBuilder - Current formData scoreRanges:", JSON.stringify(formData.scoreRanges));
+    console.log("useFormBuilder - Current formData:", {
+      showTotalScore: formData.showTotalScore,
+      scoreRanges: formData.scoreRanges
+    });
     
     setIsSaving(true);
     
@@ -251,10 +269,10 @@ export const useFormBuilder = (id?: string) => {
   const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
     try {
       setIsSaving(true);
-      console.log("useFormBuilder - Updating form with data:", JSON.stringify({
+      console.log("useFormBuilder - Updating form with data:", {
         showTotalScore: formData.showTotalScore,
         scoreRanges: formData.scoreRanges
-      }));
+      });
       
       await updateForm(id, formData);
       toast({
