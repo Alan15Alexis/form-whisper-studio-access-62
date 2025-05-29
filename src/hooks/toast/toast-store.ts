@@ -9,7 +9,3 @@ interface ToastStore {
 export const toastStore = create<ToastStore>(() => ({
   toasts: [],
 }));
-
-export const useToastStore = () => {
-  return { toasts: toastStore.getState().toasts };
-};
