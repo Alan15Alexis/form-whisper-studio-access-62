@@ -203,7 +203,7 @@ const FormSettings = ({
     });
   };
 
-  // Enhanced function to save score ranges with better error handling
+  // Enhanced function to save score ranges with better error handling and proper ID conversion
   const saveScoreRanges = async () => {
     console.log("saveScoreRanges called");
     
@@ -233,11 +233,26 @@ const FormSettings = ({
     console.log("- Ranges to save:", JSON.stringify(scoreRanges));
     
     try {
-      // Get the current form from Supabase using the form ID
+      // Convert form ID to number for database query - this fixes the UUID vs bigint issue
+      const numericFormId = parseInt(currentFormId, 10);
+      
+      if (isNaN(numericFormId)) {
+        console.error("Invalid form ID - cannot convert to number:", currentFormId);
+        toast({
+          title: "Error",
+          description: "ID de formulario inválido",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Using numeric form ID for database query:", numericFormId);
+      
+      // Get the current form from Supabase using the numeric form ID
       const { data: existingForm, error: queryError } = await supabase
         .from('formulario_construccion')
         .select('id, configuracion, preguntas, titulo')
-        .eq('id', currentFormId)
+        .eq('id', numericFormId) // Use numeric ID for the query
         .maybeSingle();
       
       if (queryError) {
@@ -251,7 +266,7 @@ const FormSettings = ({
       }
       
       if (!existingForm) {
-        console.error("Form not found in database with ID:", currentFormId);
+        console.error("Form not found in database with numeric ID:", numericFormId);
         toast({
           title: "Error",
           description: "No se encontró el formulario en la base de datos",
@@ -317,7 +332,7 @@ const FormSettings = ({
           configuracion: updatedConfig,
           preguntas: currentFields
         })
-        .eq('id', existingForm.id);
+        .eq('id', existingForm.id); // Use the ID from the database response
         
       if (updateError) {
         console.error("Error updating form scoring in Supabase:", updateError);
@@ -350,7 +365,7 @@ const FormSettings = ({
     }
   };
 
-  // Handle toggle of scoring feature with improved error handling
+  // Handle toggle of scoring feature with improved error handling and proper ID conversion
   const handleToggleScoringFeature = async (enabled: boolean) => {
     console.log("TOGGLE ACTION - handleToggleScoringFeature called with:", enabled);
     
@@ -378,11 +393,26 @@ const FormSettings = ({
     }
     
     try {
+      // Convert form ID to number for database query - this fixes the UUID vs bigint issue
+      const numericFormId = parseInt(currentFormId, 10);
+      
+      if (isNaN(numericFormId)) {
+        console.error("Invalid form ID - cannot convert to number:", currentFormId);
+        toast({
+          title: "Error",
+          description: "ID de formulario inválido",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Using numeric form ID for toggle:", numericFormId);
+      
       // Get the current form from Supabase
       const { data: existingForm, error: queryError } = await supabase
         .from('formulario_construccion')
         .select('id, configuracion, preguntas')
-        .eq('id', currentFormId)
+        .eq('id', numericFormId) // Use numeric ID for the query
         .maybeSingle();
       
       if (queryError || !existingForm) {
@@ -414,7 +444,7 @@ const FormSettings = ({
         .update({
           configuracion: updatedConfig
         })
-        .eq('id', existingForm.id);
+        .eq('id', existingForm.id); // Use the ID from the database response
         
       if (updateError) {
         console.error("Error updating scoring toggle:", updateError);

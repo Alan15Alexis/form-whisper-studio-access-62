@@ -72,7 +72,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }) || [];
             
             return {
-              id: formData.id.toString(),
+              id: formData.id.toString(), // Convert bigint to string for consistency
               title: formData.titulo || 'Untitled Form',
               description: formData.descripcion || '',
               fields: processedFields,

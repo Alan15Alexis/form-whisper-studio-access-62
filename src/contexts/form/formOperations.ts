@@ -256,14 +256,42 @@ export const updateFormOperation = (
     const fieldsForDatabase = removeScoreRangesFromFields(updatedForm.fields);
     console.log("Fields for database (without scoreRanges):", JSON.stringify(fieldsForDatabase));
     
-    // Update the form in Supabase
+    // Update the form in Supabase with proper ID handling
     try {
-      // First check if the form exists in Supabase by title
-      const { data: existingForm } = await supabase
-        .from('formulario_construccion')
-        .select('id')
-        .eq('titulo', updatedForm.title)
-        .maybeSingle();
+      // Convert form ID to number if it's a string that represents a number
+      let queryId: string | number = id;
+      const numericId = parseInt(id, 10);
+      
+      // If the ID can be converted to a number, use it for the database query
+      if (!isNaN(numericId)) {
+        queryId = numericId;
+        console.log("Using numeric ID for database query:", queryId);
+      } else {
+        // If it's not a number, try to find by title as fallback
+        console.log("ID is not numeric, will search by title:", id);
+      }
+      
+      let existingForm;
+      
+      // Try to find by numeric ID first if possible
+      if (typeof queryId === 'number') {
+        const { data } = await supabase
+          .from('formulario_construccion')
+          .select('id')
+          .eq('id', queryId)
+          .maybeSingle();
+        existingForm = data;
+      }
+      
+      // If not found by ID or ID is not numeric, try to find by title
+      if (!existingForm) {
+        const { data } = await supabase
+          .from('formulario_construccion')
+          .select('id')
+          .eq('titulo', updatedForm.title)
+          .maybeSingle();
+        existingForm = data;
+      }
 
       if (existingForm) {
         // Update existing form - ensure configuration is explicitly set

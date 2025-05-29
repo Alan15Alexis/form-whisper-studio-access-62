@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -31,8 +32,16 @@ export function useFormValidation() {
           return;
         }
         
-        // Otherwise, try to get the form from the context
-        const foundForm = forms.find(form => form.id === id);
+        // Try to find the form - handle both UUID and numeric IDs
+        let foundForm = forms.find(form => form.id === id);
+        
+        // If not found by exact ID match and ID looks like a number, try converting
+        if (!foundForm) {
+          const numericId = parseInt(id, 10);
+          if (!isNaN(numericId)) {
+            foundForm = forms.find(form => form.id === numericId.toString());
+          }
+        }
         
         // If form doesn't exist, end validation
         if (!foundForm) {
