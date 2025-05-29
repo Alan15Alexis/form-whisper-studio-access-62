@@ -57,11 +57,11 @@ const FormBuilderTabs = ({
   externalScoreRanges = [],
   isScoringEnabled = false
 }: FormBuilderTabsProps) => {
-  // Extract data from formData with proper fallbacks
+  // Use formData.showTotalScore as the single source of truth
   const showTotalScore = Boolean(formData.showTotalScore);
   const scoreRanges = Array.isArray(formData.scoreRanges) ? formData.scoreRanges : [];
 
-  console.log("FormBuilderTabs - Rendering with formData:", {
+  console.log("FormBuilderTabs - Rendering with standardized props:", {
     title: formData.title,
     showTotalScore,
     scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges',
@@ -116,8 +116,7 @@ const FormBuilderTabs = ({
           showTotalScore={showTotalScore}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
-          externalScoreRanges={scoreRanges}
-          isScoringEnabled={showTotalScore}
+          scoreRanges={scoreRanges}
         />
       </TabsContent>
       

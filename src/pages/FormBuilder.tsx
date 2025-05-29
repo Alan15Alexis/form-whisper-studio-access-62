@@ -49,7 +49,7 @@ const FormBuilder = () => {
     );
   }
 
-  console.log("FormBuilder - Rendering with formData:", {
+  console.log("FormBuilder - Rendering with standardized formData:", {
     showTotalScore: formData.showTotalScore,
     scoreRanges: formData.scoreRanges
   });
@@ -86,8 +86,6 @@ const FormBuilder = () => {
             formId={id}
             allowedUserName={allowedUserName}
             setAllowedUserName={setAllowedUserName}
-            externalScoreRanges={formData.scoreRanges || []}
-            isScoringEnabled={formData.showTotalScore || false}
           />
         </DragDropContext>
       </div>
