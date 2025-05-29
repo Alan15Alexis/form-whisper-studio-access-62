@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, LogOut, Menu, X, ClipboardList } from 'lucide-react';
+import { Home, LogOut, Menu, X, ClipboardList, LogIn } from 'lucide-react';
 import { useState } from 'react';
 
 interface LayoutProps {
@@ -84,7 +84,10 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
                 ) : (
                   <div className="flex items-center space-x-2">
                     <Link to="/login">
-                      <Button variant="outline">Login</Button>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <LogIn className="h-4 w-4" />
+                        Admin Login
+                      </Button>
                     </Link>
                     <Link to="/register">
                       <Button>Sign Up</Button>
@@ -138,12 +141,15 @@ const Layout = ({ children, title, hideNav = false }: LayoutProps) => {
                     Logout
                   </Button>
                 ) : (
-                  <div className="flex items-center space-x-2 py-2">
+                  <div className="flex flex-col space-y-2 py-2">
                     <Link to="/login" onClick={() => setMenuOpen(false)}>
-                      <Button variant="outline">Login</Button>
+                      <Button variant="outline" className="w-full flex items-center gap-2">
+                        <LogIn className="h-4 w-4" />
+                        Admin Login
+                      </Button>
                     </Link>
                     <Link to="/register" onClick={() => setMenuOpen(false)}>
-                      <Button>Sign Up</Button>
+                      <Button className="w-full">Sign Up</Button>
                     </Link>
                   </div>
                 )}
