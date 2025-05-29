@@ -37,10 +37,8 @@ export const useFormBuilder = (id?: string) => {
   });
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
-  const [scoreRanges, setScoreRanges] = useState<any[]>([]);
-  const [isScoringEnabled, setIsScoringEnabled] = useState(false);
 
-  // Initialize form data and scoring state from existing form or defaults
+  // Initialize form data from existing form or defaults
   useEffect(() => {
     console.log("useFormBuilder - Initializing form data for formId:", formId);
     
@@ -55,16 +53,6 @@ export const useFormBuilder = (id?: string) => {
         
         setForm(existingForm);
         setFormData(existingForm);
-        
-        // Synchronize scoring state with form data
-        const scoringEnabled = !!existingForm.showTotalScore;
-        const formScoreRanges = existingForm.scoreRanges || [];
-        
-        console.log("useFormBuilder - Setting isScoringEnabled to:", scoringEnabled);
-        console.log("useFormBuilder - Setting scoreRanges to:", JSON.stringify(formScoreRanges));
-        
-        setIsScoringEnabled(scoringEnabled);
-        setScoreRanges(formScoreRanges);
       } else {
         console.log("useFormBuilder - Form not found, redirecting to forms list");
         toast({
@@ -77,7 +65,6 @@ export const useFormBuilder = (id?: string) => {
       setIsLoading(false);
     } else {
       console.log("useFormBuilder - Initializing new form");
-      // Initialize empty form data for new form
       const newFormData = {
         id: '',
         title: '',
@@ -97,23 +84,9 @@ export const useFormBuilder = (id?: string) => {
       };
       
       setFormData(newFormData);
-      setIsScoringEnabled(false);
-      setScoreRanges([]);
       setIsLoading(false);
     }
   }, [formId, getForm, navigate]);
-
-  // Watch for changes in formData.showTotalScore and sync with isScoringEnabled
-  useEffect(() => {
-    console.log("useFormBuilder - Syncing isScoringEnabled with formData.showTotalScore:", formData.showTotalScore);
-    setIsScoringEnabled(!!formData.showTotalScore);
-  }, [formData.showTotalScore]);
-
-  // Watch for changes in formData.scoreRanges and sync with scoreRanges state
-  useEffect(() => {
-    console.log("useFormBuilder - Syncing scoreRanges with formData.scoreRanges:", JSON.stringify(formData.scoreRanges));
-    setScoreRanges(formData.scoreRanges || []);
-  }, [formData.scoreRanges]);
 
   const isEditMode = Boolean(formId);
 
@@ -132,27 +105,22 @@ export const useFormBuilder = (id?: string) => {
   const handleToggleFormScoring = (enabled: boolean) => {
     console.log("useFormBuilder - handleToggleFormScoring called with:", enabled);
     
-    // Update both state and formData synchronously
-    setIsScoringEnabled(enabled);
     setFormData(prev => {
-      const updated = { ...prev, showTotalScore: enabled };
+      const updated = { 
+        ...prev, 
+        showTotalScore: enabled,
+        // Clear score ranges when disabling scoring
+        scoreRanges: enabled ? prev.scoreRanges : []
+      };
       console.log("useFormBuilder - Updated formData showTotalScore to:", updated.showTotalScore);
+      console.log("useFormBuilder - Updated formData scoreRanges to:", JSON.stringify(updated.scoreRanges));
       return updated;
     });
-    
-    // If toggling off, clear score ranges
-    if (!enabled) {
-      console.log("useFormBuilder - Clearing score ranges when toggling off");
-      setScoreRanges([]);
-      setFormData(prev => ({ ...prev, scoreRanges: [] }));
-    }
   };
 
   const handleSaveScoreRanges = (ranges: any[]) => {
     console.log("useFormBuilder - handleSaveScoreRanges called with:", JSON.stringify(ranges));
     
-    // Update both state and formData synchronously
-    setScoreRanges(ranges);
     setFormData(prev => {
       const updated = { ...prev, scoreRanges: ranges };
       console.log("useFormBuilder - Updated formData scoreRanges to:", JSON.stringify(updated.scoreRanges));
@@ -313,8 +281,6 @@ export const useFormBuilder = (id?: string) => {
     isEditMode,
     allowedUserEmail,
     allowedUserName,
-    scoreRanges,
-    isScoringEnabled,
     setAllowedUserEmail,
     setAllowedUserName,
     handleTitleChange,

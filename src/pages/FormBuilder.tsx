@@ -31,9 +31,7 @@ const FormBuilder = () => {
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
-    handleHttpConfigChange,
-    scoreRanges, 
-    isScoringEnabled 
+    handleHttpConfigChange
   } = useFormBuilder(id);
 
   // Add a safety check to ensure formData is not undefined before rendering
@@ -51,10 +49,10 @@ const FormBuilder = () => {
     );
   }
 
-  // We now ensure formData exists before trying to access its properties
-  const showTotalScore = formData.showTotalScore || false;
-  const scoreConfig = formData.scoreConfig || {};
-  const formScoreRanges = formData.scoreRanges || [];
+  console.log("FormBuilder - Rendering with formData:", {
+    showTotalScore: formData.showTotalScore,
+    scoreRanges: formData.scoreRanges
+  });
 
   return (
     <Layout>
@@ -88,8 +86,8 @@ const FormBuilder = () => {
             formId={id}
             allowedUserName={allowedUserName}
             setAllowedUserName={setAllowedUserName}
-            externalScoreRanges={scoreRanges}
-            isScoringEnabled={isScoringEnabled}
+            externalScoreRanges={formData.scoreRanges || []}
+            isScoringEnabled={formData.showTotalScore || false}
           />
         </DragDropContext>
       </div>

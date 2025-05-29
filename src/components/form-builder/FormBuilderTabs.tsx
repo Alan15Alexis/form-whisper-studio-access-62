@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FormBasicInfo from "./FormBasicInfo";
@@ -56,11 +57,12 @@ const FormBuilderTabs = ({
   externalScoreRanges = [],
   isScoringEnabled = false
 }: FormBuilderTabsProps) => {
-  // Log the incoming data to debug the data flow
-  console.log("FormBuilderTabs - Received formData showTotalScore:", formData.showTotalScore);
-  console.log("FormBuilderTabs - Received external score ranges:", JSON.stringify(externalScoreRanges));
-  console.log("FormBuilderTabs - Received isScoringEnabled:", isScoringEnabled);
-  console.log("FormBuilderTabs - formData scoreRanges:", JSON.stringify(formData.scoreRanges));
+  // Use formData as source of truth
+  const showTotalScore = formData.showTotalScore || false;
+  const scoreRanges = formData.scoreRanges || [];
+
+  console.log("FormBuilderTabs - formData showTotalScore:", showTotalScore);
+  console.log("FormBuilderTabs - formData scoreRanges:", JSON.stringify(scoreRanges));
 
   return (
     <Tabs defaultValue="fields" className="w-full mt-6">
@@ -83,7 +85,7 @@ const FormBuilderTabs = ({
               formData={formData}
               updateField={updateField}
               removeField={removeField}
-              formShowTotalScore={isScoringEnabled}
+              formShowTotalScore={showTotalScore}
               onToggleFormScoring={onToggleFormScoring}
             />
           </div>
@@ -107,11 +109,11 @@ const FormBuilderTabs = ({
           onHttpConfigChange={onHttpConfigChange}
           formFields={formData.fields || []}
           formId={formId}
-          showTotalScore={formData.showTotalScore}
+          showTotalScore={showTotalScore}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
-          externalScoreRanges={externalScoreRanges}
-          isScoringEnabled={isScoringEnabled}
+          externalScoreRanges={scoreRanges}
+          isScoringEnabled={showTotalScore}
         />
       </TabsContent>
       

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -79,67 +80,43 @@ const FormSettings = ({
 
   // Local state for score ranges management
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
-  const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
 
   console.log("FormSettings - Component Rendered");
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
   console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
   console.log("FormSettings - external score ranges:", JSON.stringify(externalScoreRanges));
   
-  // Initialize score ranges from external prop (from hook)
+  // Initialize score ranges from external prop (from formData)
   useEffect(() => {
     console.log("FormSettings - Initializing score ranges from external prop");
     console.log("FormSettings - External score ranges:", JSON.stringify(externalScoreRanges));
     
-    if (externalScoreRanges && externalScoreRanges.length > 0) {
-      console.log("FormSettings - Setting score ranges from external prop");
-      setScoreRanges(JSON.parse(JSON.stringify(externalScoreRanges)));
-    } else if (isScoringEnabled && scoreRanges.length === 0) {
-      console.log("FormSettings - Creating default score range for enabled scoring");
-      setScoreRanges([{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }]);
-    } else if (!isScoringEnabled) {
-      console.log("FormSettings - Clearing score ranges for disabled scoring");
-      setScoreRanges([]);
-    }
-    
-    // Reset unsaved changes flag when external data changes
-    setHasUnsavedRanges(false);
-  }, [externalScoreRanges, isScoringEnabled]);
+    setScoreRanges(JSON.parse(JSON.stringify(externalScoreRanges || [])));
+  }, [externalScoreRanges]);
 
   // Score range management functions
   const addScoreRange = () => {
     console.log("FormSettings - Adding new score range");
     
+    let newRanges;
     if (scoreRanges.length === 0) {
-      const newRanges = [
-        { min: 0, max: 10, message: "Mensaje para puntuación 0-10" }
-      ];
-      setScoreRanges(newRanges);
-      setHasUnsavedRanges(true);
-      
-      toast({
-        title: "Rango añadido",
-        description: "Se añadió un nuevo rango de puntuación: 0-10",
-      });
-      return;
+      newRanges = [{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }];
+    } else {
+      const lastRange = scoreRanges[scoreRanges.length - 1];
+      const newMin = lastRange ? lastRange.max + 1 : 0;
+      const newMax = newMin + 10;
+      newRanges = [...scoreRanges, { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }];
     }
-    
-    const lastRange = scoreRanges[scoreRanges.length - 1];
-    const newMin = lastRange ? lastRange.max + 1 : 0;
-    const newMax = newMin + 10;
-    
-    const newRanges = [
-      ...JSON.parse(JSON.stringify(scoreRanges)), 
-      { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
-    ];
     
     console.log("FormSettings - New score ranges:", JSON.stringify(newRanges));
     setScoreRanges(newRanges);
-    setHasUnsavedRanges(true);
+    
+    // Immediately save to parent
+    onSaveScoreRanges(newRanges);
     
     toast({
       title: "Rango añadido",
-      description: `Se añadió un nuevo rango de puntuación: ${newMin}-${newMax}`,
+      description: `Se añadió un nuevo rango de puntuación`,
     });
   };
 
@@ -151,7 +128,7 @@ const FormSettings = ({
       return;
     }
     
-    const updatedRanges = JSON.parse(JSON.stringify(scoreRanges));
+    const updatedRanges = [...scoreRanges];
     updatedRanges[index] = { 
       ...updatedRanges[index], 
       [field]: typeof value === 'string' ? value : Number(value)
@@ -159,7 +136,9 @@ const FormSettings = ({
     
     console.log("FormSettings - Updated score ranges:", JSON.stringify(updatedRanges));
     setScoreRanges(updatedRanges);
-    setHasUnsavedRanges(true);
+    
+    // Immediately save to parent
+    onSaveScoreRanges(updatedRanges);
   };
 
   const removeScoreRange = (index: number) => {
@@ -168,37 +147,14 @@ const FormSettings = ({
     const updatedRanges = scoreRanges.filter((_, i) => i !== index);
     console.log("FormSettings - Updated score ranges after removal:", JSON.stringify(updatedRanges));
     setScoreRanges(updatedRanges);
-    setHasUnsavedRanges(true);
+    
+    // Immediately save to parent
+    onSaveScoreRanges(updatedRanges);
     
     toast({
       title: "Rango eliminado",
       description: "El rango de puntuación ha sido eliminado",
     });
-  };
-
-  const saveScoreRanges = async () => {
-    console.log("FormSettings - saveScoreRanges called");
-    
-    if (scoreRanges.length === 0) {
-      toast({
-        title: "Error",
-        description: "No hay rangos de puntuación para guardar",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    console.log("FormSettings - Saving score ranges:", JSON.stringify(scoreRanges));
-    
-    setHasUnsavedRanges(false);
-    
-    toast({
-      title: "Cambios guardados",
-      description: "Los rangos de puntuación se han guardado correctamente",
-    });
-    
-    // Call the parent handler with a deep copy
-    onSaveScoreRanges(JSON.parse(JSON.stringify(scoreRanges)));
   };
 
   const handleToggleScoringFeature = async (enabled: boolean) => {
@@ -212,12 +168,12 @@ const FormSettings = ({
     // If toggling on and no ranges exist yet, add a default range
     if (enabled && scoreRanges.length === 0) {
       console.log("FormSettings - Adding default score range when toggling on");
-      addScoreRange();
+      setTimeout(() => addScoreRange(), 100); // Small delay to ensure state is updated
     }
   };
 
-  // Use isScoringEnabled as the source of truth for the switch state
-  const switchChecked = isScoringEnabled;
+  // Use showTotalScore as the source of truth for the switch state
+  const switchChecked = showTotalScore;
   
   console.log("FormSettings - Switch checked state:", switchChecked);
   console.log("FormSettings - Current score ranges count:", scoreRanges.length);
@@ -311,26 +267,15 @@ const FormSettings = ({
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={addScoreRange}
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="h-4 w-4" /> Añadir rango
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant={hasUnsavedRanges ? "default" : "outline"}
-                    size="sm"
-                    onClick={saveScoreRanges}
-                    className="flex items-center gap-1"
-                  >
-                    <Save className="h-4 w-4" /> Guardar cambios
-                  </Button>
-                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addScoreRange}
+                  className="flex items-center gap-1"
+                >
+                  <Plus className="h-4 w-4" /> Añadir rango
+                </Button>
               </div>
               
               {scoreRanges.length === 0 && (
@@ -406,12 +351,6 @@ const FormSettings = ({
                   </div>
                 )}
               </div>
-              
-              {hasUnsavedRanges && (
-                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                  ¡Tienes cambios sin guardar! Haz clic en "Guardar cambios" para aplicar la configuración de puntuación.
-                </div>
-              )}
             </div>
           )}
         </div>
