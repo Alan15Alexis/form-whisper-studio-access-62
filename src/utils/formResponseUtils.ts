@@ -1,6 +1,6 @@
 
 import { FormResponse } from '@/types/form';
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { sendHttpRequest, validateFormResponses } from '@/utils/http-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { processFileUpload } from './fileUploadUtils';
