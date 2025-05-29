@@ -87,6 +87,12 @@ const FormView = () => {
 
   // Show score card if enabled and form was just submitted
   if (showScoreCard) {
+    console.log("Showing score card with form data:", {
+      showTotalScore: form.showTotalScore,
+      enableScoring: form.enableScoring,
+      hasNumericFields: form.fields.some(f => f.hasNumericValues)
+    });
+    
     return (
       <Layout hideNav>
         <FormScoreCard 
@@ -100,14 +106,22 @@ const FormView = () => {
 
   // If submit success, show success page with the score if enabled
   if (isSubmitSuccess) {
-    console.log("Showing success page with score:", form.showTotalScore);
-    console.log("Form scoring enabled:", form.enableScoring);
+    const hasNumericFields = form.fields.some(f => f.hasNumericValues);
+    const shouldShowScore = (form.showTotalScore || form.enableScoring) && hasNumericFields;
+    
+    console.log("Showing success page:", {
+      showTotalScore: form.showTotalScore,
+      enableScoring: form.enableScoring,
+      hasNumericFields,
+      shouldShowScore
+    });
+    
     return (
       <Layout hideNav>
         <FormSuccess 
           formValues={formResponses} 
           fields={form.fields}
-          showTotalScore={form.showTotalScore || form.enableScoring}
+          showTotalScore={shouldShowScore}
         />
       </Layout>
     );

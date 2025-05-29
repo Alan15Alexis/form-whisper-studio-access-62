@@ -67,7 +67,7 @@ export function useFormScoring() {
     
     console.log("Getting feedback for score:", score);
     
-    // Find a field with score ranges
+    // Find the first field with score ranges (should be consistent across all fields)
     const fieldWithRanges = fields.find(field => 
       field.scoreRanges && field.scoreRanges.length > 0
     );
@@ -85,7 +85,7 @@ export function useFormScoring() {
       score >= range.min && score <= range.max
     );
     
-    console.log("Matching range:", matchingRange);
+    console.log("Matching range for score", score, ":", matchingRange);
     
     return matchingRange?.message || null;
   };

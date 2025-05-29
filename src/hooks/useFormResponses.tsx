@@ -161,14 +161,24 @@ export function useFormResponses(form: FormType | null) {
         description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
       });
       
-      // Check if we should show the score card before the success message
-      if (form.showTotalScore && form.fields.some(f => f.hasNumericValues)) {
+      // Check if we should show the score card
+      const hasNumericFields = form.fields.some(f => f.hasNumericValues);
+      const shouldShowScore = (form.showTotalScore || form.enableScoring) && hasNumericFields;
+      
+      console.log("Score check:", { 
+        showTotalScore: form.showTotalScore, 
+        enableScoring: form.enableScoring,
+        hasNumericFields,
+        shouldShowScore
+      });
+      
+      if (shouldShowScore) {
         setShowScoreCard(true);
-        // After 3 seconds, hide score card and show success
+        // After 4 seconds, hide score card and show success
         setTimeout(() => {
           setShowScoreCard(false);
           setIsSubmitSuccess(true);
-        }, 3000);
+        }, 4000);
       } else {
         setIsSubmitSuccess(true);
       }
@@ -177,7 +187,7 @@ export function useFormResponses(form: FormType | null) {
       setTimeout(() => {
         // Always redirect to assigned forms page
         navigate("/assigned-forms", { replace: true });
-      }, form.showTotalScore ? 8000 : 5000); // More time if showing score card
+      }, shouldShowScore ? 9000 : 5000); // More time if showing score card
       
     } catch (error) {
       console.error("Error submitting form:", error);

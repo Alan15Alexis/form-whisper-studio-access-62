@@ -17,7 +17,7 @@ const FormScoreCard = ({ formValues, fields, formTitle }: FormScoreCardProps) =>
   const currentScore = calculateTotalScore(formValues, fields || []);
   const scoreFeedback = getScoreFeedback(currentScore, fields || []);
 
-  console.log("FormScoreCard render:", { currentScore, scoreFeedback });
+  console.log("FormScoreCard render:", { currentScore, scoreFeedback, fields: fields?.length });
 
   return (
     <motion.div
@@ -39,7 +39,7 @@ const FormScoreCard = ({ formValues, fields, formTitle }: FormScoreCardProps) =>
         
         <CardContent className="space-y-6 py-6">
           <div className="p-6 bg-primary/5 rounded-lg space-y-4 border border-primary/20">
-            <h3 className="text-xl font-medium text-center mb-4">Tu Puntuación</h3>
+            <h3 className="text-xl font-medium text-center mb-4">Tu Puntuación Total</h3>
             
             <div className="flex items-center justify-center">
               <Badge variant="outline" className="text-3xl font-bold px-6 py-3 bg-primary/10">
@@ -49,13 +49,14 @@ const FormScoreCard = ({ formValues, fields, formTitle }: FormScoreCardProps) =>
             
             {scoreFeedback && (
               <div className="mt-6 p-4 bg-background rounded border text-center">
+                <h4 className="text-lg font-semibold mb-2 text-primary">Resultado:</h4>
                 <p className="text-lg font-medium">{scoreFeedback}</p>
               </div>
             )}
           </div>
           
           <div className="text-center text-muted-foreground">
-            <p>Procesando tu respuesta...</p>
+            <p>Gracias por completar el formulario</p>
           </div>
         </CardContent>
       </Card>

@@ -141,7 +141,70 @@ export const processFormData = async (
   return processedData;
 };
 
-// Format responses to use labels instead of IDs and include numeric values
+// Calculate total score for a form submission
+export const calculateFormScore = (
+  formFields: any[],
+  processedData: Record<string, any>
+): number => {
+  let totalScore = 0;
+  
+  if (!Array.isArray(formFields)) return totalScore;
+  
+  console.log("Calculating total score for form submission");
+  
+  formFields.forEach(field => {
+    if (!field.hasNumericValues) return;
+    
+    const response = processedData[field.id];
+    if (response === undefined || response === null) return;
+    
+    // Skip file uploads, images, drawings and signatures - they don't contribute to score
+    if (field.type === 'image-upload' || field.type === 'file-upload' || 
+        field.type === 'drawing' || field.type === 'signature') {
+      return;
+    }
+    
+    const fieldScore = calculateFieldNumericValue(field, response);
+    if (fieldScore !== null) {
+      console.log(`Field ${field.id}: adding ${fieldScore} to total score`);
+      totalScore += fieldScore;
+    }
+  });
+  
+  console.log("Total calculated score:", totalScore);
+  return totalScore;
+};
+
+// Get score feedback message based on total score
+export const getScoreFeedbackMessage = (
+  totalScore: number,
+  formFields: any[]
+): string | null => {
+  if (!Array.isArray(formFields)) return null;
+  
+  // Find a field with score ranges
+  const fieldWithRanges = formFields.find(field => 
+    field.scoreRanges && field.scoreRanges.length > 0
+  );
+  
+  if (!fieldWithRanges || !fieldWithRanges.scoreRanges) {
+    console.log("No score ranges found in any field");
+    return null;
+  }
+  
+  const scoreRanges = fieldWithRanges.scoreRanges;
+  console.log("Checking score ranges for total:", totalScore, scoreRanges);
+  
+  // Find a range that matches the current score
+  const matchingRange = scoreRanges.find(range => 
+    totalScore >= range.min && totalScore <= range.max
+  );
+  
+  console.log("Matching range:", matchingRange);
+  return matchingRange?.message || null;
+};
+
+// Format responses to use labels instead of IDs and include numeric values and total score
 export const formatResponsesWithLabels = (
   formFields: any[],
   processedData: Record<string, any>
@@ -167,6 +230,19 @@ export const formatResponsesWithLabels = (
         }
       }
     });
+    
+    // Calculate and store total score if there are numeric fields
+    const hasNumericFields = formFields.some(f => f.hasNumericValues);
+    if (hasNumericFields) {
+      const totalScore = calculateFormScore(formFields, processedData);
+      formattedResponses['*** PUNTUACIÓN TOTAL ***'] = totalScore;
+      
+      // Also store the feedback message if available
+      const feedbackMessage = getScoreFeedbackMessage(totalScore, formFields);
+      if (feedbackMessage) {
+        formattedResponses['*** MENSAJE DEL RESULTADO ***'] = feedbackMessage;
+      }
+    }
   }
   
   return formattedResponses;
