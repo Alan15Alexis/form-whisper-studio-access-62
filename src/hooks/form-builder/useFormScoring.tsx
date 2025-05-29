@@ -1,7 +1,38 @@
 
 import { FormField, ScoreRange } from "@/types/form";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 
 export function useFormScoring() {
+  const [formScoreRanges, setFormScoreRanges] = useState<ScoreRange[]>([]);
+
+  const fetchScoreRangesFromDB = async (formId: string): Promise<ScoreRange[]> => {
+    try {
+      console.log("Fetching score ranges for form:", formId);
+      
+      const { data, error } = await supabase
+        .from('formulario_construccion')
+        .select('configuracion')
+        .eq('id', formId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching score ranges:", error);
+        return [];
+      }
+
+      if (data?.configuracion?.scoreRanges) {
+        console.log("Found score ranges in DB:", data.configuracion.scoreRanges);
+        return data.configuracion.scoreRanges;
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error in fetchScoreRangesFromDB:", error);
+      return [];
+    }
+  };
+
   const calculateTotalScore = (responses: Record<string, any>, fields: FormField[]): number => {
     let totalScore = 0;
     
@@ -62,22 +93,32 @@ export function useFormScoring() {
     return totalScore;
   };
   
-  const getScoreFeedback = (score: number, fields: FormField[]): string | null => {
-    if (!fields) return null;
+  const getScoreFeedback = async (score: number, formId?: string, fields?: FormField[]): Promise<string | null> => {
+    console.log("Getting feedback for score:", score, "formId:", formId);
     
-    console.log("Getting feedback for score:", score);
+    let scoreRanges: ScoreRange[] = [];
     
-    // Find the first field with score ranges (should be consistent across all fields)
-    const fieldWithRanges = fields.find(field => 
-      field.scoreRanges && field.scoreRanges.length > 0
-    );
+    // First try to get score ranges from database if formId is provided
+    if (formId) {
+      scoreRanges = await fetchScoreRangesFromDB(formId);
+    }
     
-    if (!fieldWithRanges || !fieldWithRanges.scoreRanges) {
-      console.log("No score ranges found in any field");
+    // Fallback to fields if no ranges found in DB
+    if (scoreRanges.length === 0 && fields) {
+      const fieldWithRanges = fields.find(field => 
+        field.scoreRanges && field.scoreRanges.length > 0
+      );
+      
+      if (fieldWithRanges?.scoreRanges) {
+        scoreRanges = fieldWithRanges.scoreRanges;
+      }
+    }
+    
+    if (scoreRanges.length === 0) {
+      console.log("No score ranges found");
       return null;
     }
     
-    const scoreRanges = fieldWithRanges.scoreRanges;
     console.log("Using score ranges:", JSON.stringify(scoreRanges));
     
     // Find a range that matches the current score
@@ -108,6 +149,7 @@ export function useFormScoring() {
   return {
     calculateTotalScore,
     getScoreFeedback,
-    shouldShowScoreCard
+    shouldShowScoreCard,
+    fetchScoreRangesFromDB
   };
 }

@@ -3,9 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/components/ui/use-toast";
 import { useEffect, useState } from "react";
 import { ExternalLink, FileIcon } from "lucide-react";
 
@@ -17,23 +16,28 @@ interface FormSuccessProps {
 
 const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) => {
   const navigate = useNavigate();
+  const { id: formId } = useParams();
   const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
   const [displayValues, setDisplayValues] = useState<Record<string, any>>(formValues);
+  const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
   
   const currentScore = calculateTotalScore(formValues, fields || []);
-  const scoreFeedback = getScoreFeedback(currentScore, fields || []);
   const showScore = shouldShowScoreCard(fields || [], showTotalScore);
 
-  console.log("FormSuccess render:", { showTotalScore, currentScore, scoreFeedback, showScore });
+  console.log("FormSuccess render:", { showTotalScore, currentScore, showScore });
   
-  // Debug scores and feedback in more detail
+  // Fetch score feedback from database
   useEffect(() => {
-    console.log("Form values:", formValues);
-    console.log("Form fields:", fields);
-    console.log("Score feedback:", scoreFeedback);
-    console.log("Show total score flag:", showTotalScore);
-    console.log("Fields with numeric values:", fields?.filter(f => f.hasNumericValues));
-  }, [formValues, fields, scoreFeedback, showTotalScore]);
+    const fetchFeedback = async () => {
+      if (formId && showScore) {
+        const feedback = await getScoreFeedback(currentScore, formId, fields);
+        setScoreFeedback(feedback);
+        console.log("Score feedback from DB in FormSuccess:", feedback);
+      }
+    };
+    
+    fetchFeedback();
+  }, [currentScore, formId, fields, showScore, getScoreFeedback]);
   
   // Helper function to check if value is a file URL
   const isFileUrl = (value: any): boolean => {
@@ -90,80 +94,59 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
           </div>
         )}
         <div className="flex-1">
-          <p className="text-sm font-medium">{field?.label || "Archivo"}</p>
-          <p className="text-xs text-gray-500">{getFileNameFromUrl(fileUrl)}</p>
+          <div className="font-medium text-sm">{field?.label || "Archivo"}</div>
+          <div className="text-xs text-gray-500">{getFileNameFromUrl(fileUrl)}</div>
         </div>
         <a 
-          href={fileUrl}
+          href={fileUrl} 
           target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline text-sm flex items-center"
+          rel="noopener noreferrer" 
+          className="text-blue-600 hover:text-blue-800"
         >
-          <ExternalLink className="h-4 w-4 mr-1" /> Ver
+          <ExternalLink className="h-4 w-4" />
         </a>
       </div>
     );
   };
-  
-  // Get all file fields and their values for display
-  const fileFields = Object.entries(formValues)
-    .filter(([key, value]) => isFileUrl(value))
-    .map(([key, value]) => ({
-      fieldId: key,
-      fileUrl: value as string,
-      field: fields?.find(f => f.id === key)
-    }));
-    
-  console.log("Found file fields to display:", fileFields.length);
-  
+
   return (
-    <div className="container max-w-3xl mx-auto py-8">
-      <Card className="shadow-md">
+    <div className="container max-w-2xl mx-auto py-8">
+      <Card className="shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">¡Gracias por responder!</CardTitle>
-          <CardDescription className="text-base mt-2">
-            Tu respuesta ha sido registrada con éxito
+          <CardTitle className="text-2xl text-green-600">¡Respuesta Enviada!</CardTitle>
+          <CardDescription>
+            Tu respuesta ha sido registrada exitosamente
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-6 py-6">
+        <CardContent className="space-y-6">
           {showScore && (
-            <div className="p-6 bg-primary/5 rounded-lg space-y-3 border">
-              <h3 className="text-xl font-medium text-center mb-4">Resultado</h3>
+            <div className="p-6 bg-primary/5 rounded-lg space-y-4 border border-primary/20">
+              <h3 className="text-xl font-medium text-center mb-4">Tu Puntuación Total</h3>
               
-              <div className="flex items-center justify-between">
-                <span className="text-lg">Puntuación Total:</span>
+              <div className="flex items-center justify-center">
                 <Badge variant="outline" className="text-2xl font-bold px-4 py-2 bg-primary/10">
-                  {currentScore}
+                  {currentScore} puntos
                 </Badge>
               </div>
               
               {scoreFeedback && (
                 <div className="mt-4 p-4 bg-background rounded border text-center">
-                  <p className="text-lg">{scoreFeedback}</p>
+                  <h4 className="text-lg font-semibold mb-2 text-primary">Resultado:</h4>
+                  <p className="text-base font-medium">{scoreFeedback}</p>
                 </div>
               )}
             </div>
           )}
           
-          {/* Display files uploaded in the responses */}
-          {fileFields.length > 0 && (
-            <div className="mt-6 space-y-3">
-              <h3 className="text-lg font-medium">Archivos adjuntos</h3>
-              <div className="space-y-2">
-                {fileFields.map(({fieldId, fileUrl, field}) => (
-                  <div key={fieldId}>
-                    {renderFilePreview(fieldId, fileUrl)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="text-center text-muted-foreground">
+            <p>Gracias por tu tiempo y participación</p>
+          </div>
         </CardContent>
         
-        <CardFooter className="flex justify-center pb-6">
-          <Button onClick={() => navigate("/assigned-forms")}>
-            Volver a mis formularios
+        <CardFooter className="flex justify-center">
+          <Button onClick={() => navigate("/assigned-forms")} className="px-8">
+            Volver a formularios
           </Button>
         </CardFooter>
       </Card>

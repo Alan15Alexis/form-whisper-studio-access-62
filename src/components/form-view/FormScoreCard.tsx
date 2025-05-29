@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 interface FormScoreCardProps {
   formValues: Record<string, any>;
@@ -12,12 +14,26 @@ interface FormScoreCardProps {
 }
 
 const FormScoreCard = ({ formValues, fields, formTitle }: FormScoreCardProps) => {
+  const { id: formId } = useParams();
   const { calculateTotalScore, getScoreFeedback } = useFormScoring();
+  const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
   
   const currentScore = calculateTotalScore(formValues, fields || []);
-  const scoreFeedback = getScoreFeedback(currentScore, fields || []);
 
-  console.log("FormScoreCard render:", { currentScore, scoreFeedback, fields: fields?.length });
+  console.log("FormScoreCard render:", { currentScore, formId, fields: fields?.length });
+
+  // Fetch score feedback from database
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      if (formId) {
+        const feedback = await getScoreFeedback(currentScore, formId, fields);
+        setScoreFeedback(feedback);
+        console.log("Score feedback from DB:", feedback);
+      }
+    };
+    
+    fetchFeedback();
+  }, [currentScore, formId, fields, getScoreFeedback]);
 
   return (
     <motion.div

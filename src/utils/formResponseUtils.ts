@@ -1,6 +1,6 @@
 
 import { FormResponse } from '@/types/form';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { sendHttpRequest, validateFormResponses } from '@/utils/http-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { processFileUpload } from './fileUploadUtils';
@@ -175,14 +175,53 @@ export const calculateFormScore = (
   return totalScore;
 };
 
-// Get score feedback message based on total score
+// Get score feedback message from database
+export const getScoreFeedbackFromDB = async (
+  totalScore: number,
+  formId: string
+): Promise<string | null> => {
+  try {
+    console.log("Fetching score feedback from DB for score:", totalScore, "formId:", formId);
+    
+    const { data, error } = await supabase
+      .from('formulario_construccion')
+      .select('configuracion')
+      .eq('id', formId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching score ranges from DB:", error);
+      return null;
+    }
+
+    if (data?.configuracion?.scoreRanges) {
+      const scoreRanges = data.configuracion.scoreRanges;
+      console.log("Found score ranges in DB:", scoreRanges);
+      
+      // Find a range that matches the current score
+      const matchingRange = scoreRanges.find(range => 
+        totalScore >= range.min && totalScore <= range.max
+      );
+      
+      console.log("Matching range from DB:", matchingRange);
+      return matchingRange?.message || null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error in getScoreFeedbackFromDB:", error);
+    return null;
+  }
+};
+
+// Get score feedback message based on total score (fallback to field ranges)
 export const getScoreFeedbackMessage = (
   totalScore: number,
   formFields: any[]
 ): string | null => {
   if (!Array.isArray(formFields)) return null;
   
-  // Find a field with score ranges
+  // Find a field with score ranges (fallback method)
   const fieldWithRanges = formFields.find(field => 
     field.scoreRanges && field.scoreRanges.length > 0
   );
@@ -205,10 +244,11 @@ export const getScoreFeedbackMessage = (
 };
 
 // Format responses to use labels instead of IDs and include numeric values and total score
-export const formatResponsesWithLabels = (
+export const formatResponsesWithLabels = async (
   formFields: any[],
-  processedData: Record<string, any>
-): Record<string, any> => {
+  processedData: Record<string, any>,
+  formId?: string
+): Promise<Record<string, any>> => {
   const formattedResponses: Record<string, any> = {};
   
   // Create a mapping between field IDs and their labels
@@ -237,8 +277,17 @@ export const formatResponsesWithLabels = (
       const totalScore = calculateFormScore(formFields, processedData);
       formattedResponses['*** PUNTUACIÓN TOTAL ***'] = totalScore;
       
-      // Also store the feedback message if available
-      const feedbackMessage = getScoreFeedbackMessage(totalScore, formFields);
+      // Try to get feedback message from database first
+      let feedbackMessage = null;
+      if (formId) {
+        feedbackMessage = await getScoreFeedbackFromDB(totalScore, formId);
+      }
+      
+      // Fallback to field ranges if no message found in DB
+      if (!feedbackMessage) {
+        feedbackMessage = getScoreFeedbackMessage(totalScore, formFields);
+      }
+      
       if (feedbackMessage) {
         formattedResponses['*** MENSAJE DEL RESULTADO ***'] = feedbackMessage;
       }

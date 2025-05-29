@@ -28,8 +28,8 @@ export const submitFormResponseOperation = (
       // Process form data (handle file uploads, etc.)
       const processedData = await processFormData(form, data, userEmail, formId);
       
-      // Format responses to use labels instead of IDs
-      const formattedResponses = formatResponsesWithLabels(form.fields, processedData);
+      // Format responses to use labels instead of IDs and include score feedback from DB
+      const formattedResponses = await formatResponsesWithLabels(form.fields, processedData, formId);
       
       // Create the response object - Using the correct FormResponse type properties
       const formResponse: FormResponse = {

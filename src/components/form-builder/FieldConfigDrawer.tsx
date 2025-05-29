@@ -52,11 +52,27 @@ const FieldConfigDrawer = ({
 
     // If we're enabling numeric values for the first time, initialize them
     if (enabled && localField.options && !localField.options.some(opt => opt.numericValue !== undefined)) {
-      const updatedOptions = localField.options.map((option, index) => ({
-        ...option,
-        numericValue: index + 1
-      }));
-
+      if (localField.type === 'yesno') {
+        // For Yes/No fields, create default options with customizable values
+        const updatedOptions = [
+          { id: 'yes', label: 'Sí', value: 'yes', numericValue: 1 },
+          { id: 'no', label: 'No', value: 'no', numericValue: 0 }
+        ];
+        updatedField.options = updatedOptions;
+      } else {
+        // For other field types, use existing logic
+        const updatedOptions = localField.options.map((option, index) => ({
+          ...option,
+          numericValue: index + 1
+        }));
+        updatedField.options = updatedOptions;
+      }
+    } else if (enabled && localField.type === 'yesno' && !localField.options) {
+      // If Yes/No field doesn't have options yet, create them
+      const updatedOptions = [
+        { id: 'yes', label: 'Sí', value: 'yes', numericValue: 1 },
+        { id: 'no', label: 'No', value: 'no', numericValue: 0 }
+      ];
       updatedField.options = updatedOptions;
     }
 
@@ -64,9 +80,7 @@ const FieldConfigDrawer = ({
     setLocalField(updatedField);
     
     // If enabling numeric values and scoring is not enabled yet, suggest enabling scoring
-    // but don't enable it automatically
     if (enabled && !formHasScoring) {
-      // Show a message suggesting to enable scoring in the form settings
       console.log("Numeric values enabled but form scoring is off - user should enable it manually");
     }
   };
@@ -134,6 +148,7 @@ const FieldConfigDrawer = ({
                           value={localField.options?.[0]?.numericValue || 1}
                           onChange={(e) => handleOptionNumericValueChange(0, Number(e.target.value))}
                           className="mt-1"
+                          placeholder="Valor para Sí"
                         />
                       </div>
                       <div>
@@ -144,6 +159,7 @@ const FieldConfigDrawer = ({
                           value={localField.options?.[1]?.numericValue || 0}
                           onChange={(e) => handleOptionNumericValueChange(1, Number(e.target.value))}
                           className="mt-1"
+                          placeholder="Valor para No"
                         />
                       </div>
                     </div>
