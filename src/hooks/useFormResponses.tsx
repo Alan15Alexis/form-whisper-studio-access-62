@@ -92,7 +92,6 @@ export function useFormResponses(form: FormType | null) {
     if (!form || !id) return;
     
     // Check if the current user is an admin in preview mode
-    // Admins cannot submit responses in preview mode, show a toast instead
     if (isAuthenticated && currentUser?.role === "admin") {
       toast({
         title: "Vista previa",
@@ -156,11 +155,6 @@ export function useFormResponses(form: FormType | null) {
       const result = await submitFormResponse(id, formResponses, form);
       console.log("Form submission result:", result);
       
-      toast({
-        title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
-        description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
-      });
-      
       // Check if we should show the score card first
       const hasNumericFields = form.fields.some(f => f.hasNumericValues);
       const shouldShowScore = (form.showTotalScore || form.enableScoring) && hasNumericFields;
@@ -173,10 +167,16 @@ export function useFormResponses(form: FormType | null) {
       });
       
       if (shouldShowScore) {
-        // Show score card first, user will navigate to thank you card manually
+        // Show score card first - NO TOAST HERE to avoid interference
+        console.log("Setting showScoreCard to true");
         setShowScoreCard(true);
       } else {
-        // Go directly to thank you card if no score to show
+        // Show toast and go directly to thank you card if no score to show
+        toast({
+          title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
+          description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
+        });
+        
         setIsSubmitSuccess(true);
         // Redirect after showing success
         setTimeout(() => {
@@ -208,9 +208,20 @@ export function useFormResponses(form: FormType | null) {
     }
   };
 
-  // New function to handle navigation from score card to thank you card
+  // Function to handle navigation from score card to thank you card
   const handleScoreCardNext = () => {
+    console.log("Score card next clicked - moving to thank you card");
+    
+    // Hide score card
     setShowScoreCard(false);
+    
+    // Show success toast now (after score card)
+    toast({
+      title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
+      description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
+    });
+    
+    // Show thank you card
     setIsSubmitSuccess(true);
     
     // Redirect after showing the thank you card

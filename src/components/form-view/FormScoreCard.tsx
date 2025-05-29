@@ -12,13 +12,14 @@ interface FormScoreCardProps {
   formValues: Record<string, any>;
   fields: FormField[];
   formTitle?: string;
-  onNext: () => void; // New prop for handling next navigation
+  onNext: () => void;
 }
 
 const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardProps) => {
   const { id: formId } = useParams();
   const { calculateTotalScore, getScoreFeedback } = useFormScoring();
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const currentScore = calculateTotalScore(formValues, fields || []);
 
@@ -28,9 +29,19 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
   useEffect(() => {
     const fetchFeedback = async () => {
       if (formId) {
-        const feedback = await getScoreFeedback(currentScore, formId, fields);
-        setScoreFeedback(feedback);
-        console.log("Score feedback from DB:", feedback);
+        try {
+          setIsLoading(true);
+          const feedback = await getScoreFeedback(currentScore, formId, fields);
+          setScoreFeedback(feedback);
+          console.log("Score feedback from DB:", feedback);
+        } catch (error) {
+          console.error("Error fetching score feedback:", error);
+          // Don't show toast error here to avoid interference
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
       }
     };
     
@@ -65,12 +76,16 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
               </Badge>
             </div>
             
-            {scoreFeedback && (
+            {isLoading ? (
+              <div className="mt-6 p-4 bg-background rounded border text-center">
+                <p className="text-muted-foreground">Cargando resultado...</p>
+              </div>
+            ) : scoreFeedback ? (
               <div className="mt-6 p-4 bg-background rounded border text-center">
                 <h4 className="text-lg font-semibold mb-2 text-primary">Resultado:</h4>
                 <p className="text-lg font-medium">{scoreFeedback}</p>
               </div>
-            )}
+            ) : null}
           </div>
           
           <div className="text-center text-muted-foreground">
@@ -79,7 +94,11 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
           
           {/* Next button in bottom right */}
           <div className="flex justify-end mt-8">
-            <Button onClick={onNext} className="px-8">
+            <Button 
+              onClick={onNext} 
+              className="px-8"
+              disabled={isLoading}
+            >
               Siguiente
             </Button>
           </div>
