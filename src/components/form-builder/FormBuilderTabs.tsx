@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FormBasicInfo from "./FormBasicInfo";
@@ -29,8 +28,8 @@ interface FormBuilderTabsProps {
   formId?: string;
   allowedUserName?: string;
   setAllowedUserName?: (name: string) => void;
-  externalScoreRanges?: ScoreRange[]; // Prop to receive score ranges
-  isScoringEnabled?: boolean; // New prop to receive scoring enabled state
+  externalScoreRanges?: ScoreRange[];
+  isScoringEnabled?: boolean;
 }
 
 const FormBuilderTabs = ({
@@ -55,12 +54,13 @@ const FormBuilderTabs = ({
   allowedUserName = "",
   setAllowedUserName = () => {},
   externalScoreRanges = [],
-  isScoringEnabled = false // Default to false if not provided
+  isScoringEnabled = false
 }: FormBuilderTabsProps) => {
-  // Log the incoming data to debug
-  console.log("FormBuilderTabs - formData showTotalScore:", formData.showTotalScore);
-  console.log("FormBuilderTabs - External score ranges:", externalScoreRanges);
-  console.log("FormBuilderTabs - isScoringEnabled:", isScoringEnabled);
+  // Log the incoming data to debug the data flow
+  console.log("FormBuilderTabs - Received formData showTotalScore:", formData.showTotalScore);
+  console.log("FormBuilderTabs - Received external score ranges:", JSON.stringify(externalScoreRanges));
+  console.log("FormBuilderTabs - Received isScoringEnabled:", isScoringEnabled);
+  console.log("FormBuilderTabs - formData scoreRanges:", JSON.stringify(formData.scoreRanges));
 
   return (
     <Tabs defaultValue="fields" className="w-full mt-6">
@@ -110,8 +110,8 @@ const FormBuilderTabs = ({
           showTotalScore={formData.showTotalScore}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
-          externalScoreRanges={externalScoreRanges} // Pass score ranges to FormSettings
-          isScoringEnabled={isScoringEnabled} // Pass the isScoringEnabled state
+          externalScoreRanges={externalScoreRanges}
+          isScoringEnabled={isScoringEnabled}
         />
       </TabsContent>
       

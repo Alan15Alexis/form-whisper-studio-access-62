@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -78,59 +77,38 @@ const FormSettings = ({
 
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
 
-  // Initialize score ranges from props or existing fields
+  // Local state for score ranges management
   const [scoreRanges, setScoreRanges] = useState<ScoreRange[]>([]);
-  
-  // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
 
   console.log("FormSettings - Component Rendered");
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
-  console.log("FormSettings - external score ranges:", JSON.stringify(externalScoreRanges));
   console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
+  console.log("FormSettings - external score ranges:", JSON.stringify(externalScoreRanges));
   
-  // Init state from props or fields
+  // Initialize score ranges from external prop (from hook)
   useEffect(() => {
-    console.log("FormSettings - useEffect running for score ranges initialization");
-    console.log("Current external score ranges:", JSON.stringify(externalScoreRanges));
-    console.log("Current isScoringEnabled value:", isScoringEnabled);
+    console.log("FormSettings - Initializing score ranges from external prop");
+    console.log("FormSettings - External score ranges:", JSON.stringify(externalScoreRanges));
     
-    // First priority: use externally provided score ranges if available
     if (externalScoreRanges && externalScoreRanges.length > 0) {
-      console.log("Setting score ranges from externalScoreRanges");
+      console.log("FormSettings - Setting score ranges from external prop");
       setScoreRanges(JSON.parse(JSON.stringify(externalScoreRanges)));
-      return;
-    }
-    
-    // Second priority: look for ranges in fields if scoring is enabled
-    if ((showTotalScore || isScoringEnabled) && formFields && formFields.length > 0) {
-      const fieldWithRanges = formFields.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
-      );
-      
-      if (fieldWithRanges?.scoreRanges && fieldWithRanges.scoreRanges.length > 0) {
-        console.log("Setting score ranges from fields:", JSON.stringify(fieldWithRanges.scoreRanges));
-        setScoreRanges(JSON.parse(JSON.stringify(fieldWithRanges.scoreRanges)));
-        return;
-      }
-    }
-    
-    // If scoring is enabled but no ranges found, create a default range
-    if ((showTotalScore || isScoringEnabled) && scoreRanges.length === 0) {
-      console.log("Creating default score range");
+    } else if (isScoringEnabled && scoreRanges.length === 0) {
+      console.log("FormSettings - Creating default score range for enabled scoring");
       setScoreRanges([{ min: 0, max: 10, message: "Mensaje para puntuación 0-10" }]);
+    } else if (!isScoringEnabled) {
+      console.log("FormSettings - Clearing score ranges for disabled scoring");
+      setScoreRanges([]);
     }
-  }, [externalScoreRanges, formFields, showTotalScore, isScoringEnabled]);
-  
-  // Reset unsaved changes flag when external props change
-  useEffect(() => {
-    console.log("FormSettings - Resetting unsaved changes flag");
+    
+    // Reset unsaved changes flag when external data changes
     setHasUnsavedRanges(false);
   }, [externalScoreRanges, isScoringEnabled]);
 
   // Score range management functions
   const addScoreRange = () => {
-    console.log("Adding new score range");
+    console.log("FormSettings - Adding new score range");
     
     if (scoreRanges.length === 0) {
       const newRanges = [
@@ -155,7 +133,7 @@ const FormSettings = ({
       { min: newMin, max: newMax, message: `Mensaje para puntuación ${newMin}-${newMax}` }
     ];
     
-    console.log("New score ranges:", JSON.stringify(newRanges));
+    console.log("FormSettings - New score ranges:", JSON.stringify(newRanges));
     setScoreRanges(newRanges);
     setHasUnsavedRanges(true);
     
@@ -166,10 +144,10 @@ const FormSettings = ({
   };
 
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
-    console.log(`Updating score range at index ${index}, field ${String(field)} to value ${value}`);
+    console.log(`FormSettings - Updating score range at index ${index}, field ${String(field)} to value ${value}`);
     
     if (!scoreRanges[index]) {
-      console.error(`Score range at index ${index} does not exist`);
+      console.error(`FormSettings - Score range at index ${index} does not exist`);
       return;
     }
     
@@ -179,16 +157,16 @@ const FormSettings = ({
       [field]: typeof value === 'string' ? value : Number(value)
     };
     
-    console.log("Updated score ranges:", JSON.stringify(updatedRanges));
+    console.log("FormSettings - Updated score ranges:", JSON.stringify(updatedRanges));
     setScoreRanges(updatedRanges);
     setHasUnsavedRanges(true);
   };
 
   const removeScoreRange = (index: number) => {
-    console.log(`Removing score range at index ${index}`);
+    console.log(`FormSettings - Removing score range at index ${index}`);
     
     const updatedRanges = scoreRanges.filter((_, i) => i !== index);
-    console.log("Updated score ranges after removal:", JSON.stringify(updatedRanges));
+    console.log("FormSettings - Updated score ranges after removal:", JSON.stringify(updatedRanges));
     setScoreRanges(updatedRanges);
     setHasUnsavedRanges(true);
     
@@ -198,9 +176,8 @@ const FormSettings = ({
     });
   };
 
-  // Simplified save function using the same pattern as other settings
   const saveScoreRanges = async () => {
-    console.log("saveScoreRanges called - using simplified approach");
+    console.log("FormSettings - saveScoreRanges called");
     
     if (scoreRanges.length === 0) {
       toast({
@@ -211,8 +188,7 @@ const FormSettings = ({
       return;
     }
     
-    console.log("Saving score ranges:", JSON.stringify(scoreRanges));
-    console.log("Current isScoringEnabled:", isScoringEnabled);
+    console.log("FormSettings - Saving score ranges:", JSON.stringify(scoreRanges));
     
     setHasUnsavedRanges(false);
     
@@ -221,25 +197,30 @@ const FormSettings = ({
       description: "Los rangos de puntuación se han guardado correctamente",
     });
     
-    // Call the parent handler with a deep copy - same as other settings
+    // Call the parent handler with a deep copy
     onSaveScoreRanges(JSON.parse(JSON.stringify(scoreRanges)));
   };
 
-  // Simplified toggle function using the same pattern as other settings
   const handleToggleScoringFeature = async (enabled: boolean) => {
-    console.log("TOGGLE ACTION - handleToggleScoringFeature called with:", enabled);
+    console.log("FormSettings - handleToggleScoringFeature called with:", enabled);
     
-    // Call the parent handler directly - same as other settings
+    // Call the parent handler
     if (onToggleFormScoring) {
       onToggleFormScoring(enabled);
     }
     
     // If toggling on and no ranges exist yet, add a default range
     if (enabled && scoreRanges.length === 0) {
-      console.log("Adding default score range when toggling on");
+      console.log("FormSettings - Adding default score range when toggling on");
       addScoreRange();
     }
   };
+
+  // Use isScoringEnabled as the source of truth for the switch state
+  const switchChecked = isScoringEnabled;
+  
+  console.log("FormSettings - Switch checked state:", switchChecked);
+  console.log("FormSettings - Current score ranges count:", scoreRanges.length);
 
   return (
     <div className="space-y-8">
@@ -298,7 +279,7 @@ const FormSettings = ({
           <div className="flex items-center space-x-4">
             <Switch
               id="show-total-score"
-              checked={isScoringEnabled} 
+              checked={switchChecked}
               onCheckedChange={handleToggleScoringFeature}
               disabled={!hasFieldsWithNumericValues}
               className="data-[state=checked]:bg-[#686df3]"
@@ -326,7 +307,7 @@ const FormSettings = ({
           )}
           
           {/* Score Ranges Configuration */}
-          {isScoringEnabled && (
+          {switchChecked && (
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>

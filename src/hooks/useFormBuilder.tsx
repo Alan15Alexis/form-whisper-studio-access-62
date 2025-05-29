@@ -40,18 +40,33 @@ export const useFormBuilder = (id?: string) => {
   const [scoreRanges, setScoreRanges] = useState<any[]>([]);
   const [isScoringEnabled, setIsScoringEnabled] = useState(false);
 
+  // Initialize form data and scoring state from existing form or defaults
   useEffect(() => {
+    console.log("useFormBuilder - Initializing form data for formId:", formId);
+    
     if (formId) {
       setIsLoading(true);
       const existingForm = getForm(formId);
+      
       if (existingForm) {
+        console.log("useFormBuilder - Found existing form:", existingForm.title);
+        console.log("useFormBuilder - Form showTotalScore:", existingForm.showTotalScore);
+        console.log("useFormBuilder - Form scoreRanges:", JSON.stringify(existingForm.scoreRanges));
+        
         setForm(existingForm);
         setFormData(existingForm);
         
-        // Set scoring state based on form configuration
-        setIsScoringEnabled(!!existingForm.showTotalScore);
-        setScoreRanges(existingForm.scoreRanges || []);
+        // Synchronize scoring state with form data
+        const scoringEnabled = !!existingForm.showTotalScore;
+        const formScoreRanges = existingForm.scoreRanges || [];
+        
+        console.log("useFormBuilder - Setting isScoringEnabled to:", scoringEnabled);
+        console.log("useFormBuilder - Setting scoreRanges to:", JSON.stringify(formScoreRanges));
+        
+        setIsScoringEnabled(scoringEnabled);
+        setScoreRanges(formScoreRanges);
       } else {
+        console.log("useFormBuilder - Form not found, redirecting to forms list");
         toast({
           title: 'Form not found',
           description: 'The form you are trying to edit does not exist.',
@@ -61,8 +76,9 @@ export const useFormBuilder = (id?: string) => {
       }
       setIsLoading(false);
     } else {
+      console.log("useFormBuilder - Initializing new form");
       // Initialize empty form data for new form
-      setFormData({
+      const newFormData = {
         id: '',
         title: '',
         description: '',
@@ -78,10 +94,26 @@ export const useFormBuilder = (id?: string) => {
         allowEditOwnResponses: false,
         showTotalScore: false,
         scoreRanges: []
-      });
+      };
+      
+      setFormData(newFormData);
+      setIsScoringEnabled(false);
+      setScoreRanges([]);
       setIsLoading(false);
     }
   }, [formId, getForm, navigate]);
+
+  // Watch for changes in formData.showTotalScore and sync with isScoringEnabled
+  useEffect(() => {
+    console.log("useFormBuilder - Syncing isScoringEnabled with formData.showTotalScore:", formData.showTotalScore);
+    setIsScoringEnabled(!!formData.showTotalScore);
+  }, [formData.showTotalScore]);
+
+  // Watch for changes in formData.scoreRanges and sync with scoreRanges state
+  useEffect(() => {
+    console.log("useFormBuilder - Syncing scoreRanges with formData.scoreRanges:", JSON.stringify(formData.scoreRanges));
+    setScoreRanges(formData.scoreRanges || []);
+  }, [formData.scoreRanges]);
 
   const isEditMode = Boolean(formId);
 
@@ -98,13 +130,34 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const handleToggleFormScoring = (enabled: boolean) => {
+    console.log("useFormBuilder - handleToggleFormScoring called with:", enabled);
+    
+    // Update both state and formData synchronously
     setIsScoringEnabled(enabled);
-    setFormData(prev => ({ ...prev, showTotalScore: enabled }));
+    setFormData(prev => {
+      const updated = { ...prev, showTotalScore: enabled };
+      console.log("useFormBuilder - Updated formData showTotalScore to:", updated.showTotalScore);
+      return updated;
+    });
+    
+    // If toggling off, clear score ranges
+    if (!enabled) {
+      console.log("useFormBuilder - Clearing score ranges when toggling off");
+      setScoreRanges([]);
+      setFormData(prev => ({ ...prev, scoreRanges: [] }));
+    }
   };
 
   const handleSaveScoreRanges = (ranges: any[]) => {
+    console.log("useFormBuilder - handleSaveScoreRanges called with:", JSON.stringify(ranges));
+    
+    // Update both state and formData synchronously
     setScoreRanges(ranges);
-    setFormData(prev => ({ ...prev, scoreRanges: ranges }));
+    setFormData(prev => {
+      const updated = { ...prev, scoreRanges: ranges };
+      console.log("useFormBuilder - Updated formData scoreRanges to:", JSON.stringify(updated.scoreRanges));
+      return updated;
+    });
   };
 
   const updateField = (id: string, updatedField: FormField) => {
@@ -189,6 +242,10 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const handleSubmit = async () => {
+    console.log("useFormBuilder - handleSubmit called");
+    console.log("useFormBuilder - Current formData showTotalScore:", formData.showTotalScore);
+    console.log("useFormBuilder - Current formData scoreRanges:", JSON.stringify(formData.scoreRanges));
+    
     setIsSaving(true);
     
     try {
@@ -212,6 +269,7 @@ export const useFormBuilder = (id?: string) => {
         description: `"${newForm.title}" has been created successfully`,
       });
     } catch (error) {
+      console.error("Error creating form:", error);
       toast({
         title: 'Error creating form',
         description: 'Something went wrong while creating the form.',
@@ -225,12 +283,18 @@ export const useFormBuilder = (id?: string) => {
   const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
     try {
       setIsSaving(true);
+      console.log("useFormBuilder - Updating form with data:", JSON.stringify({
+        showTotalScore: formData.showTotalScore,
+        scoreRanges: formData.scoreRanges
+      }));
+      
       await updateForm(id, formData);
       toast({
         title: 'Form updated',
         description: `"${formData.title}" has been updated successfully`,
       });
     } catch (error) {
+      console.error("Error updating form:", error);
       toast({
         title: 'Error updating form',
         description: 'Something went wrong while updating the form.',
