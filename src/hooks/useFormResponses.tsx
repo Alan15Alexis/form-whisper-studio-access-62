@@ -161,7 +161,7 @@ export function useFormResponses(form: FormType | null) {
         description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
       });
       
-      // Check if we should show the score card
+      // Check if we should show the score card first
       const hasNumericFields = form.fields.some(f => f.hasNumericValues);
       const shouldShowScore = (form.showTotalScore || form.enableScoring) && hasNumericFields;
       
@@ -173,21 +173,16 @@ export function useFormResponses(form: FormType | null) {
       });
       
       if (shouldShowScore) {
+        // Show score card first, user will navigate to thank you card manually
         setShowScoreCard(true);
-        // After 4 seconds, hide score card and show success
-        setTimeout(() => {
-          setShowScoreCard(false);
-          setIsSubmitSuccess(true);
-        }, 4000);
       } else {
+        // Go directly to thank you card if no score to show
         setIsSubmitSuccess(true);
+        // Redirect after showing success
+        setTimeout(() => {
+          navigate("/assigned-forms", { replace: true });
+        }, 5000);
       }
-
-      // Redirigir después de unos segundos para mostrar el mensaje de éxito
-      setTimeout(() => {
-        // Always redirect to assigned forms page
-        navigate("/assigned-forms", { replace: true });
-      }, shouldShowScore ? 9000 : 5000); // More time if showing score card
       
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -213,6 +208,17 @@ export function useFormResponses(form: FormType | null) {
     }
   };
 
+  // New function to handle navigation from score card to thank you card
+  const handleScoreCardNext = () => {
+    setShowScoreCard(false);
+    setIsSubmitSuccess(true);
+    
+    // Redirect after showing the thank you card
+    setTimeout(() => {
+      navigate("/assigned-forms", { replace: true });
+    }, 5000);
+  };
+
   const { isAuthenticated } = useAuth();
   
   return {
@@ -227,6 +233,7 @@ export function useFormResponses(form: FormType | null) {
     handleSubmit,
     handleNext,
     handlePrevious,
+    handleScoreCardNext,
     setIsSubmitSuccess,
     setShowScoreCard
   };

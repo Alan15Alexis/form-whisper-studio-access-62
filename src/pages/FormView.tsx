@@ -32,7 +32,8 @@ const FormView = () => {
     handleFieldChange, 
     handleSubmit, 
     handleNext, 
-    handlePrevious 
+    handlePrevious,
+    handleScoreCardNext
   } = useFormResponses(form);
 
   const handleBackNavigation = () => {
@@ -99,29 +100,22 @@ const FormView = () => {
           formValues={formResponses} 
           fields={form.fields}
           formTitle={form.title}
+          onNext={handleScoreCardNext}
         />
       </Layout>
     );
   }
 
-  // If submit success, show success page with the score if enabled
+  // If submit success, show success page (now without score since score card was shown first)
   if (isSubmitSuccess) {
-    const hasNumericFields = form.fields.some(f => f.hasNumericValues);
-    const shouldShowScore = (form.showTotalScore || form.enableScoring) && hasNumericFields;
-    
-    console.log("Showing success page:", {
-      showTotalScore: form.showTotalScore,
-      enableScoring: form.enableScoring,
-      hasNumericFields,
-      shouldShowScore
-    });
+    console.log("Showing success page");
     
     return (
       <Layout hideNav>
         <FormSuccess 
           formValues={formResponses} 
           fields={form.fields}
-          showTotalScore={shouldShowScore}
+          showTotalScore={false} // Never show score here since it was shown in score card
         />
       </Layout>
     );
