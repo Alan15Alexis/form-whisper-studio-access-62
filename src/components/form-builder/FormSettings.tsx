@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -12,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { useParams } from "react-router-dom";
 
 const FORM_COLORS = [
   { name: "Azul", value: "#3b82f6" },
@@ -65,7 +64,6 @@ const FormSettings = ({
   isScoringEnabled = false
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
-  const { id: urlFormId } = useParams<{ id: string }>();
   const isAdmin = currentUser?.role === "admin";
   
   const defaultHttpConfig: HttpConfig = {
@@ -86,13 +84,10 @@ const FormSettings = ({
   // Track if there are unsaved changes to score ranges
   const [hasUnsavedRanges, setHasUnsavedRanges] = useState<boolean>(false);
 
-  // Debug logs to track state
   console.log("FormSettings - Component Rendered");
   console.log("FormSettings - showTotalScore prop:", showTotalScore);
   console.log("FormSettings - external score ranges:", JSON.stringify(externalScoreRanges));
   console.log("FormSettings - isScoringEnabled prop:", isScoringEnabled);
-  console.log("FormSettings - formId from props:", formId);
-  console.log("FormSettings - formId from URL:", urlFormId);
   
   // Init state from props or fields
   useEffect(() => {
@@ -203,9 +198,9 @@ const FormSettings = ({
     });
   };
 
-  // Enhanced function to save score ranges with better error handling and proper ID conversion
+  // Simplified save function using the same pattern as other settings
   const saveScoreRanges = async () => {
-    console.log("saveScoreRanges called");
+    console.log("saveScoreRanges called - using simplified approach");
     
     if (scoreRanges.length === 0) {
       toast({
@@ -216,160 +211,25 @@ const FormSettings = ({
       return;
     }
     
-    // Use the form ID from URL params as primary source
-    const currentFormId = urlFormId || formId;
+    console.log("Saving score ranges:", JSON.stringify(scoreRanges));
+    console.log("Current isScoringEnabled:", isScoringEnabled);
     
-    if (!currentFormId) {
-      toast({
-        title: "Error",
-        description: "No se encontró el ID del formulario",
-        variant: "destructive",
-      });
-      return;
-    }
+    setHasUnsavedRanges(false);
     
-    console.log("Saving score ranges with current form ID:", currentFormId);
-    console.log("- isScoringEnabled:", isScoringEnabled);
-    console.log("- Ranges to save:", JSON.stringify(scoreRanges));
+    toast({
+      title: "Cambios guardados",
+      description: "Los rangos de puntuación se han guardado correctamente",
+    });
     
-    try {
-      // Convert form ID to number for database query - this fixes the UUID vs bigint issue
-      const numericFormId = parseInt(currentFormId, 10);
-      
-      if (isNaN(numericFormId)) {
-        console.error("Invalid form ID - cannot convert to number:", currentFormId);
-        toast({
-          title: "Error",
-          description: "ID de formulario inválido",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Using numeric form ID for database query:", numericFormId);
-      
-      // Get the current form from Supabase using the numeric form ID
-      const { data: existingForm, error: queryError } = await supabase
-        .from('formulario_construccion')
-        .select('id, configuracion, preguntas, titulo')
-        .eq('id', numericFormId) // Use numeric ID for the query
-        .maybeSingle();
-      
-      if (queryError) {
-        console.error("Error querying form:", queryError);
-        toast({
-          title: "Error",
-          description: "Error al consultar el formulario en la base de datos",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (!existingForm) {
-        console.error("Form not found in database with numeric ID:", numericFormId);
-        toast({
-          title: "Error",
-          description: "No se encontró el formulario en la base de datos",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Found form in database:", existingForm);
-      
-      // Create a deep copy of all objects to avoid reference issues
-      const currentConfig = existingForm.configuracion 
-        ? JSON.parse(JSON.stringify(existingForm.configuracion)) 
-        : {};
-      
-      const rangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-      
-      // Update scoring configuration with explicit boolean value
-      const updatedConfig = {
-        ...currentConfig,
-        showTotalScore: isScoringEnabled === true,
-        scoreRanges: rangesCopy,
-        // Preserve other configuration fields
-        isPrivate: currentConfig.isPrivate !== undefined ? currentConfig.isPrivate : isPrivate,
-        formColor: currentConfig.formColor || formColor || '#3b82f6',
-        allowViewOwnResponses: currentConfig.allowViewOwnResponses !== undefined ? 
-          currentConfig.allowViewOwnResponses : allowViewOwnResponses,
-        allowEditOwnResponses: currentConfig.allowEditOwnResponses !== undefined ?
-          currentConfig.allowEditOwnResponses : allowEditOwnResponses,
-        httpConfig: currentConfig.httpConfig || httpConfig || null,
-        hasFieldsWithNumericValues: hasFieldsWithNumericValues
-      };
-      
-      console.log("Updating Supabase form with config:", JSON.stringify(updatedConfig));
-      
-      // Get current fields and ensure they have score ranges if needed
-      let currentFields = existingForm.preguntas ? 
-        JSON.parse(JSON.stringify(existingForm.preguntas)) : [];
-      
-      // If scoring is enabled, ensure fields with numeric values have score ranges
-      if (isScoringEnabled && rangesCopy.length > 0) {
-        currentFields = currentFields.map(field => {
-          if (field.hasNumericValues) {
-            return { ...field, scoreRanges: rangesCopy };
-          }
-          const { scoreRanges, ...fieldWithoutRanges } = field;
-          return fieldWithoutRanges;
-        });
-      } else {
-        // If scoring is disabled, remove score ranges from all fields
-        currentFields = currentFields.map(field => {
-          const { scoreRanges, ...fieldWithoutRanges } = field;
-          return fieldWithoutRanges;
-        });
-      }
-      
-      console.log("Prepared fields for update:", JSON.stringify(currentFields).substring(0, 100) + "...");
-      
-      // Update both configuration and questions columns
-      const { error: updateError } = await supabase
-        .from('formulario_construccion')
-        .update({
-          configuracion: updatedConfig,
-          preguntas: currentFields
-        })
-        .eq('id', existingForm.id); // Use the ID from the database response
-        
-      if (updateError) {
-        console.error("Error updating form scoring in Supabase:", updateError);
-        toast({
-          title: "Error",
-          description: "Error al actualizar la configuración en la base de datos",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Score ranges saved successfully to Supabase!");
-      setHasUnsavedRanges(false);
-      
-      toast({
-        title: "Cambios guardados",
-        description: "Los rangos de puntuación se han guardado correctamente",
-      });
-      
-      // Call the parent handler with a deep copy
-      onSaveScoreRanges(rangesCopy);
-      
-    } catch (error) {
-      console.error("Exception in saveScoreRanges:", error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error al guardar los rangos de puntuación",
-        variant: "destructive",
-      });
-    }
+    // Call the parent handler with a deep copy - same as other settings
+    onSaveScoreRanges(JSON.parse(JSON.stringify(scoreRanges)));
   };
 
-  // Handle toggle of scoring feature with improved error handling and proper ID conversion
+  // Simplified toggle function using the same pattern as other settings
   const handleToggleScoringFeature = async (enabled: boolean) => {
     console.log("TOGGLE ACTION - handleToggleScoringFeature called with:", enabled);
     
-    // Call the parent handler
+    // Call the parent handler directly - same as other settings
     if (onToggleFormScoring) {
       onToggleFormScoring(enabled);
     }
@@ -378,94 +238,6 @@ const FormSettings = ({
     if (enabled && scoreRanges.length === 0) {
       console.log("Adding default score range when toggling on");
       addScoreRange();
-    }
-    
-    // Save the toggle state immediately
-    const currentFormId = urlFormId || formId;
-    
-    if (!currentFormId) {
-      toast({
-        title: "Error",
-        description: "No se encontró el ID del formulario",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      // Convert form ID to number for database query - this fixes the UUID vs bigint issue
-      const numericFormId = parseInt(currentFormId, 10);
-      
-      if (isNaN(numericFormId)) {
-        console.error("Invalid form ID - cannot convert to number:", currentFormId);
-        toast({
-          title: "Error",
-          description: "ID de formulario inválido",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Using numeric form ID for toggle:", numericFormId);
-      
-      // Get the current form from Supabase
-      const { data: existingForm, error: queryError } = await supabase
-        .from('formulario_construccion')
-        .select('id, configuracion, preguntas')
-        .eq('id', numericFormId) // Use numeric ID for the query
-        .maybeSingle();
-      
-      if (queryError || !existingForm) {
-        console.error("Error fetching form for toggle:", queryError);
-        toast({
-          title: "Error",
-          description: "Error al obtener la información del formulario",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Update the configuration
-      const currentConfig = existingForm.configuracion 
-        ? JSON.parse(JSON.stringify(existingForm.configuracion)) 
-        : {};
-      
-      const scoreRangesCopy = JSON.parse(JSON.stringify(scoreRanges));
-      
-      const updatedConfig = {
-        ...currentConfig,
-        showTotalScore: enabled,
-        scoreRanges: scoreRangesCopy,
-        hasFieldsWithNumericValues: hasFieldsWithNumericValues
-      };
-      
-      const { error: updateError } = await supabase
-        .from('formulario_construccion')
-        .update({
-          configuracion: updatedConfig
-        })
-        .eq('id', existingForm.id); // Use the ID from the database response
-        
-      if (updateError) {
-        console.error("Error updating scoring toggle:", updateError);
-        toast({
-          title: "Error",
-          description: "Error al guardar la configuración de puntuación",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Configuración guardada",
-          description: enabled ? "Puntuación habilitada" : "Puntuación deshabilitada",
-        });
-      }
-    } catch (error) {
-      console.error("Error saving toggle state:", error);
-      toast({
-        title: "Error",
-        description: "Error al guardar la configuración",
-        variant: "destructive",
-      });
     }
   };
 
