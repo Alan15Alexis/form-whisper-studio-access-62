@@ -23,8 +23,8 @@ export function useFormFields() {
     // Opciones para campos de selección
     if (type === 'select' || type === 'radio' || type === 'checkbox') {
       options = [
-        { id: '1', label: 'Opción 1', value: 'option_1' },
-        { id: '2', label: 'Opción 2', value: 'option_2' }
+        { id: uuidv4(), label: 'Opción 1', value: 'option_1' },
+        { id: uuidv4(), label: 'Opción 2', value: 'option_2' }
       ];
     } else if (type === 'yesno') {
       options = [
@@ -33,19 +33,19 @@ export function useFormFields() {
       ];
     } else if (type === 'image-select') {
       options = [
-        { id: '1', label: 'Imagen 1', value: 'https://via.placeholder.com/150' },
-        { id: '2', label: 'Imagen 2', value: 'https://via.placeholder.com/150' }
+        { id: uuidv4(), label: 'Imagen 1', value: 'https://via.placeholder.com/150' },
+        { id: uuidv4(), label: 'Imagen 2', value: 'https://via.placeholder.com/150' }
       ];
     } else if (type === 'matrix') {
       options = [
         { 
-          id: '1', 
+          id: uuidv4(), 
           label: 'Fila 1', 
           value: 'row_1',
           columns: ['Muy mal', 'Mal', 'Neutral', 'Bien', 'Muy bien'] 
         },
         { 
-          id: '2', 
+          id: uuidv4(), 
           label: 'Fila 2', 
           value: 'row_2',
           columns: ['Muy mal', 'Mal', 'Neutral', 'Bien', 'Muy bien'] 
@@ -53,25 +53,25 @@ export function useFormFields() {
       ];
     } else if (type === 'opinion-scale') {
       options = [
-        { id: '1', label: '1', value: '1' },
-        { id: '2', label: '2', value: '2' },
-        { id: '3', label: '3', value: '3' },
-        { id: '4', label: '4', value: '4' },
-        { id: '5', label: '5', value: '5' }
+        { id: uuidv4(), label: '1', value: '1' },
+        { id: uuidv4(), label: '2', value: '2' },
+        { id: uuidv4(), label: '3', value: '3' },
+        { id: uuidv4(), label: '4', value: '4' },
+        { id: uuidv4(), label: '5', value: '5' }
       ];
     } else if (type === 'star-rating') {
       options = [
-        { id: '1', label: '1 estrella', value: '1' },
-        { id: '2', label: '2 estrellas', value: '2' },
-        { id: '3', label: '3 estrellas', value: '3' },
-        { id: '4', label: '4 estrellas', value: '4' },
-        { id: '5', label: '5 estrellas', value: '5' }
+        { id: uuidv4(), label: '1 estrella', value: '1' },
+        { id: uuidv4(), label: '2 estrellas', value: '2' },
+        { id: uuidv4(), label: '3 estrellas', value: '3' },
+        { id: uuidv4(), label: '4 estrellas', value: '4' },
+        { id: uuidv4(), label: '5 estrellas', value: '5' }
       ];
     } else if (type === 'ranking') {
       options = [
-        { id: '1', label: 'Elemento 1', value: 'item_1' },
-        { id: '2', label: 'Elemento 2', value: 'item_2' },
-        { id: '3', label: 'Elemento 3', value: 'item_3' }
+        { id: uuidv4(), label: 'Elemento 1', value: 'item_1' },
+        { id: uuidv4(), label: 'Elemento 2', value: 'item_2' },
+        { id: uuidv4(), label: 'Elemento 3', value: 'item_3' }
       ];
     }
     
@@ -120,6 +120,14 @@ export function useFormFields() {
 
   const updateField = (id: string, updatedField: FormField, fields: FormField[]) => {
     if (!fields) return fields;
+    
+    // Ensure all options have valid non-empty values
+    if (updatedField.options) {
+      updatedField.options = updatedField.options.map(option => ({
+        ...option,
+        value: option.value && option.value.trim() !== '' ? option.value : `option_${option.id}`
+      }));
+    }
     
     return fields.map(field => 
       field.id === id ? updatedField : field

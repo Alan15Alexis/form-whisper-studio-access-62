@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { type FormField as FormFieldType } from "@/types/form";
 import { Input } from "@/components/ui/input";
@@ -354,43 +353,47 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
             <SelectValue placeholder={field.placeholder || 'Seleccione una opción'} />
           </SelectTrigger>
           <SelectContent>
-            {field.options.map((option) => (
-              <SelectItem key={option.id} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
+            {field.options
+              .filter(option => option.value && option.value.trim() !== '') // Filter out empty values
+              .map((option) => (
+                <SelectItem key={option.id} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       )}
       
       {field.type === 'checkbox' && field.options && (
         <div className="space-y-3">
-          {field.options.map((option) => {
-            const isChecked = Array.isArray(value) ? value?.includes(option.value) : false;
-            
-            return (
-              <div key={option.id} className="flex items-start space-x-2">
-                <Checkbox
-                  id={`${field.id}-${option.id}`}
-                  checked={isChecked}
-                  onCheckedChange={(checked) => {
-                    const currentValues = Array.isArray(value) ? [...value] : [];
-                    const newValues = checked
-                      ? [...currentValues, option.value]
-                      : currentValues.filter((v) => v !== option.value);
-                    onChange(newValues);
-                  }}
-                  className="mt-1"
-                />
-                <Label 
-                  htmlFor={`${field.id}-${option.id}`} 
-                  className="font-normal cursor-pointer"
-                >
-                  {option.label}
-                </Label>
-              </div>
-            );
-          })}
+          {field.options
+            .filter(option => option.value && option.value.trim() !== '') // Filter out empty values
+            .map((option) => {
+              const isChecked = Array.isArray(value) ? value?.includes(option.value) : false;
+              
+              return (
+                <div key={option.id} className="flex items-start space-x-2">
+                  <Checkbox
+                    id={`${field.id}-${option.id}`}
+                    checked={isChecked}
+                    onCheckedChange={(checked) => {
+                      const currentValues = Array.isArray(value) ? [...value] : [];
+                      const newValues = checked
+                        ? [...currentValues, option.value]
+                        : currentValues.filter((v) => v !== option.value);
+                      onChange(newValues);
+                    }}
+                    className="mt-1"
+                  />
+                  <Label 
+                    htmlFor={`${field.id}-${option.id}`} 
+                    className="font-normal cursor-pointer"
+                  >
+                    {option.label}
+                  </Label>
+                </div>
+              );
+            })}
         </div>
       )}
       
@@ -400,21 +403,23 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
           onValueChange={onChange}
           className="space-y-3"
         >
-          {field.options.map((option) => (
-            <div key={option.id} className="flex items-start space-x-2">
-              <RadioGroupItem 
-                value={option.value} 
-                id={`${field.id}-${option.id}`}
-                className="mt-1"
-              />
-              <Label 
-                htmlFor={`${field.id}-${option.id}`} 
-                className="font-normal cursor-pointer"
-              >
-                {option.label}
-              </Label>
-            </div>
-          ))}
+          {field.options
+            .filter(option => option.value && option.value.trim() !== '') // Filter out empty values
+            .map((option) => (
+              <div key={option.id} className="flex items-start space-x-2">
+                <RadioGroupItem 
+                  value={option.value} 
+                  id={`${field.id}-${option.id}`}
+                  className="mt-1"
+                />
+                <Label 
+                  htmlFor={`${field.id}-${option.id}`} 
+                  className="font-normal cursor-pointer"
+                >
+                  {option.label}
+                </Label>
+              </div>
+            ))}
         </RadioGroup>
       )}
       
@@ -435,33 +440,35 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
 
       {field.type === 'image-select' && field.options && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {field.options.map((option) => (
-            <div 
-              key={option.id} 
-              className={cn(
-                "cursor-pointer border-2 rounded-md overflow-hidden transition-all",
-                value === option.value 
-                  ? "border-primary ring-2 ring-primary ring-opacity-50" 
-                  : "border-gray-200 hover:border-gray-300"
-              )}
-              onClick={() => onChange(option.value)}
-            >
-              {option.value.startsWith('http') ? (
-                <img 
-                  src={option.value} 
-                  alt={option.label}
-                  className="w-full h-36 object-cover"
-                />
-              ) : (
-                <div className="w-full h-36 bg-gray-100 flex items-center justify-center">
+          {field.options
+            .filter(option => option.value && option.value.trim() !== '') // Filter out empty values
+            .map((option) => (
+              <div 
+                key={option.id} 
+                className={cn(
+                  "cursor-pointer border-2 rounded-md overflow-hidden transition-all",
+                  value === option.value 
+                    ? "border-primary ring-2 ring-primary ring-opacity-50" 
+                    : "border-gray-200 hover:border-gray-300"
+                )}
+                onClick={() => onChange(option.value)}
+              >
+                {option.value.startsWith('http') ? (
+                  <img 
+                    src={option.value} 
+                    alt={option.label}
+                    className="w-full h-36 object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-36 bg-gray-100 flex items-center justify-center">
+                    {option.label}
+                  </div>
+                )}
+                <div className="p-2 text-center text-sm font-medium">
                   {option.label}
                 </div>
-              )}
-              <div className="p-2 text-center text-sm font-medium">
-                {option.label}
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -720,63 +727,65 @@ const FormField = ({ field, value, onChange, formColor }: FormFieldProps) => {
 
       {field.type === 'ranking' && field.options && (
         <div className="space-y-2">
-          {field.options.map((option, index) => {
-            const rank = Array.isArray(value) ? 
-              value.findIndex(v => v === option.value) + 1 : 
-              null;
-            
-            return (
-              <Card key={option.id} className={cn(
-                "border",
-                rank ? "border-primary bg-primary/5" : "hover:border-gray-300"
-              )}>
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    {rank && (
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-semibold">
-                        {rank}
-                      </div>
-                    )}
-                    <div>{option.label}</div>
-                  </div>
-                  <div className="space-x-2">
-                    <Select
-                      value={rank ? rank.toString() : ""}
-                      onValueChange={(val) => {
-                        const newRank = parseInt(val);
-                        let newValue = Array.isArray(value) ? [...value] : [];
-                        
-                        if (rank) {
-                          newValue = newValue.filter(v => v !== option.value);
-                        }
-                        
-                        if (newRank > 0) {
-                          newValue = [
-                            ...newValue.slice(0, newRank - 1),
-                            option.value,
-                            ...newValue.slice(newRank - 1)
-                          ];
-                        }
-                        
-                        onChange(newValue);
-                      }}
-                    >
-                      <SelectTrigger className="w-24">
-                        <SelectValue placeholder="Posición" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[...Array(field.options!.length)].map((_, i) => (
-                          <SelectItem key={i} value={(i + 1).toString()}>
-                            {i + 1}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {field.options
+            .filter(option => option.value && option.value.trim() !== '') // Filter out empty values
+            .map((option, index) => {
+              const rank = Array.isArray(value) ? 
+                value.findIndex(v => v === option.value) + 1 : 
+                null;
+              
+              return (
+                <Card key={option.id} className={cn(
+                  "border",
+                  rank ? "border-primary bg-primary/5" : "hover:border-gray-300"
+                )}>
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      {rank && (
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-semibold">
+                          {rank}
+                        </div>
+                      )}
+                      <div>{option.label}</div>
+                    </div>
+                    <div className="space-x-2">
+                      <Select
+                        value={rank ? rank.toString() : ""}
+                        onValueChange={(val) => {
+                          const newRank = parseInt(val);
+                          let newValue = Array.isArray(value) ? [...value] : [];
+                          
+                          if (rank) {
+                            newValue = newValue.filter(v => v !== option.value);
+                          }
+                          
+                          if (newRank > 0) {
+                            newValue = [
+                              ...newValue.slice(0, newRank - 1),
+                              option.value,
+                              ...newValue.slice(newRank - 1)
+                            ];
+                          }
+                          
+                          onChange(newValue);
+                        }}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue placeholder="Posición" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[...Array(field.options!.filter(opt => opt.value && opt.value.trim() !== '').length)].map((_, i) => (
+                            <SelectItem key={i} value={(i + 1).toString()}>
+                              {i + 1}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
         </div>
       )}
 
