@@ -36,6 +36,7 @@ const FORM_COLORS = [{
   name: "Turquesa",
   value: "#06b6d4"
 }];
+
 interface FormSettingsProps {
   isPrivate: boolean;
   onPrivateChange: (isPrivate: boolean) => void;
@@ -54,6 +55,7 @@ interface FormSettingsProps {
   onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
   scoreRanges: ScoreRange[];
 }
+
 const FormSettings = ({
   isPrivate,
   onPrivateChange,
@@ -92,8 +94,7 @@ const FormSettings = ({
   const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>(scoreRanges);
   // State for database score ranges (independent of scoring toggle)
   const [dbScoreRanges, setDbScoreRanges] = useState<ScoreRange[]>([]);
-  const [dbLoadingState, setDbLoadingState] = useState<'loading' | 'success' | 'error' | 'not-found'>('loading');
-  const [dbErrorMessage, setDbErrorMessage] = useState<string>('');
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(false);
 
   console.log("FormSettings - Component Rendered with standardized props:", {
     showTotalScore,
@@ -112,32 +113,22 @@ const FormSettings = ({
   useEffect(() => {
     const loadDbScoreRanges = async () => {
       if (!formId) {
-        setDbLoadingState('error');
-        setDbErrorMessage('No se proporcionó ID de formulario');
         return;
       }
 
       console.log("FormSettings - Loading score ranges from DB for formId:", formId);
-      setDbLoadingState('loading');
+      setIsLoadingDb(true);
       
       try {
         const ranges = await fetchScoreRangesFromDB(formId);
         console.log("FormSettings - Loaded score ranges from DB:", ranges);
         
-        if (ranges.length > 0) {
-          setDbScoreRanges(ranges);
-          setDbLoadingState('success');
-          setDbErrorMessage('');
-        } else {
-          setDbScoreRanges([]);
-          setDbLoadingState('not-found');
-          setDbErrorMessage('No se encontraron rangos de puntuación para este formulario en la base de datos');
-        }
+        setDbScoreRanges(ranges);
+        setIsLoadingDb(false);
       } catch (error) {
         console.error("FormSettings - Error loading score ranges from DB:", error);
         setDbScoreRanges([]);
-        setDbLoadingState('error');
-        setDbErrorMessage(`Error al cargar rangos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        setIsLoadingDb(false);
       }
     };
 
@@ -222,7 +213,7 @@ const FormSettings = ({
     showTotalScore,
     localScoreRangesCount: localScoreRanges.length,
     dbScoreRangesCount: dbScoreRanges.length,
-    dbLoadingState,
+    isLoadingDb,
     hasFieldsWithNumericValues
   });
   return <div className="space-y-8">
@@ -340,16 +331,13 @@ const FormSettings = ({
               </div>
             </div>}
 
-          {/* Score Ranges Visualization Block - Always show DB ranges */}
+          {/* Score Ranges from Database - Always show */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Label className="text-base font-medium">Rangos configurados desde la base de datos</Label>
-              <div className="text-xs text-gray-500">
-                (ID del formulario: {formId})
-              </div>
             </div>
             
-            {dbLoadingState === 'loading' && (
+            {isLoadingDb && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-600 text-center">
                   Cargando rangos desde la base de datos...
@@ -357,26 +345,15 @@ const FormSettings = ({
               </div>
             )}
 
-            {dbLoadingState === 'error' && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600 text-center">
-                  Error: {dbErrorMessage}
-                </p>
-              </div>
-            )}
-
-            {dbLoadingState === 'not-found' && (
+            {!isLoadingDb && dbScoreRanges.length === 0 && (
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <p className="text-sm text-gray-600 italic text-center">
-                  {dbErrorMessage}
-                </p>
-                <p className="text-xs text-gray-500 mt-1 text-center">
-                  Verifica que el formulario exista en la base de datos con el ID proporcionado
+                  No se encontraron rangos de puntuación para este formulario en la base de datos
                 </p>
               </div>
             )}
 
-            {dbLoadingState === 'success' && dbScoreRanges.length > 0 && (
+            {!isLoadingDb && dbScoreRanges.length > 0 && (
               <div className="space-y-3">
                 {dbScoreRanges.map((range, index) => (
                   <div key={index} className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
