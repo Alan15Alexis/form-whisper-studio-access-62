@@ -31,12 +31,15 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
       if (formId) {
         try {
           setIsLoading(true);
+          console.log("FormScoreCard - Fetching feedback for score:", currentScore, "formId:", formId);
+          
           const feedback = await getScoreFeedback(currentScore, formId, fields);
           setScoreFeedback(feedback);
-          console.log("Score feedback from DB:", feedback);
+          
+          console.log("FormScoreCard - Score feedback received:", feedback);
         } catch (error) {
-          console.error("Error fetching score feedback:", error);
-          // Don't show toast error here to avoid interference
+          console.error("FormScoreCard - Error fetching score feedback:", error);
+          setScoreFeedback(null);
         } finally {
           setIsLoading(false);
         }
@@ -78,14 +81,21 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
             
             {isLoading ? (
               <div className="mt-6 p-4 bg-background rounded border text-center">
-                <p className="text-muted-foreground">Cargando resultado...</p>
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground">Cargando resultado...</p>
+                </div>
               </div>
             ) : scoreFeedback ? (
               <div className="mt-6 p-4 bg-background rounded border text-center">
                 <h4 className="text-lg font-semibold mb-2 text-primary">Resultado:</h4>
                 <p className="text-lg font-medium">{scoreFeedback}</p>
               </div>
-            ) : null}
+            ) : (
+              <div className="mt-6 p-4 bg-gray-50 rounded border text-center">
+                <p className="text-muted-foreground">Sin mensaje personalizado para esta puntuación</p>
+              </div>
+            )}
           </div>
           
           <div className="text-center text-muted-foreground">
