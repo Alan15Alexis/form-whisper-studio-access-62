@@ -1,4 +1,3 @@
-
 import { FormField, ScoreRange } from "@/types/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -8,27 +7,87 @@ export function useFormScoring() {
 
   const fetchScoreRangesFromDB = async (formId: string): Promise<ScoreRange[]> => {
     try {
-      console.log("Fetching score ranges for form:", formId);
+      console.log("useFormScoring - Fetching score ranges for formId:", formId, "type:", typeof formId);
       
-      const { data, error } = await supabase
-        .from('formulario_construccion')
-        .select('configuracion')
-        .eq('id', formId)
-        .single();
+      let data = null;
+      let error = null;
 
-      if (error) {
-        console.error("Error fetching score ranges:", error);
+      // First attempt: Try as numeric ID if the formId is numeric
+      const numericId = parseInt(formId);
+      if (!isNaN(numericId)) {
+        console.log("useFormScoring - Attempting numeric ID lookup:", numericId);
+        const numericResult = await supabase
+          .from('formulario_construccion')
+          .select('configuracion, titulo')
+          .eq('id', numericId)
+          .single();
+        
+        data = numericResult.data;
+        error = numericResult.error;
+        
+        if (!error && data) {
+          console.log("useFormScoring - Found form by numeric ID:", data.titulo);
+        }
+      }
+
+      // Second attempt: If UUID or numeric lookup failed, try to find by UUID string match
+      if (!data && formId.includes('-')) {
+        console.log("useFormScoring - Attempting UUID string search in configuration");
+        const uuidResult = await supabase
+          .from('formulario_construccion')
+          .select('configuracion, titulo, id')
+          .not('configuracion', 'is', null);
+        
+        if (!uuidResult.error && uuidResult.data) {
+          // Look for a form that might have this UUID stored in its configuration
+          const matchingForm = uuidResult.data.find(form => {
+            const config = form.configuracion;
+            return config && (
+              config.formId === formId || 
+              config.uuid === formId ||
+              JSON.stringify(config).includes(formId)
+            );
+          });
+          
+          if (matchingForm) {
+            console.log("useFormScoring - Found form by UUID in configuration:", matchingForm.titulo);
+            data = matchingForm;
+            error = null;
+          }
+        }
+      }
+
+      // Third attempt: Get all forms and let user know what's available
+      if (!data) {
+        console.log("useFormScoring - Form not found, listing available forms");
+        const allFormsResult = await supabase
+          .from('formulario_construccion')
+          .select('id, titulo, configuracion')
+          .limit(10);
+        
+        if (!allFormsResult.error && allFormsResult.data) {
+          console.log("useFormScoring - Available forms:", allFormsResult.data.map(f => ({
+            id: f.id,
+            title: f.titulo,
+            hasScoreRanges: !!(f.configuracion?.scoreRanges?.length)
+          })));
+        }
+        
+        console.log("useFormScoring - No matching form found for ID:", formId);
         return [];
       }
 
+      // Extract score ranges from the found form
       if (data?.configuracion?.scoreRanges) {
-        console.log("Found score ranges in DB:", data.configuracion.scoreRanges);
+        console.log("useFormScoring - Found score ranges in DB:", data.configuracion.scoreRanges);
         return data.configuracion.scoreRanges;
       }
 
+      console.log("useFormScoring - No score ranges found in form configuration");
       return [];
+      
     } catch (error) {
-      console.error("Error in fetchScoreRangesFromDB:", error);
+      console.error("useFormScoring - Error in fetchScoreRangesFromDB:", error);
       return [];
     }
   };
