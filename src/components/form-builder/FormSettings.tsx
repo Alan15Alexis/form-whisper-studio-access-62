@@ -229,8 +229,7 @@ const FormSettings = ({
           <div className="flex items-center space-x-4">
             <Switch id="show-total-score" checked={!!showTotalScore} onCheckedChange={handleToggleScoringFeature} disabled={!hasFieldsWithNumericValues} className="data-[state=checked]:bg-[#686df3]" />
             <div>
-              <Label htmlFor="show-total-score" className="text-lg font-medium">Agregar rangos y emnsajes
-            </Label>
+              <Label htmlFor="show-total-score" className="text-lg font-medium">Agregar rangos y mensajes</Label>
               <p className="text-sm text-gray-500">
                 {hasFieldsWithNumericValues ? "Muestra la puntuación total al finalizar el formulario" : "Para activar, configura valores numéricos en al menos un campo"}
               </p>
