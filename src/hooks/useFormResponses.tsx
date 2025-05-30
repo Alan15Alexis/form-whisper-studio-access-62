@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Form as FormType } from "@/types/form";
+import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 
 /**
  * Custom hook to handle form responses and submission
@@ -17,6 +18,7 @@ export function useFormResponses(form: FormType | null) {
   const location = useLocation();
   const isEditMode = location.state?.editMode || new URLSearchParams(location.search).get('edit') === 'true';
   const navigate = useNavigate();
+  const { fetchScoreRangesFromDB } = useFormScoring();
   
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -155,20 +157,36 @@ export function useFormResponses(form: FormType | null) {
       const result = await submitFormResponse(id, formResponses, form);
       console.log("Form submission result:", result);
       
-      // Check if we should show the score card first
+      // Check both local form configuration AND database ranges
       const hasNumericFields = form.fields.some(f => f.hasNumericValues);
-      const shouldShowScore = (form.showTotalScore || form.enableScoring) && hasNumericFields;
+      const localScoringEnabled = (form.showTotalScore || form.enableScoring) && hasNumericFields;
+      
+      // Also check if there are score ranges in the database
+      let dbRangesExist = false;
+      if (id && hasNumericFields) {
+        try {
+          const dbRanges = await fetchScoreRangesFromDB(id);
+          dbRangesExist = dbRanges.length > 0;
+          console.log("Database ranges check:", { dbRangesExist, rangesCount: dbRanges.length });
+        } catch (error) {
+          console.error("Error checking database ranges:", error);
+        }
+      }
+      
+      const shouldShowScore = localScoringEnabled || dbRangesExist;
       
       console.log("Score check:", { 
         showTotalScore: form.showTotalScore, 
         enableScoring: form.enableScoring,
         hasNumericFields,
+        localScoringEnabled,
+        dbRangesExist,
         shouldShowScore
       });
       
       if (shouldShowScore) {
         // Show score card first - NO TOAST HERE to avoid interference
-        console.log("Setting showScoreCard to true");
+        console.log("Setting showScoreCard to true (local or DB ranges found)");
         setShowScoreCard(true);
       } else {
         // Show toast and go directly to thank you card if no score to show
