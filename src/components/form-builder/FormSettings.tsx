@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -9,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle, Save } from "lucide-react";
+import { Trash, Plus, AlertCircle, Save, Database } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
@@ -113,6 +114,7 @@ const FormSettings = ({
   useEffect(() => {
     const loadDbScoreRanges = async () => {
       if (!formId) {
+        console.log("FormSettings - No formId provided, skipping DB load");
         return;
       }
 
@@ -124,10 +126,10 @@ const FormSettings = ({
         console.log("FormSettings - Loaded score ranges from DB:", ranges);
         
         setDbScoreRanges(ranges);
-        setIsLoadingDb(false);
       } catch (error) {
         console.error("FormSettings - Error loading score ranges from DB:", error);
         setDbScoreRanges([]);
+      } finally {
         setIsLoadingDb(false);
       }
     };
@@ -165,6 +167,7 @@ const FormSettings = ({
       description: `Se añadió un nuevo rango de puntuación`
     });
   };
+
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
     console.log(`FormSettings - Updating score range at index ${index}, field ${String(field)} to value ${value}`);
     if (!localScoreRanges[index]) {
@@ -182,6 +185,7 @@ const FormSettings = ({
     // Immediately save to parent
     onSaveScoreRanges(updatedRanges);
   };
+
   const removeScoreRange = (index: number) => {
     console.log(`FormSettings - Removing score range at index ${index}`);
     const updatedRanges = localScoreRanges.filter((_, i) => i !== index);
@@ -195,6 +199,7 @@ const FormSettings = ({
       description: "El rango de puntuación ha sido eliminado"
     });
   };
+
   const handleToggleScoringFeature = async (enabled: boolean) => {
     console.log("FormSettings - handleToggleScoringFeature called with:", enabled);
 
@@ -209,6 +214,7 @@ const FormSettings = ({
       setTimeout(() => addScoreRange(), 100);
     }
   };
+
   console.log("FormSettings - Final render state:", {
     showTotalScore,
     localScoreRangesCount: localScoreRanges.length,
@@ -216,6 +222,7 @@ const FormSettings = ({
     isLoadingDb,
     hasFieldsWithNumericValues
   });
+
   return <div className="space-y-8">
       {/* General Settings Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
@@ -330,52 +337,80 @@ const FormSettings = ({
                   </div>}
               </div>
             </div>}
+        </div>
+      </Card>
 
-          {/* Score Ranges from Database - Always show */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Label className="text-base font-medium">Rangos configurados desde la base de datos</Label>
-            </div>
-            
-            {isLoadingDb && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-600 text-center">
+      {/* Database Score Ranges Card - Separate and independent */}
+      <Card className="p-6 shadow-sm border border-blue-100 bg-blue-50/20">
+        <div className="flex items-center space-x-2 mb-4">
+          <Database className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-medium text-blue-900">Rangos desde la Base de Datos</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-blue-700">
+            Estos rangos están configurados directamente en la base de datos y se aplicarán automáticamente al formulario.
+          </p>
+          
+          {isLoadingDb && (
+            <div className="p-4 bg-blue-100 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <p className="text-sm text-blue-600">
                   Cargando rangos desde la base de datos...
                 </p>
               </div>
-            )}
+            </div>
+          )}
 
-            {!isLoadingDb && dbScoreRanges.length === 0 && (
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-600 italic text-center">
-                  No se encontraron rangos de puntuación para este formulario en la base de datos
+          {!isLoadingDb && dbScoreRanges.length === 0 && (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="text-center">
+                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600 font-medium">
+                  No se encontraron rangos de puntuación
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Este formulario no tiene rangos configurados en la base de datos para el ID: {formId}
                 </p>
               </div>
-            )}
+            </div>
+          )}
 
-            {!isLoadingDb && dbScoreRanges.length > 0 && (
-              <div className="space-y-3">
-                {dbScoreRanges.map((range, index) => (
-                  <div key={index} className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-1 text-sm font-medium text-gray-700">
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">
-                            {range.min} - {range.max} puntos
-                          </span>
-                        </div>
+          {!isLoadingDb && dbScoreRanges.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-blue-800">
+                  {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} encontrado{dbScoreRanges.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              
+              {dbScoreRanges.map((range, index) => (
+                <div key={index} className="p-4 bg-white border border-blue-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                          {range.min} - {range.max} puntos
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Rango #{index + 1}
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-md">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium text-gray-900">Mensaje:</span>
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1 italic">
+                          "{range.message}"
+                        </p>
                       </div>
                     </div>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Mensaje:</span> {range.message}
-                      </p>
-                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Card>
       
@@ -412,4 +447,5 @@ const FormSettings = ({
       <HttpConfigSettings config={httpConfig || defaultHttpConfig} onConfigChange={config => onHttpConfigChange && onHttpConfigChange(config)} isAdmin={isAdmin} formFields={formFields} />
     </div>;
 };
+
 export default FormSettings;
