@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
+import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
+
 const FORM_COLORS = [{
   name: "Azul",
   value: "#3b82f6"
@@ -73,6 +75,7 @@ const FormSettings = ({
   const {
     currentUser
   } = useAuth();
+  const { fetchScoreRangesFromDB } = useFormScoring();
   const isAdmin = currentUser?.role === "admin";
   const defaultHttpConfig: HttpConfig = {
     enabled: false,
@@ -87,6 +90,8 @@ const FormSettings = ({
 
   // Local state for score ranges management - initialize directly from props
   const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>(scoreRanges);
+  // State for database score ranges (independent of scoring toggle)
+  const [dbScoreRanges, setDbScoreRanges] = useState<ScoreRange[]>([]);
   console.log("FormSettings - Component Rendered with standardized props:", {
     showTotalScore,
     scoreRanges,
@@ -99,6 +104,25 @@ const FormSettings = ({
     console.log("FormSettings - Syncing local score ranges with prop:", scoreRanges);
     setLocalScoreRanges([...scoreRanges]);
   }, [scoreRanges]);
+
+  // Fetch score ranges from database on component mount
+  useEffect(() => {
+    const loadDbScoreRanges = async () => {
+      if (formId) {
+        console.log("FormSettings - Loading score ranges from DB for formId:", formId);
+        try {
+          const ranges = await fetchScoreRangesFromDB(formId);
+          console.log("FormSettings - Loaded score ranges from DB:", ranges);
+          setDbScoreRanges(ranges);
+        } catch (error) {
+          console.error("FormSettings - Error loading score ranges from DB:", error);
+          setDbScoreRanges([]);
+        }
+      }
+    };
+
+    loadDbScoreRanges();
+  }, [formId, fetchScoreRangesFromDB]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -177,6 +201,7 @@ const FormSettings = ({
   console.log("FormSettings - Final render state:", {
     showTotalScore,
     localScoreRangesCount: localScoreRanges.length,
+    dbScoreRangesCount: dbScoreRanges.length,
     hasFieldsWithNumericValues
   });
   return <div className="space-y-8">
@@ -294,21 +319,21 @@ const FormSettings = ({
               </div>
             </div>}
 
-          {/* Score Ranges Visualization Block */}
+          {/* Score Ranges Visualization Block - Always show DB ranges */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Label className="text-base font-medium">Rangos configurados</Label>
+              <Label className="text-base font-medium">Rangos configurados desde la base de datos</Label>
             </div>
             
-            {localScoreRanges.length === 0 ? (
+            {dbScoreRanges.length === 0 ? (
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <p className="text-sm text-gray-600 italic text-center">
-                  Aún no has configurado rangos de puntuación y mensajes
+                  Aún no has configurado rangos de puntuación y mensajes en la base de datos
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {localScoreRanges.map((range, index) => (
+                {dbScoreRanges.map((range, index) => (
                   <div key={index} className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
