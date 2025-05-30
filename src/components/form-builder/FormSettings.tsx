@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -293,6 +293,42 @@ const FormSettings = ({
                   </div>}
               </div>
             </div>}
+
+          {/* Score Ranges Visualization Block */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Label className="text-base font-medium">Rangos configurados</Label>
+            </div>
+            
+            {localScoreRanges.length === 0 ? (
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 italic text-center">
+                  Aún no has configurado rangos de puntuación y mensajes
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {localScoreRanges.map((range, index) => (
+                  <div key={index} className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1 text-sm font-medium text-gray-700">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">
+                            {range.min} - {range.max} puntos
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Mensaje:</span> {range.message}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </Card>
       
