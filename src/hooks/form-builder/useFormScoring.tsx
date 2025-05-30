@@ -15,34 +15,10 @@ export function useFormScoring() {
         return [];
       }
       
-      // First, try direct lookup by id (assuming formId might be the database ID)
-      const numericId = parseInt(formId);
-      if (!isNaN(numericId)) {
-        console.log("useFormScoring - Trying direct numeric ID lookup:", numericId);
-        
-        const { data: directData, error: directError } = await supabase
-          .from('formulario_construccion')
-          .select('id, titulo, configuracion')
-          .eq('id', numericId)
-          .single();
-        
-        if (!directError && directData) {
-          console.log("useFormScoring - Found form by direct ID:", directData.titulo);
-          console.log("useFormScoring - Configuration:", directData.configuracion);
-          
-          if (directData.configuracion?.scoreRanges && Array.isArray(directData.configuracion.scoreRanges)) {
-            console.log("useFormScoring - Found score ranges in configuration:", directData.configuracion.scoreRanges);
-            return directData.configuracion.scoreRanges;
-          }
-        }
-      }
-      
-      // If no direct match, search by UUID in all forms
-      console.log("useFormScoring - Searching all forms for UUID pattern matching");
-      
+      // Get all forms from database
       const { data: allForms, error: allFormsError } = await supabase
         .from('formulario_construccion')
-        .select('id, titulo, configuracion, preguntas')
+        .select('*')
         .not('configuracion', 'is', null);
       
       if (allFormsError) {
@@ -55,28 +31,56 @@ export function useFormScoring() {
         return [];
       }
 
-      console.log(`useFormScoring - Searching through ${allForms.length} forms for UUID match`);
+      console.log(`useFormScoring - Found ${allForms.length} forms in database`);
       
-      // Search through forms for UUID matches
+      // Try multiple search strategies
       for (const form of allForms) {
-        // Convert entire form to string for comprehensive search
-        const formString = JSON.stringify(form).toLowerCase();
-        const searchId = formId.toLowerCase();
+        console.log(`useFormScoring - Checking form ${form.id}: "${form.titulo}"`);
+        console.log("useFormScoring - Form configuration:", form.configuracion);
         
-        if (formString.includes(searchId)) {
-          console.log(`useFormScoring - Found UUID match in form ${form.id}: "${form.titulo}"`);
-          
+        // Strategy 1: Direct ID match (if formId is numeric)
+        if (form.id.toString() === formId) {
+          console.log("useFormScoring - Found form by direct ID match");
           if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
-            console.log("useFormScoring - Found score ranges:", form.configuracion.scoreRanges);
+            console.log("useFormScoring - Found score ranges by direct ID:", form.configuracion.scoreRanges);
             return form.configuracion.scoreRanges;
-          } else {
-            console.log("useFormScoring - Form found but no scoreRanges in configuration");
-            return [];
+          }
+        }
+        
+        // Strategy 2: Search in preguntas field for UUID matches
+        if (form.preguntas) {
+          const preguntasString = JSON.stringify(form.preguntas).toLowerCase();
+          if (preguntasString.includes(formId.toLowerCase())) {
+            console.log("useFormScoring - Found form by UUID in preguntas field");
+            if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
+              console.log("useFormScoring - Found score ranges by UUID search:", form.configuracion.scoreRanges);
+              return form.configuracion.scoreRanges;
+            }
+          }
+        }
+        
+        // Strategy 3: Search in entire form object for UUID
+        const formString = JSON.stringify(form).toLowerCase();
+        if (formString.includes(formId.toLowerCase())) {
+          console.log("useFormScoring - Found form by UUID in entire form object");
+          if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
+            console.log("useFormScoring - Found score ranges by full search:", form.configuracion.scoreRanges);
+            return form.configuracion.scoreRanges;
           }
         }
       }
 
-      console.log("useFormScoring - No matching forms found for formId:", formId);
+      // Strategy 4: If no UUID matches, try to find any form with score ranges
+      console.log("useFormScoring - No UUID matches found, checking for any forms with score ranges");
+      for (const form of allForms) {
+        if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges) && form.configuracion.scoreRanges.length > 0) {
+          console.log("useFormScoring - Found form with score ranges (fallback):", form.titulo);
+          console.log("useFormScoring - Using fallback score ranges:", form.configuracion.scoreRanges);
+          return form.configuracion.scoreRanges;
+        }
+      }
+
+      console.log("useFormScoring - No score ranges found in any form");
       return [];
       
     } catch (error) {

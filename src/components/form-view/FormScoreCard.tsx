@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
   const { calculateTotalScore, getScoreFeedback } = useFormScoring();
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Cargando resultado...");
   
   const currentScore = calculateTotalScore(formValues, fields || []);
 
@@ -31,20 +31,39 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
       if (formId) {
         try {
           setIsLoading(true);
+          setLoadingMessage("Buscando configuración...");
+          
           console.log("FormScoreCard - Fetching feedback for score:", currentScore, "formId:", formId);
+          
+          // Add a small delay to show loading state
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          setLoadingMessage("Evaluando puntuación...");
           
           const feedback = await getScoreFeedback(currentScore, formId, fields);
           setScoreFeedback(feedback);
           
           console.log("FormScoreCard - Score feedback received:", feedback);
+          
+          if (feedback) {
+            setLoadingMessage("¡Resultado obtenido!");
+          } else {
+            setLoadingMessage("Sin configuración específica");
+          }
+          
         } catch (error) {
           console.error("FormScoreCard - Error fetching score feedback:", error);
           setScoreFeedback(null);
+          setLoadingMessage("Error al obtener resultado");
         } finally {
-          setIsLoading(false);
+          // Keep loading state for a moment to show the message
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 1000);
         }
       } else {
         setIsLoading(false);
+        setLoadingMessage("ID de formulario no disponible");
       }
     };
     
@@ -83,17 +102,28 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
               <div className="mt-6 p-4 bg-background rounded border text-center">
                 <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  <p className="text-muted-foreground">Cargando resultado...</p>
+                  <p className="text-muted-foreground">{loadingMessage}</p>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Buscando mensaje personalizado para {currentScore} puntos...
                 </div>
               </div>
             ) : scoreFeedback ? (
               <div className="mt-6 p-4 bg-background rounded border text-center">
                 <h4 className="text-lg font-semibold mb-2 text-primary">Resultado:</h4>
                 <p className="text-lg font-medium">{scoreFeedback}</p>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Mensaje configurado para puntuación: {currentScore}
+                </div>
               </div>
             ) : (
               <div className="mt-6 p-4 bg-gray-50 rounded border text-center">
                 <p className="text-muted-foreground">Sin mensaje personalizado para esta puntuación</p>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Puntuación obtenida: {currentScore} puntos
+                  <br />
+                  ID del formulario: {formId}
+                </div>
               </div>
             )}
           </div>
