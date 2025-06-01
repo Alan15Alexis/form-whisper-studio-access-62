@@ -1,433 +1,362 @@
-
-import { FormResponse } from '@/types/form';
-import { toast } from "@/components/ui/use-toast";
-import { sendHttpRequest, validateFormResponses } from '@/utils/http-utils';
 import { supabase } from '@/integrations/supabase/client';
-import { processFileUpload } from './fileUploadUtils';
+import { FormField, Form } from '@/types/form';
 
-// Process the form data before submission
+// Process form data including file uploads
 export const processFormData = async (
-  form: any,
+  form: Form,
   data: Record<string, any>,
   userEmail: string,
   formId: string
 ): Promise<Record<string, any>> => {
-  // Process file uploads first and replace them with URLs in the response data
-  const processedData = {...data};
-  const uploadPromises = [];
+  const processedData = { ...data };
   
-  console.log("Processing form submission with fields:", form.fields);
-  console.log("Form data before processing:", data);
-  
-  // Iterate through fields to find file uploads, images or drawings
-  if (Array.isArray(form.fields)) {
-    for (const field of form.fields) {
-      const fieldValue = data[field.id];
+  // Process file upload fields
+  for (const field of form.fields) {
+    if ((field.type === 'image-upload' || field.type === 'file-upload' || 
+         field.type === 'drawing' || field.type === 'signature') && 
+        processedData[field.id]) {
       
-      // Skip empty fields
-      if (!fieldValue) continue;
+      const fileData = processedData[field.id];
       
-      console.log(`Processing field ${field.id} (${field.type}) with value:`, 
-        typeof fieldValue === 'string' && fieldValue.length > 100 
-          ? `${fieldValue.substring(0, 100)}... [truncated]` 
-          : fieldValue
-      );
+      // Check if it's already a URL (already uploaded)
+      if (typeof fileData === 'string' && fileData.startsWith('http')) {
+        continue;
+      }
       
-      // Handle file and image uploads
-      if (field.type === 'image-upload' || field.type === 'file-upload' || 
-          field.type === 'drawing' || field.type === 'signature') {
+      try {
+        let uploadResult;
         
-        console.log(`Found uploadable field ${field.id} of type ${field.type}`);
+        if (fileData instanceof File) {
+          // Handle File objects
+          uploadResult = await uploadFileToSupabase(fileData, userEmail, formId, field.id);
+        } else if (typeof fileData === 'string' && fileData.startsWith('data:')) {
+          // Handle base64 data (for drawings and signatures)
+          uploadResult = await uploadBase64ToSupabase(fileData, userEmail, formId, field.id, field.type);
+        }
         
-        // For base64 data (images, drawings, signatures)
-        if (typeof fieldValue === 'string' && fieldValue.startsWith('data:')) {
-          console.log(`Processing base64 data for field ${field.id}`);
-          const uploadPromise = processFileUpload(fieldValue, field.id, userEmail, formId)
-            .then(url => {
-              console.log(`Upload success for field ${field.id}, URL: ${url}`);
-              processedData[field.id] = url;
-              return url;
-            })
-            .catch(err => {
-              console.error(`Upload failed for field ${field.id}:`, err);
-              
-              // Store placeholder instead of file URL
-              processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
-              
-              toast({
-                title: "Advertencia",
-                description: "Hubo un problema al subir un archivo, pero el formulario se enviará de todos modos",
-                variant: "default",
-              });
-              
-              return null;
-            });
-          
-          uploadPromises.push(uploadPromise);
-        } 
-        // For File objects (file uploads)
-        else if (fieldValue instanceof File) {
-          console.log(`Processing File object for field ${field.id}: ${fieldValue.name}`);
-          const uploadPromise = processFileUpload(fieldValue, field.id, userEmail, formId)
-            .then(url => {
-              console.log(`Upload success for field ${field.id}, URL: ${url}`);
-              processedData[field.id] = url;
-              return url;
-            })
-            .catch(err => {
-              console.error(`Upload failed for field ${field.id}:`, err);
-              
-              // Store placeholder instead of file URL
-              processedData[field.id] = "Error al subir archivo: " + (err.message || "Error desconocido");
-              
-              toast({
-                title: "Advertencia",
-                description: "Hubo un problema al subir un archivo, pero el formulario se enviará de todos modos",
-                variant: "default",
-              });
-              
-              return null;
-            });
-          
-          uploadPromises.push(uploadPromise);
+        if (uploadResult) {
+          processedData[field.id] = uploadResult;
+          console.log(`Uploaded ${field.type} for field ${field.id}:`, uploadResult);
         }
-        // Already a URL (from previous upload or edit mode)
-        else if (typeof fieldValue === 'string' && (
-          fieldValue.startsWith('http://') || 
-          fieldValue.startsWith('https://') || 
-          fieldValue.includes('respuestas-formulario')
-        )) {
-          console.log(`Field ${field.id} already has a URL: ${fieldValue}`);
-          // No need to re-upload, keep the existing URL
-        }
-        else {
-          console.warn(`Unexpected value for uploadable field ${field.id}:`, fieldValue);
-        }
+      } catch (error) {
+        console.error(`Error uploading ${field.type} for field ${field.id}:`, error);
+        // Keep the original data if upload fails
       }
     }
   }
   
-  // Wait for all uploads to complete
-  if (uploadPromises.length > 0) {
-    console.log(`Waiting for ${uploadPromises.length} uploads to complete...`);
-    try {
-      const results = await Promise.allSettled(uploadPromises);
-      console.log('All file uploads completed:', results);
-      
-      // Check if any uploads failed
-      const failedUploads = results.filter(result => result.status === 'rejected').length;
-      if (failedUploads > 0) {
-        console.warn(`${failedUploads} file uploads failed, but continuing with form submission`);
-        toast({
-          title: "Advertencia",
-          description: `Algunos archivos no pudieron ser subidos (${failedUploads}), pero el formulario se enviará de todos modos`,
-          variant: "default",
-        });
-      }
-    } catch (error) {
-      console.error('Error handling file uploads:', error);
-      toast({
-        title: "Advertencia",
-        description: "Hubo problemas al subir algunos archivos, pero intentaremos enviar el formulario de todos modos",
-        variant: "default",
-      });
-      // Continue with form submission despite upload errors
-    }
-  } else {
-    console.log('No files to upload');
-  }
-  
-  console.log("Form data after processing uploads:", processedData);
   return processedData;
 };
 
-// Calculate total score for a form submission
-export const calculateFormScore = (
-  formFields: any[],
-  processedData: Record<string, any>
-): number => {
+// Upload file to Supabase storage
+const uploadFileToSupabase = async (
+  file: File,
+  userEmail: string,
+  formId: string,
+  fieldId: string
+): Promise<string | null> => {
+  try {
+    const timestamp = new Date().getTime();
+    const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `${sanitizedEmail}_${formId}_${fieldId}_${timestamp}_${file.name}`;
+    const filePath = `respuestas-formulario/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('formularios')
+      .upload(filePath, file);
+
+    if (error) {
+      console.error('Error uploading file to Supabase:', error);
+      return null;
+    }
+
+    // Get the public URL
+    const { data: urlData } = supabase.storage
+      .from('formularios')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadFileToSupabase:', error);
+    return null;
+  }
+};
+
+// Upload base64 data to Supabase storage
+const uploadBase64ToSupabase = async (
+  base64Data: string,
+  userEmail: string,
+  formId: string,
+  fieldId: string,
+  fieldType: string
+): Promise<string | null> => {
+  try {
+    // Convert base64 to blob
+    const base64Response = await fetch(base64Data);
+    const blob = await base64Response.blob();
+    
+    const timestamp = new Date().getTime();
+    const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+    const extension = fieldType === 'drawing' ? 'png' : 'png'; // Default to PNG
+    const fileName = `${sanitizedEmail}_${formId}_${fieldId}_${timestamp}.${extension}`;
+    const filePath = `respuestas-formulario/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('formularios')
+      .upload(filePath, blob);
+
+    if (error) {
+      console.error('Error uploading base64 to Supabase:', error);
+      return null;
+    }
+
+    // Get the public URL
+    const { data: urlData } = supabase.storage
+      .from('formularios')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadBase64ToSupabase:', error);
+    return null;
+  }
+};
+
+// Calculate total score
+const calculateTotalScore = (fields: FormField[], responses: Record<string, any>): number => {
   let totalScore = 0;
   
-  if (!Array.isArray(formFields)) return totalScore;
-  
-  console.log("Calculating total score for form submission");
-  
-  formFields.forEach(field => {
+  fields.forEach(field => {
     if (!field.hasNumericValues) return;
     
-    const response = processedData[field.id];
+    const response = responses[field.id];
     if (response === undefined || response === null) return;
     
-    // Skip file uploads, images, drawings and signatures - they don't contribute to score
+    // Skip file uploads, images, drawings and signatures
     if (field.type === 'image-upload' || field.type === 'file-upload' || 
         field.type === 'drawing' || field.type === 'signature') {
       return;
     }
     
-    const fieldScore = calculateFieldNumericValue(field, response);
-    if (fieldScore !== null) {
-      console.log(`Field ${field.id}: adding ${fieldScore} to total score`);
-      totalScore += fieldScore;
+    if (field.type === 'checkbox' && Array.isArray(response)) {
+      response.forEach(value => {
+        const option = field.options?.find(opt => opt.value === value);
+        if (option && option.numericValue !== undefined) {
+          totalScore += option.numericValue;
+        }
+      });
+    } else if (field.type === 'yesno') {
+      const isYes = response === true || response === "true" || response === "yes" || response === "sí";
+      const option = field.options?.[isYes ? 0 : 1];
+      if (option && option.numericValue !== undefined) {
+        totalScore += option.numericValue;
+      }
+    } else if (field.type === 'radio' || field.type === 'select' || field.type === 'image-select') {
+      const option = field.options?.find(opt => opt.value === response);
+      if (option && option.numericValue !== undefined) {
+        totalScore += option.numericValue;
+      }
+    } else if (field.type === 'star-rating' || field.type === 'opinion-scale') {
+      const numValue = parseInt(response);
+      if (!isNaN(numValue)) {
+        totalScore += numValue;
+      }
     }
   });
   
-  console.log("Total calculated score:", totalScore);
   return totalScore;
 };
 
-// Get score feedback message from database
-export const getScoreFeedbackFromDB = async (
-  totalScore: number,
-  formId: string
-): Promise<string | null> => {
+// Get score feedback from database
+const getScoreFeedbackFromDB = async (score: number, formId: string): Promise<string | null> => {
   try {
-    console.log("Fetching score feedback from DB for score:", totalScore, "formId:", formId);
-    
-    const { data, error } = await supabase
+    const { data: forms, error } = await supabase
       .from('formulario_construccion')
-      .select('configuracion')
-      .eq('id', formId)
-      .single();
-
-    if (error) {
-      console.error("Error fetching score ranges from DB:", error);
+      .select('*');
+    
+    if (error || !forms) {
+      console.error('Error fetching forms for score feedback:', error);
       return null;
     }
-
-    if (data?.configuracion?.scoreRanges) {
-      const scoreRanges = data.configuracion.scoreRanges;
-      console.log("Found score ranges in DB:", scoreRanges);
-      
-      // Find a range that matches the current score
-      const matchingRange = scoreRanges.find(range => 
-        totalScore >= range.min && totalScore <= range.max
-      );
-      
-      console.log("Matching range from DB:", matchingRange);
-      return matchingRange?.message || null;
+    
+    // Find the form by ID or UUID
+    const form = forms.find(f => 
+      f.id.toString() === formId || 
+      (f.preguntas && JSON.stringify(f.preguntas).toLowerCase().includes(formId.toLowerCase())) ||
+      JSON.stringify(f).toLowerCase().includes(formId.toLowerCase())
+    );
+    
+    if (!form) {
+      console.log('Form not found for score feedback');
+      return null;
     }
-
-    return null;
+    
+    // Get score ranges from rangos_mensajes or configuracion
+    let scoreRanges = [];
+    if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
+      scoreRanges = form.rangos_mensajes;
+    } else if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
+      scoreRanges = form.configuracion.scoreRanges;
+    }
+    
+    // Find matching range
+    const matchingRange = scoreRanges.find(range => 
+      score >= range.min && score <= range.max
+    );
+    
+    return matchingRange?.message || null;
   } catch (error) {
-    console.error("Error in getScoreFeedbackFromDB:", error);
+    console.error('Error getting score feedback from DB:', error);
     return null;
   }
 };
 
-// Get score feedback message based on total score (fallback to field ranges)
-export const getScoreFeedbackMessage = (
-  totalScore: number,
-  formFields: any[]
-): string | null => {
-  if (!Array.isArray(formFields)) return null;
-  
-  // Find a field with score ranges (fallback method)
-  const fieldWithRanges = formFields.find(field => 
-    field.scoreRanges && field.scoreRanges.length > 0
-  );
-  
-  if (!fieldWithRanges || !fieldWithRanges.scoreRanges) {
-    console.log("No score ranges found in any field");
-    return null;
-  }
-  
-  const scoreRanges = fieldWithRanges.scoreRanges;
-  console.log("Checking score ranges for total:", totalScore, scoreRanges);
-  
-  // Find a range that matches the current score
-  const matchingRange = scoreRanges.find(range => 
-    totalScore >= range.min && totalScore <= range.max
-  );
-  
-  console.log("Matching range:", matchingRange);
-  return matchingRange?.message || null;
-};
-
-// Format responses to use labels instead of IDs and include numeric values and total score
+// Format responses with labels and include score data
 export const formatResponsesWithLabels = async (
-  formFields: any[],
-  processedData: Record<string, any>,
-  formId?: string
+  fields: FormField[],
+  responses: Record<string, any>,
+  formId: string
 ): Promise<Record<string, any>> => {
   const formattedResponses: Record<string, any> = {};
   
-  // Create a mapping between field IDs and their labels
-  if (Array.isArray(formFields)) {
-    formFields.forEach(field => {
-      if (processedData[field.id] !== undefined) {
-        const label = field.label || `Pregunta ${field.id.substring(0, 5)}`;
-        const fieldValue = processedData[field.id];
-        
-        // Store the regular response
-        formattedResponses[label] = fieldValue;
-        
-        // If this field has numeric values, also store the numeric value separately
-        if (field.hasNumericValues) {
-          const numericValue = calculateFieldNumericValue(field, fieldValue);
-          if (numericValue !== null && numericValue !== undefined) {
-            formattedResponses[`${label} (Valor Numérico)`] = numericValue;
-          }
-        }
-      }
-    });
+  // Calculate total score if there are numeric fields
+  const hasNumericFields = fields.some(f => f.hasNumericValues);
+  let totalScore = 0;
+  let scoreFeedback = null;
+  
+  if (hasNumericFields) {
+    totalScore = calculateTotalScore(fields, responses);
+    scoreFeedback = await getScoreFeedbackFromDB(totalScore, formId);
     
-    // Calculate and store total score if there are numeric fields
-    const hasNumericFields = formFields.some(f => f.hasNumericValues);
-    if (hasNumericFields) {
-      const totalScore = calculateFormScore(formFields, processedData);
-      formattedResponses['*** PUNTUACIÓN TOTAL ***'] = totalScore;
-      
-      // Try to get feedback message from database first
-      let feedbackMessage = null;
-      if (formId) {
-        feedbackMessage = await getScoreFeedbackFromDB(totalScore, formId);
-      }
-      
-      // Fallback to field ranges if no message found in DB
-      if (!feedbackMessage) {
-        feedbackMessage = getScoreFeedbackMessage(totalScore, formFields);
-      }
-      
-      if (feedbackMessage) {
-        formattedResponses['*** MENSAJE DEL RESULTADO ***'] = feedbackMessage;
-      }
+    // Add score data to formatted responses
+    formattedResponses['_puntuacion_total'] = totalScore;
+    if (scoreFeedback) {
+      formattedResponses['_mensaje_puntuacion'] = scoreFeedback;
     }
   }
   
-  return formattedResponses;
-};
-
-// Calculate numeric value for a specific field based on its response
-export const calculateFieldNumericValue = (field: any, response: any): number | null => {
-  if (!field.hasNumericValues || response === undefined || response === null) {
-    return null;
-  }
-  
-  // Skip file uploads, images, drawings and signatures - they don't contribute to score
-  if (field.type === 'image-upload' || field.type === 'file-upload' || 
-      field.type === 'drawing' || field.type === 'signature') {
-    return null;
-  }
-  
-  if (field.type === 'checkbox' && Array.isArray(response)) {
-    // For checkboxes, sum numeric values of all selected options
-    let total = 0;
-    response.forEach(value => {
-      const option = field.options?.find(opt => opt.value === value);
-      if (option && option.numericValue !== undefined) {
-        total += option.numericValue;
+  // Format each field response
+  fields.forEach(field => {
+    const fieldLabel = field.label || `Pregunta ${field.id.substring(0, 5)}`;
+    const response = responses[field.id];
+    
+    if (response !== undefined && response !== null && response !== '') {
+      if (field.type === 'checkbox' && Array.isArray(response)) {
+        // For checkboxes, convert values to labels
+        const selectedLabels = response.map(value => {
+          const option = field.options?.find(opt => opt.value === value);
+          return option ? option.label : value;
+        });
+        formattedResponses[fieldLabel] = selectedLabels.join(', ');
+      } else if ((field.type === 'radio' || field.type === 'select' || field.type === 'image-select') && field.options) {
+        // For single selections, convert value to label
+        const option = field.options.find(opt => opt.value === response);
+        formattedResponses[fieldLabel] = option ? option.label : response;
+      } else if (field.type === 'yesno') {
+        // For Yes/No fields, convert boolean to text
+        const isYes = response === true || response === "true" || response === "yes" || response === "sí";
+        formattedResponses[fieldLabel] = isYes ? 'Sí' : 'No';
+      } else {
+        // For other field types, use the response as is
+        formattedResponses[fieldLabel] = response;
       }
-    });
-    return total;
-  } else if (field.type === 'yesno') {
-    // For Yes/No fields, find the corresponding option
-    const isYes = response === true || response === "true" || response === "yes" || response === "sí";
-    const option = field.options?.[isYes ? 0 : 1]; // Assuming Yes is index 0 and No is index 1
-    return option?.numericValue ?? null;
-  } else if (field.type === 'radio' || field.type === 'select' || field.type === 'image-select') {
-    // For single selections and image selections
-    const option = field.options?.find(opt => opt.value === response);
-    return option?.numericValue ?? null;
-  } else if (field.type === 'star-rating' || field.type === 'opinion-scale') {
-    // For direct numeric ratings
-    const numValue = parseInt(response);
-    return !isNaN(numValue) ? numValue : null;
-  }
+    }
+  });
   
-  return null;
+  console.log('Formatted responses with score data:', formattedResponses);
+  return formattedResponses;
 };
 
 // Save form response to database
 export const saveFormResponseToDatabase = async (
-  form: any,
+  form: Form,
   formId: string,
   userEmail: string,
   formattedResponses: Record<string, any>,
   apiEndpoint: string
 ): Promise<void> => {
   try {
-    // Get admin email (form creator)
-    const adminEmail = form.createdBy || form.ownerId || null;
-    
-    // Check if this user already has a response for this form
-    // This handles the edit case
-    const { data: existingData, error: existingError } = await supabase
+    // Save to Supabase
+    const { error: supabaseError } = await supabase
       .from('formulario')
-      .select('id')
-      .eq('nombre_formulario', form.title)
-      .eq('nombre_invitado', userEmail);
-    
-    // If the user already has a response and the form allows editing
-    if (existingData && existingData.length > 0 && form.allowEditOwnResponses) {
-      // Update the existing response
-      await supabase
-        .from('formulario')
-        .update({
-          respuestas: formattedResponses,
-          estatus: true // Confirm it's still complete
-        })
-        .eq('id', existingData[0].id);
-        
-      console.log(`Updated existing response for form ${form.title} by user ${userEmail}`);
-    } else {
-      // Insert a new response
-      await supabase
-        .from('formulario')
-        .insert({
-          nombre_formulario: form.title || 'Untitled Form',
-          nombre_invitado: userEmail,  // Ensure we use the correct user email
-          nombre_administrador: adminEmail || null,
-          respuestas: formattedResponses,
-          estatus: true // Set the status to true for completed forms
+      .insert({
+        nombre_formulario: form.title,
+        nombre_invitado: userEmail,
+        nombre_administrador: form.ownerId || 'unknown',
+        respuestas: formattedResponses,
+        estatus: true
+      });
+
+    if (supabaseError) {
+      console.error('Error saving to Supabase:', supabaseError);
+      throw supabaseError;
+    }
+
+    console.log('Response saved to Supabase successfully');
+
+    // Save to MySQL if HTTP config is enabled
+    if (form.httpConfig?.enabled && form.httpConfig?.url) {
+      try {
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'create',
+            data: {
+              nombre_formulario: form.title,
+              nombre_invitado: userEmail,
+              nombre_administrador: form.ownerId || 'unknown',
+              respuestas: JSON.stringify(formattedResponses)
+            }
+          })
         });
 
-      console.log(`Form response saved to Supabase for user ${userEmail} with status=true`);
-    }
+        const mysqlResult = await response.json();
+        console.log('MySQL save result:', mysqlResult);
 
-    // Send to MySQL database through API
-    try {
-      // Prepare data for MySQL submission
-      const mysqlData = {
-        form_id: formId,
-        responses: JSON.stringify(formattedResponses),
-        submitted_by: userEmail, // Ensure we use the correct user email
-        form_title: form.title || 'Untitled Form',
-        estatus: true // Add status field here too for MySQL
-      };
-      
-      // Send to MySQL API endpoint
-      await sendHttpRequest({
-        url: apiEndpoint,
-        method: 'POST',
-        headers: {
+        // Also send to custom HTTP endpoint if configured
+        const customHeaders: Record<string, string> = {
           'Content-Type': 'application/json'
-        },
-        body: mysqlData,
-        timeout: 15000
-      });
-      
-      toast({
-        title: "Respuesta guardada",
-        description: "La respuesta fue guardada correctamente",
-      });
-    } catch (error) {
-      console.error('Error saving to MySQL:', error);
-      // Even if MySQL fails, we've already saved to local state and Supabase
-      toast({
-        title: "Aviso",
-        description: "La respuesta fue guardada pero hubo un problema al sincronizar con la base de datos",
-        variant: "default"
-      });
-      // We don't throw an error here so the submission still counts as successful
+        };
+
+        // Add custom headers
+        if (form.httpConfig.headers) {
+          form.httpConfig.headers.forEach(header => {
+            if (header.key && header.value) {
+              customHeaders[header.key] = header.value;
+            }
+          });
+        }
+
+        // Parse and prepare the body
+        let customBody = form.httpConfig.body || '{}';
+        try {
+          const bodyObj = JSON.parse(customBody);
+          // Replace placeholders with actual data
+          const processedBody = JSON.stringify(bodyObj).replace(
+            /"respuesta"/g, 
+            JSON.stringify(formattedResponses)
+          );
+          
+          const customResponse = await fetch(form.httpConfig.url, {
+            method: form.httpConfig.method || 'POST',
+            headers: customHeaders,
+            body: processedBody
+          });
+
+          console.log('Custom HTTP endpoint response:', customResponse.status);
+        } catch (bodyError) {
+          console.error('Error processing custom HTTP body:', bodyError);
+        }
+      } catch (httpError) {
+        console.error('Error with HTTP configuration:', httpError);
+        // Don't throw here as the main save was successful
+      }
     }
   } catch (error) {
-    console.error('Error saving to Supabase:', error);
-    // We still consider the form submitted since it's saved in local state
-    toast({
-      title: "Aviso",
-      description: "La respuesta fue guardada localmente, pero hubo un problema al guardarla en la nube",
-      variant: "default"
-    });
-    // We don't throw an error here so the submission still counts as successful
+    console.error('Error saving form response:', error);
+    throw error;
   }
 };

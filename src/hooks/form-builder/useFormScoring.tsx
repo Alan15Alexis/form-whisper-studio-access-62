@@ -1,3 +1,4 @@
+
 import { FormField, ScoreRange } from "@/types/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -17,8 +18,7 @@ export function useFormScoring() {
       // Get all forms from database
       const { data: allForms, error: allFormsError } = await supabase
         .from('formulario_construccion')
-        .select('*')
-        .not('rangos_mensajes', 'is', null);
+        .select('*');
       
       if (allFormsError) {
         console.error("useFormScoring - Error fetching forms:", allFormsError);
@@ -26,16 +26,15 @@ export function useFormScoring() {
       }
 
       if (!allForms || allForms.length === 0) {
-        console.log("useFormScoring - No forms found in database with rangos_mensajes");
+        console.log("useFormScoring - No forms found in database");
         return [];
       }
 
-      console.log(`useFormScoring - Found ${allForms.length} forms with rangos_mensajes in database`);
+      console.log(`useFormScoring - Found ${allForms.length} forms in database`);
       
-      // Try multiple search strategies
+      // Try multiple search strategies to find the form
       for (const form of allForms) {
         console.log(`useFormScoring - Checking form ${form.id}: "${form.titulo}"`);
-        console.log("useFormScoring - Form rangos_mensajes:", form.rangos_mensajes);
         
         // Strategy 1: Direct ID match (if formId is numeric)
         if (form.id.toString() === formId) {
@@ -72,17 +71,7 @@ export function useFormScoring() {
       // Strategy 4: Fallback to configuracion.scoreRanges for existing data
       console.log("useFormScoring - No rangos_mensajes found, checking configuracion.scoreRanges as fallback");
       
-      const { data: fallbackForms, error: fallbackError } = await supabase
-        .from('formulario_construccion')
-        .select('*')
-        .not('configuracion', 'is', null);
-      
-      if (fallbackError) {
-        console.error("useFormScoring - Error fetching fallback forms:", fallbackError);
-        return [];
-      }
-
-      for (const form of fallbackForms || []) {
+      for (const form of allForms) {
         // Try same matching strategies for fallback
         if (form.id.toString() === formId || 
             (form.preguntas && JSON.stringify(form.preguntas).toLowerCase().includes(formId.toLowerCase())) ||

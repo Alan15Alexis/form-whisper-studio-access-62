@@ -19,7 +19,7 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
   const { calculateTotalScore, getScoreFeedback } = useFormScoring();
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState("Cargando resultado...");
+  const [loadingMessage, setLoadingMessage] = useState("Calculando puntuación...");
   
   const currentScore = calculateTotalScore(formValues, fields || []);
 
@@ -31,14 +31,12 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
       if (formId) {
         try {
           setIsLoading(true);
-          setLoadingMessage("Buscando configuración...");
+          setLoadingMessage("Buscando mensaje personalizado...");
           
           console.log("FormScoreCard - Fetching feedback for score:", currentScore, "formId:", formId);
           
           // Add a small delay to show loading state
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          setLoadingMessage("Evaluando puntuación...");
+          await new Promise(resolve => setTimeout(resolve, 800));
           
           const feedback = await getScoreFeedback(currentScore, formId, fields);
           setScoreFeedback(feedback);
@@ -46,15 +44,15 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
           console.log("FormScoreCard - Score feedback received:", feedback);
           
           if (feedback) {
-            setLoadingMessage("¡Resultado obtenido!");
+            setLoadingMessage("¡Mensaje encontrado!");
           } else {
-            setLoadingMessage("Sin configuración específica");
+            setLoadingMessage("Sin mensaje específico configurado");
           }
           
         } catch (error) {
           console.error("FormScoreCard - Error fetching score feedback:", error);
           setScoreFeedback(null);
-          setLoadingMessage("Error al obtener resultado");
+          setLoadingMessage("Error al obtener mensaje");
         } finally {
           // Keep loading state for a moment to show the message
           setTimeout(() => {
@@ -105,24 +103,24 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
                   <p className="text-muted-foreground">{loadingMessage}</p>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Buscando mensaje personalizado para {currentScore} puntos...
+                  Evaluando puntuación de {currentScore} puntos...
                 </div>
               </div>
             ) : scoreFeedback ? (
-              <div className="mt-6 p-4 bg-background rounded border text-center">
-                <h4 className="text-lg font-semibold mb-2 text-primary">Resultado:</h4>
-                <p className="text-lg font-medium">{scoreFeedback}</p>
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Mensaje configurado para puntuación: {currentScore}
+              <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-200 text-center">
+                <h4 className="text-lg font-semibold mb-3 text-green-800">🎯 Tu Resultado:</h4>
+                <p className="text-lg font-medium text-gray-800 leading-relaxed">{scoreFeedback}</p>
+                <div className="mt-3 text-sm text-green-600 bg-green-100 rounded-full px-3 py-1 inline-block">
+                  Puntuación: {currentScore} puntos
                 </div>
               </div>
             ) : (
               <div className="mt-6 p-4 bg-gray-50 rounded border text-center">
-                <p className="text-muted-foreground">Sin mensaje personalizado para esta puntuación</p>
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Puntuación obtenida: {currentScore} puntos
-                  <br />
-                  ID del formulario: {formId}
+                <div className="text-gray-600">
+                  <p className="font-medium">Puntuación registrada: {currentScore} puntos</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    No hay mensaje específico configurado para esta puntuación
+                  </p>
                 </div>
               </div>
             )}
@@ -139,7 +137,7 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
               className="px-8"
               disabled={isLoading}
             >
-              Siguiente
+              Continuar
             </Button>
           </div>
         </CardContent>

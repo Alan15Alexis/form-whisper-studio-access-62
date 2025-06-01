@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -110,7 +109,7 @@ const FormSettings = ({
     setLocalScoreRanges([...scoreRanges]);
   }, [scoreRanges]);
 
-  // Fetch score ranges from database on component mount
+  // Fetch score ranges from database on component mount with better error handling
   useEffect(() => {
     const loadDbScoreRanges = async () => {
       if (!formId) {
@@ -340,7 +339,7 @@ const FormSettings = ({
         </div>
       </Card>
 
-      {/* Database Score Ranges Card - Separate and independent */}
+      {/* Database Score Ranges Card - Enhanced display */}
       <Card className="p-6 shadow-sm border border-blue-100 bg-blue-50/20">
         <div className="flex items-center space-x-2 mb-4">
           <Database className="h-5 w-5 text-blue-600" />
@@ -379,29 +378,32 @@ const FormSettings = ({
 
           {!isLoadingDb && dbScoreRanges.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-medium text-blue-800">
-                  {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} encontrado{dbScoreRanges.length !== 1 ? 's' : ''}
+                  ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} configurado{dbScoreRanges.length !== 1 ? 's' : ''}
                 </p>
+                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                  Activo
+                </span>
               </div>
               
               {dbScoreRanges.map((range, index) => (
                 <div key={index} className="p-4 bg-white border border-blue-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
+                      <div className="flex items-center space-x-3 mb-3">
                         <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                           {range.min} - {range.max} puntos
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                           Rango #{index + 1}
                         </span>
                       </div>
-                      <div className="bg-gray-50 p-3 rounded-md">
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium text-gray-900">Mensaje:</span>
+                      <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-3 rounded-md border-l-4 border-blue-400">
+                        <p className="text-sm text-gray-700 font-medium mb-1">
+                          📄 Mensaje configurado:
                         </p>
-                        <p className="text-sm text-gray-600 mt-1 italic">
+                        <p className="text-sm text-gray-800 leading-relaxed italic">
                           "{range.message}"
                         </p>
                       </div>
@@ -409,6 +411,12 @@ const FormSettings = ({
                   </div>
                 </div>
               ))}
+
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  🎯 <strong>Estos rangos están activos:</strong> Los usuarios verán los mensajes correspondientes según su puntuación al completar el formulario.
+                </p>
+              </div>
             </div>
           )}
         </div>
