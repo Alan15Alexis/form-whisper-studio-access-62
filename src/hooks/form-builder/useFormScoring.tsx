@@ -1,4 +1,3 @@
-
 import { FormField, ScoreRange } from "@/types/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -19,7 +18,7 @@ export function useFormScoring() {
       const { data: allForms, error: allFormsError } = await supabase
         .from('formulario_construccion')
         .select('*')
-        .not('configuracion', 'is', null);
+        .not('rangos_mensajes', 'is', null);
       
       if (allFormsError) {
         console.error("useFormScoring - Error fetching forms:", allFormsError);
@@ -27,23 +26,23 @@ export function useFormScoring() {
       }
 
       if (!allForms || allForms.length === 0) {
-        console.log("useFormScoring - No forms found in database");
+        console.log("useFormScoring - No forms found in database with rangos_mensajes");
         return [];
       }
 
-      console.log(`useFormScoring - Found ${allForms.length} forms in database`);
+      console.log(`useFormScoring - Found ${allForms.length} forms with rangos_mensajes in database`);
       
       // Try multiple search strategies
       for (const form of allForms) {
         console.log(`useFormScoring - Checking form ${form.id}: "${form.titulo}"`);
-        console.log("useFormScoring - Form configuration:", form.configuracion);
+        console.log("useFormScoring - Form rangos_mensajes:", form.rangos_mensajes);
         
         // Strategy 1: Direct ID match (if formId is numeric)
         if (form.id.toString() === formId) {
           console.log("useFormScoring - Found form by direct ID match");
-          if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
-            console.log("useFormScoring - Found score ranges by direct ID:", form.configuracion.scoreRanges);
-            return form.configuracion.scoreRanges;
+          if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
+            console.log("useFormScoring - Found score ranges by direct ID:", form.rangos_mensajes);
+            return form.rangos_mensajes;
           }
         }
         
@@ -52,9 +51,9 @@ export function useFormScoring() {
           const preguntasString = JSON.stringify(form.preguntas).toLowerCase();
           if (preguntasString.includes(formId.toLowerCase())) {
             console.log("useFormScoring - Found form by UUID in preguntas field");
-            if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
-              console.log("useFormScoring - Found score ranges by UUID search:", form.configuracion.scoreRanges);
-              return form.configuracion.scoreRanges;
+            if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
+              console.log("useFormScoring - Found score ranges by UUID search:", form.rangos_mensajes);
+              return form.rangos_mensajes;
             }
           }
         }
@@ -63,24 +62,40 @@ export function useFormScoring() {
         const formString = JSON.stringify(form).toLowerCase();
         if (formString.includes(formId.toLowerCase())) {
           console.log("useFormScoring - Found form by UUID in entire form object");
+          if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
+            console.log("useFormScoring - Found score ranges by full search:", form.rangos_mensajes);
+            return form.rangos_mensajes;
+          }
+        }
+      }
+
+      // Strategy 4: Fallback to configuracion.scoreRanges for existing data
+      console.log("useFormScoring - No rangos_mensajes found, checking configuracion.scoreRanges as fallback");
+      
+      const { data: fallbackForms, error: fallbackError } = await supabase
+        .from('formulario_construccion')
+        .select('*')
+        .not('configuracion', 'is', null);
+      
+      if (fallbackError) {
+        console.error("useFormScoring - Error fetching fallback forms:", fallbackError);
+        return [];
+      }
+
+      for (const form of fallbackForms || []) {
+        // Try same matching strategies for fallback
+        if (form.id.toString() === formId || 
+            (form.preguntas && JSON.stringify(form.preguntas).toLowerCase().includes(formId.toLowerCase())) ||
+            JSON.stringify(form).toLowerCase().includes(formId.toLowerCase())) {
+          
           if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
-            console.log("useFormScoring - Found score ranges by full search:", form.configuracion.scoreRanges);
+            console.log("useFormScoring - Found score ranges in configuracion (fallback):", form.configuracion.scoreRanges);
             return form.configuracion.scoreRanges;
           }
         }
       }
 
-      // Strategy 4: If no UUID matches, try to find any form with score ranges
-      console.log("useFormScoring - No UUID matches found, checking for any forms with score ranges");
-      for (const form of allForms) {
-        if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges) && form.configuracion.scoreRanges.length > 0) {
-          console.log("useFormScoring - Found form with score ranges (fallback):", form.titulo);
-          console.log("useFormScoring - Using fallback score ranges:", form.configuracion.scoreRanges);
-          return form.configuracion.scoreRanges;
-        }
-      }
-
-      console.log("useFormScoring - No score ranges found in any form");
+      console.log("useFormScoring - No score ranges found anywhere");
       return [];
       
     } catch (error) {

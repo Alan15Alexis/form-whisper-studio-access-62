@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -56,11 +55,21 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Convert Supabase data format to our form format
           const loadedForms = formsData.map(formData => {
             console.log(`Processing form "${formData.titulo}" with configuration:`, formData.configuracion);
+            console.log(`Form "${formData.titulo}" rangos_mensajes:`, formData.rangos_mensajes);
             
             // Extract configuration safely with proper fallbacks
             const config = formData.configuracion || {};
             const showTotalScore = Boolean(config.showTotalScore);
-            const scoreRanges = Array.isArray(config.scoreRanges) ? config.scoreRanges : [];
+            
+            // Get score ranges from new column first, then fallback to old location
+            let scoreRanges = [];
+            if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
+              scoreRanges = formData.rangos_mensajes;
+              console.log(`Using score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
+            } else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
+              scoreRanges = config.scoreRanges;
+              console.log(`Using fallback score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
+            }
             
             console.log(`Form "${formData.titulo}":`, {
               showTotalScore,

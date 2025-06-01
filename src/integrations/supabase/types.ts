@@ -48,6 +48,7 @@ export type Database = {
           descripcion: string | null
           id: number
           preguntas: Json | null
+          rangos_mensajes: Json | null
           titulo: string | null
         }
         Insert: {
@@ -58,6 +59,7 @@ export type Database = {
           descripcion?: string | null
           id?: number
           preguntas?: Json | null
+          rangos_mensajes?: Json | null
           titulo?: string | null
         }
         Update: {
@@ -68,6 +70,7 @@ export type Database = {
           descripcion?: string | null
           id?: number
           preguntas?: Json | null
+          rangos_mensajes?: Json | null
           titulo?: string | null
         }
         Relationships: []
