@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle, Save, Database } from "lucide-react";
+import { Trash, Plus, AlertCircle, Save, Database, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
@@ -110,31 +110,43 @@ const FormSettings = ({
   }, [scoreRanges]);
 
   // Fetch score ranges from database on component mount with better error handling
-  useEffect(() => {
-    const loadDbScoreRanges = async () => {
-      if (!formId) {
-        console.log("FormSettings - No formId provided, skipping DB load");
-        return;
-      }
+  const loadDbScoreRanges = async () => {
+    if (!formId) {
+      console.log("FormSettings - No formId provided, skipping DB load");
+      return;
+    }
 
-      console.log("FormSettings - Loading score ranges from DB for formId:", formId);
-      setIsLoadingDb(true);
+    console.log("FormSettings - Loading score ranges from DB for formId:", formId);
+    setIsLoadingDb(true);
+    
+    try {
+      const ranges = await fetchScoreRangesFromDB(formId);
+      console.log("FormSettings - Loaded score ranges from DB:", ranges);
       
-      try {
-        const ranges = await fetchScoreRangesFromDB(formId);
-        console.log("FormSettings - Loaded score ranges from DB:", ranges);
-        
-        setDbScoreRanges(ranges);
-      } catch (error) {
-        console.error("FormSettings - Error loading score ranges from DB:", error);
-        setDbScoreRanges([]);
-      } finally {
-        setIsLoadingDb(false);
+      setDbScoreRanges(ranges);
+      
+      if (ranges.length > 0) {
+        toast({
+          title: "Rangos cargados",
+          description: `Se encontraron ${ranges.length} rango${ranges.length !== 1 ? 's' : ''} en la base de datos`
+        });
       }
-    };
+    } catch (error) {
+      console.error("FormSettings - Error loading score ranges from DB:", error);
+      setDbScoreRanges([]);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los rangos desde la base de datos",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingDb(false);
+    }
+  };
 
+  useEffect(() => {
     loadDbScoreRanges();
-  }, [formId, fetchScoreRangesFromDB]);
+  }, [formId]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -341,9 +353,21 @@ const FormSettings = ({
 
       {/* Database Score Ranges Card - Enhanced display */}
       <Card className="p-6 shadow-sm border border-blue-100 bg-blue-50/20">
-        <div className="flex items-center space-x-2 mb-4">
-          <Database className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-medium text-blue-900">Rangos desde la Base de Datos</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <Database className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-medium text-blue-900">Rangos desde la Base de Datos</h3>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadDbScoreRanges}
+            disabled={isLoadingDb || !formId}
+            className="flex items-center space-x-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoadingDb ? 'animate-spin' : ''}`} />
+            <span>Actualizar</span>
+          </Button>
         </div>
         
         <div className="space-y-4">
@@ -372,6 +396,15 @@ const FormSettings = ({
                 <p className="text-xs text-gray-500 mt-1">
                   Este formulario no tiene rangos configurados en la base de datos para el ID: {formId}
                 </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadDbScoreRanges}
+                  className="mt-3"
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Reintentar carga
+                </Button>
               </div>
             </div>
           )}

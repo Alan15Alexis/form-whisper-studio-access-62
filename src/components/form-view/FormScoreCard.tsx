@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState("Calculando puntuación...");
+  const [feedbackSource, setFeedbackSource] = useState<string>("");
   
   const currentScore = calculateTotalScore(formValues, fields || []);
 
@@ -45,14 +47,17 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
           
           if (feedback) {
             setLoadingMessage("¡Mensaje encontrado!");
+            setFeedbackSource("base de datos");
           } else {
             setLoadingMessage("Sin mensaje específico configurado");
+            setFeedbackSource("");
           }
           
         } catch (error) {
           console.error("FormScoreCard - Error fetching score feedback:", error);
           setScoreFeedback(null);
           setLoadingMessage("Error al obtener mensaje");
+          setFeedbackSource("");
         } finally {
           // Keep loading state for a moment to show the message
           setTimeout(() => {
@@ -62,6 +67,7 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
       } else {
         setIsLoading(false);
         setLoadingMessage("ID de formulario no disponible");
+        setFeedbackSource("");
       }
     };
     
@@ -109,9 +115,16 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
             ) : scoreFeedback ? (
               <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-200 text-center">
                 <h4 className="text-lg font-semibold mb-3 text-green-800">🎯 Tu Resultado:</h4>
-                <p className="text-lg font-medium text-gray-800 leading-relaxed">{scoreFeedback}</p>
-                <div className="mt-3 text-sm text-green-600 bg-green-100 rounded-full px-3 py-1 inline-block">
-                  Puntuación: {currentScore} puntos
+                <p className="text-lg font-medium text-gray-800 leading-relaxed mb-3">{scoreFeedback}</p>
+                <div className="flex items-center justify-center space-x-2 mt-3">
+                  <div className="text-sm text-green-600 bg-green-100 rounded-full px-3 py-1">
+                    Puntuación: {currentScore} puntos
+                  </div>
+                  {feedbackSource && (
+                    <div className="text-xs text-blue-600 bg-blue-100 rounded-full px-2 py-1">
+                      Desde {feedbackSource}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -121,6 +134,9 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
                   <p className="text-sm text-muted-foreground mt-2">
                     No hay mensaje específico configurado para esta puntuación
                   </p>
+                  <div className="mt-3 text-xs text-amber-600 bg-amber-50 rounded px-3 py-2 inline-block">
+                    💡 Tip: Los administradores pueden configurar mensajes personalizados para diferentes rangos de puntuación
+                  </div>
                 </div>
               </div>
             )}

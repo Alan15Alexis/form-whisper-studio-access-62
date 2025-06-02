@@ -15,10 +15,40 @@ export function useFormScoring() {
         return [];
       }
       
-      // Get all forms from database
+      // First try direct ID match (numeric)
+      const numericFormId = parseInt(formId);
+      if (!isNaN(numericFormId)) {
+        console.log("useFormScoring - Trying numeric ID match:", numericFormId);
+        
+        const { data: directMatch, error: directError } = await supabase
+          .from('formulario_construccion')
+          .select('rangos_mensajes, configuracion')
+          .eq('id', numericFormId)
+          .single();
+        
+        if (!directError && directMatch) {
+          console.log("useFormScoring - Found form by direct ID match:", directMatch);
+          
+          // First check rangos_mensajes column
+          if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes)) {
+            console.log("useFormScoring - Found score ranges in rangos_mensajes:", directMatch.rangos_mensajes);
+            return directMatch.rangos_mensajes;
+          }
+          
+          // Fallback to configuracion.scoreRanges
+          if (directMatch.configuracion?.scoreRanges && Array.isArray(directMatch.configuracion.scoreRanges)) {
+            console.log("useFormScoring - Found score ranges in configuracion:", directMatch.configuracion.scoreRanges);
+            return directMatch.configuracion.scoreRanges;
+          }
+        }
+      }
+      
+      // If direct match fails, try searching in all forms
+      console.log("useFormScoring - Direct match failed, searching all forms");
+      
       const { data: allForms, error: allFormsError } = await supabase
         .from('formulario_construccion')
-        .select('*');
+        .select('id, titulo, preguntas, rangos_mensajes, configuracion');
       
       if (allFormsError) {
         console.error("useFormScoring - Error fetching forms:", allFormsError);
@@ -32,53 +62,44 @@ export function useFormScoring() {
 
       console.log(`useFormScoring - Found ${allForms.length} forms in database`);
       
-      // Try multiple search strategies to find the form
+      // Search strategies for UUID-based formIds
       for (const form of allForms) {
         console.log(`useFormScoring - Checking form ${form.id}: "${form.titulo}"`);
         
-        // Strategy 1: Direct ID match (if formId is numeric)
-        if (form.id.toString() === formId) {
-          console.log("useFormScoring - Found form by direct ID match");
-          if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
-            console.log("useFormScoring - Found score ranges by direct ID:", form.rangos_mensajes);
-            return form.rangos_mensajes;
-          }
-        }
-        
-        // Strategy 2: Search in preguntas field for UUID matches
+        // Strategy 1: Search in preguntas field for UUID matches
         if (form.preguntas) {
           const preguntasString = JSON.stringify(form.preguntas).toLowerCase();
           if (preguntasString.includes(formId.toLowerCase())) {
             console.log("useFormScoring - Found form by UUID in preguntas field");
+            
+            // Check rangos_mensajes first
             if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
-              console.log("useFormScoring - Found score ranges by UUID search:", form.rangos_mensajes);
+              console.log("useFormScoring - Found score ranges in rangos_mensajes:", form.rangos_mensajes);
               return form.rangos_mensajes;
+            }
+            
+            // Fallback to configuracion
+            if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
+              console.log("useFormScoring - Found score ranges in configuracion:", form.configuracion.scoreRanges);
+              return form.configuracion.scoreRanges;
             }
           }
         }
         
-        // Strategy 3: Search in entire form object for UUID
+        // Strategy 2: Search in entire form object for UUID
         const formString = JSON.stringify(form).toLowerCase();
         if (formString.includes(formId.toLowerCase())) {
           console.log("useFormScoring - Found form by UUID in entire form object");
+          
+          // Check rangos_mensajes first
           if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
-            console.log("useFormScoring - Found score ranges by full search:", form.rangos_mensajes);
+            console.log("useFormScoring - Found score ranges in rangos_mensajes:", form.rangos_mensajes);
             return form.rangos_mensajes;
           }
-        }
-      }
-
-      // Strategy 4: Fallback to configuracion.scoreRanges for existing data
-      console.log("useFormScoring - No rangos_mensajes found, checking configuracion.scoreRanges as fallback");
-      
-      for (const form of allForms) {
-        // Try same matching strategies for fallback
-        if (form.id.toString() === formId || 
-            (form.preguntas && JSON.stringify(form.preguntas).toLowerCase().includes(formId.toLowerCase())) ||
-            JSON.stringify(form).toLowerCase().includes(formId.toLowerCase())) {
           
+          // Fallback to configuracion
           if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
-            console.log("useFormScoring - Found score ranges in configuracion (fallback):", form.configuracion.scoreRanges);
+            console.log("useFormScoring - Found score ranges in configuracion:", form.configuracion.scoreRanges);
             return form.configuracion.scoreRanges;
           }
         }
@@ -162,7 +183,7 @@ export function useFormScoring() {
     if (formId) {
       try {
         scoreRanges = await fetchScoreRangesFromDB(formId);
-        console.log("Database score ranges found:", scoreRanges.length);
+        console.log("Database score ranges found:", scoreRanges.length, scoreRanges);
       } catch (error) {
         console.error("Error fetching score ranges from DB:", error);
       }
@@ -185,7 +206,7 @@ export function useFormScoring() {
       return null;
     }
     
-    console.log("Using score ranges:", JSON.stringify(scoreRanges));
+    console.log("Using score ranges for feedback:", JSON.stringify(scoreRanges));
     
     // Find a range that matches the current score
     const matchingRange = scoreRanges.find(range => 

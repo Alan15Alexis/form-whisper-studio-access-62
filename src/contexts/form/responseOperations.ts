@@ -1,6 +1,7 @@
 
 import { Form, FormResponse } from '@/types/form';
 import { processFormData, saveFormResponseToDatabase, formatResponsesWithLabels } from '@/utils/formResponseUtils';
+import { useFormScoring } from '@/hooks/form-builder/useFormScoring';
 
 // Submit form response operation
 export const submitFormResponseOperation = (
@@ -28,8 +29,30 @@ export const submitFormResponseOperation = (
       // Process form data (handle file uploads, etc.)
       const processedData = await processFormData(form, data, userEmail, formId);
       
+      // Calculate score and get feedback message if scoring is enabled
+      const { calculateTotalScore, getScoreFeedback } = useFormScoring();
+      let scoreData = null;
+      
+      if (form.showTotalScore && form.fields.some(f => f.hasNumericValues)) {
+        const totalScore = calculateTotalScore(processedData, form.fields);
+        const scoreFeedback = await getScoreFeedback(totalScore, formId, form.fields);
+        
+        scoreData = {
+          totalScore,
+          feedback: scoreFeedback,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log("Score data calculated:", scoreData);
+      }
+      
       // Format responses to use labels instead of IDs and include score feedback from DB
       const formattedResponses = await formatResponsesWithLabels(form.fields, processedData, formId);
+      
+      // Add score data to formatted responses if available
+      if (scoreData) {
+        formattedResponses['_score_data'] = scoreData;
+      }
       
       // Create the response object - Using the correct FormResponse type properties
       const formResponse: FormResponse = {
@@ -44,7 +67,7 @@ export const submitFormResponseOperation = (
       // Save the response locally
       setResponses(prev => [...prev, formResponse]);
 
-      // Save to database (Supabase and MySQL)
+      // Save to database (Supabase and MySQL) - include score data
       await saveFormResponseToDatabase(form, formId, userEmail, formattedResponses, apiEndpoint);
       
       return formResponse;
