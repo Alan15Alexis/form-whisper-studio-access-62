@@ -1,3 +1,4 @@
+
 import { Form, FormResponse } from '@/types/form';
 import { processFormData, saveFormResponseToDatabase, formatResponsesWithLabels } from '@/utils/formResponseUtils';
 
@@ -38,7 +39,15 @@ export const submitFormResponseOperation = (
       
       // Add score data to formatted responses if available
       if (scoreData) {
-        formattedResponses['_score_data'] = scoreData;
+        console.log("Adding score data to formatted responses:", scoreData);
+        formattedResponses['_puntuacion_total'] = scoreData.totalScore;
+        formattedResponses['_mensaje_puntuacion'] = scoreData.feedback;
+        formattedResponses['_fecha_puntuacion'] = scoreData.timestamp;
+        
+        // Also add to processed data for local storage
+        processedData['_puntuacion_total'] = scoreData.totalScore;
+        processedData['_mensaje_puntuacion'] = scoreData.feedback;
+        processedData['_fecha_puntuacion'] = scoreData.timestamp;
       }
       
       // Create the response object - Using the correct FormResponse type properties
@@ -56,6 +65,8 @@ export const submitFormResponseOperation = (
 
       // Save to database (Supabase and MySQL) - include score data
       await saveFormResponseToDatabase(form, formId, userEmail, formattedResponses, apiEndpoint);
+      
+      console.log("Form response saved successfully with score data:", formResponse);
       
       return formResponse;
     } catch (error) {

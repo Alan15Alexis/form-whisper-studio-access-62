@@ -1,10 +1,8 @@
+
 import { FormField, ScoreRange } from "@/types/form";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
 
 export function useFormScoring() {
-  const [formScoreRanges, setFormScoreRanges] = useState<ScoreRange[]>([]);
-
   const fetchScoreRangesFromDB = async (formId: string): Promise<ScoreRange[]> => {
     try {
       console.log("useFormScoring - Fetching score ranges for formId:", formId);

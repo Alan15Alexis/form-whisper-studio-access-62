@@ -13,9 +13,14 @@ interface FormScoreCardProps {
   fields: FormField[];
   formTitle?: string;
   onNext: () => void;
+  scoreData?: {
+    totalScore: number;
+    feedback: string | null;
+    timestamp: string;
+  } | null;
 }
 
-const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardProps) => {
+const FormScoreCard = ({ formValues, fields, formTitle, onNext, scoreData }: FormScoreCardProps) => {
   const { id: formId } = useParams();
   const { calculateTotalScore, getScoreFeedback } = useFormScoring();
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
@@ -23,9 +28,17 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
   const [loadingMessage, setLoadingMessage] = useState("Calculando puntuación...");
   const [feedbackSource, setFeedbackSource] = useState<string>("");
   
-  const currentScore = calculateTotalScore(formValues, fields || []);
+  // Use score data if provided, otherwise calculate
+  const currentScore = scoreData?.totalScore ?? calculateTotalScore(formValues, fields || []);
+  const providedFeedback = scoreData?.feedback;
 
-  console.log("FormScoreCard render:", { currentScore, formId, fields: fields?.length });
+  console.log("FormScoreCard render:", { 
+    currentScore, 
+    formId, 
+    fields: fields?.length, 
+    scoreData,
+    providedFeedback 
+  });
 
   // Fetch score feedback from database with improved ID handling
   useEffect(() => {
@@ -33,6 +46,17 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
       if (formId) {
         try {
           setIsLoading(true);
+          
+          // If we already have feedback from scoreData, use it
+          if (providedFeedback) {
+            console.log("FormScoreCard - Using provided feedback:", providedFeedback);
+            setScoreFeedback(providedFeedback);
+            setLoadingMessage("¡Mensaje personalizado encontrado!");
+            setFeedbackSource("datos del formulario");
+            setIsLoading(false);
+            return;
+          }
+          
           setLoadingMessage("Buscando mensaje personalizado...");
           
           console.log("FormScoreCard - Fetching feedback for score:", currentScore, "formId:", formId);
@@ -72,7 +96,7 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext }: FormScoreCardP
     };
     
     fetchFeedback();
-  }, [currentScore, formId, fields, getScoreFeedback]);
+  }, [currentScore, formId, fields, getScoreFeedback, providedFeedback]);
 
   return (
     <motion.div

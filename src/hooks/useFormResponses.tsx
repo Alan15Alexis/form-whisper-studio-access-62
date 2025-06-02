@@ -26,6 +26,7 @@ export function useFormResponses(form: FormType | null) {
   const [showScoreCard, setShowScoreCard] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [calculatedScoreData, setCalculatedScoreData] = useState<any>(null);
 
   // Load existing responses when in edit mode
   useEffect(() => {
@@ -153,12 +154,16 @@ export function useFormResponses(form: FormType | null) {
         });
       }
       
-      // Calculate score and get feedback message if scoring is enabled (MOVED FROM responseOperations.ts)
+      // Calculate score and get feedback message if scoring is enabled
       let scoreData = null;
       
       if (form.showTotalScore && form.fields.some(f => f.hasNumericValues)) {
+        console.log("Calculating score for form submission...");
         const totalScore = calculateTotalScore(formResponses, form.fields);
+        console.log("Total score calculated:", totalScore);
+        
         const scoreFeedback = await getScoreFeedback(totalScore, id, form.fields);
+        console.log("Score feedback received:", scoreFeedback);
         
         scoreData = {
           totalScore,
@@ -166,7 +171,10 @@ export function useFormResponses(form: FormType | null) {
           timestamp: new Date().toISOString()
         };
         
-        console.log("Score data calculated:", scoreData);
+        // Store score data for the score card
+        setCalculatedScoreData(scoreData);
+        
+        console.log("Score data prepared:", scoreData);
       }
       
       // Pass the form from location to the submit function to ensure we have the form data
@@ -198,7 +206,8 @@ export function useFormResponses(form: FormType | null) {
         hasNumericFields,
         localScoringEnabled,
         dbRangesExist,
-        shouldShowScore
+        shouldShowScore,
+        scoreData
       });
       
       if (shouldShowScore) {
@@ -275,6 +284,7 @@ export function useFormResponses(form: FormType | null) {
     currentQuestionIndex,
     uploadProgress,
     isEditMode,
+    calculatedScoreData,
     handleFieldChange,
     handleSubmit,
     handleNext,

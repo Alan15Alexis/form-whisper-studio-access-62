@@ -1,165 +1,233 @@
 
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import Layout from "@/components/Layout";
+import React, { useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
-import FormField from "@/components/form-view/FormField";
-import FormAccess from "@/components/form-view/FormAccess";
-import FormSuccess from "@/components/form-view/FormSuccess";
-import FormScoreCard from "@/components/form-view/FormScoreCard";
-import { useFormValidation } from "@/hooks/useFormValidation";
-import { useFormResponses } from "@/hooks/useFormResponses";
+import Layout from "@/components/Layout";
+import FormHeader from "@/components/form-view/FormHeader";
 import FormQuestion from "@/components/form-view/FormQuestion";
 import FormProgressBar from "@/components/form-view/FormProgressBar";
+import FormSuccess from "@/components/form-view/FormSuccess";
+import FormScoreCard from "@/components/form-view/FormScoreCard";
+import FormAccess from "@/components/form-view/FormAccess";
 import FormNotFound from "@/components/form-view/FormNotFound";
-import FormHeader from "@/components/form-view/FormHeader";
-import { useForm } from "@/contexts/form";
+import { useFormResponses } from "@/hooks/useFormResponses";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const FormView = () => {
-  const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const { isUserAllowed } = useForm();
+  const { id } = useParams<{ id: string }>();
+  const { getForm, validateAccessToken } = useForm();
+  const { currentUser, isAuthenticated } = useAuth();
+  const location = useLocation();
   
-  // Use custom hooks for form validation and responses
-  const { form, accessValidated, validationLoading, setAccessValidated } = useFormValidation();
-  const { 
-    formResponses, 
-    isSubmitting, 
-    isSubmitSuccess, 
+  const [form, setForm] = useState(getForm(id || ''));
+  const [hasAccess, setHasAccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  const {
+    formResponses,
+    isSubmitting,
+    isSubmitSuccess,
     showScoreCard,
-    currentQuestionIndex, 
+    currentQuestionIndex,
     isEditMode,
-    handleFieldChange, 
-    handleSubmit, 
-    handleNext, 
+    calculatedScoreData,
+    handleFieldChange,
+    handleSubmit,
+    handleNext,
     handlePrevious,
-    handleScoreCardNext
+    handleScoreCardNext,
   } = useFormResponses(form);
 
-  const handleBackNavigation = () => {
-    // If user is admin, navigate to dashboard-admin
-    if (currentUser?.role === "admin") {
-      navigate("/dashboard-admin");
-    } else {
-      // For regular users or unauthenticated users, navigate to assigned forms
-      navigate("/assigned-forms");
-    }
-  };
+  useEffect(() => {
+    const loadFormFromSupabase = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
 
-  const handleAccessGranted = () => {
-    setAccessValidated(true);
-  };
+      // First try to get from context
+      let foundForm = getForm(id);
+      
+      if (!foundForm) {
+        try {
+          // Try to fetch from Supabase by ID
+          const numericId = parseInt(id);
+          if (!isNaN(numericId)) {
+            const { data: formData, error } = await supabase
+              .from('formulario_construccion')
+              .select('*')
+              .eq('id', numericId)
+              .single();
+            
+            if (!error && formData) {
+              // Convert Supabase data to our form format
+              foundForm = {
+                id: formData.id.toString(),
+                title: formData.titulo || 'Untitled Form',
+                description: formData.descripcion || '',
+                fields: formData.preguntas || [],
+                isPrivate: formData.configuracion?.isPrivate || false,
+                allowedUsers: formData.acceso || [],
+                createdAt: formData.created_at,
+                updatedAt: formData.created_at,
+                accessLink: '',
+                ownerId: formData.administrador || 'unknown',
+                enableScoring: formData.configuracion?.enableScoring || false,
+                showTotalScore: formData.configuracion?.showTotalScore || false,
+                formColor: formData.configuracion?.formColor,
+                allowViewOwnResponses: formData.configuracion?.allowViewOwnResponses || false,
+                allowEditOwnResponses: formData.configuracion?.allowEditOwnResponses || false,
+                httpConfig: formData.configuracion?.httpConfig,
+                scoreRanges: formData.rangos_mensajes || []
+              };
+            }
+          }
+        } catch (error) {
+          console.error("Error loading form from Supabase:", error);
+        }
+      }
 
-  // Create an adapter function that only takes email parameter
-  // but internally calls isUserAllowed with the current form's ID
-  const checkUserAllowed = (email: string) => {
-    if (!form || !form.id) return false;
-    return isUserAllowed(form.id, email);
-  };
+      if (foundForm) {
+        setForm(foundForm);
+        
+        // Check access
+        const searchParams = new URLSearchParams(location.search);
+        const token = searchParams.get('token');
+        
+        if (!foundForm.isPrivate) {
+          setHasAccess(true);
+        } else if (token && validateAccessToken(foundForm.id, token)) {
+          setHasAccess(true);
+        } else if (currentUser && foundForm.allowedUsers?.includes(currentUser.email)) {
+          setHasAccess(true);
+        } else if (isAuthenticated && currentUser?.role === "admin") {
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
+      }
+      
+      setLoading(false);
+    };
 
-  if (validationLoading) {
+    loadFormFromSupabase();
+  }, [id, getForm, validateAccessToken, currentUser, isAuthenticated, location.search]);
+
+  if (loading) {
     return (
-      <Layout hideNav>
-        <div className="flex justify-center items-center min-h-[60vh]">
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
   }
 
-  if (form && form.isPrivate && !accessValidated) {
-    return (
-      <Layout hideNav>
-        <FormAccess 
-          onAccessGranted={handleAccessGranted} 
-          isUserAllowed={checkUserAllowed}
-        />
-      </Layout>
-    );
-  }
-
   if (!form) {
-    return (
-      <Layout hideNav>
-        <FormNotFound onBackClick={handleBackNavigation} />
-      </Layout>
-    );
+    return <FormNotFound />;
   }
 
-  // Show score card if enabled and form was just submitted
-  if (showScoreCard) {
-    console.log("Showing score card with form data:", {
-      showTotalScore: form.showTotalScore,
-      enableScoring: form.enableScoring,
-      hasNumericFields: form.fields.some(f => f.hasNumericValues)
-    });
-    
-    return (
-      <Layout hideNav>
-        <FormScoreCard 
-          formValues={formResponses} 
-          fields={form.fields}
-          formTitle={form.title}
-          onNext={handleScoreCardNext}
-        />
-      </Layout>
-    );
+  if (form.isPrivate && !hasAccess) {
+    return <FormAccess formId={form.id} />;
   }
 
-  // If submit success, show success page (now without score since score card was shown first)
   if (isSubmitSuccess) {
-    console.log("Showing success page");
-    
+    return <FormSuccess formTitle={form.title} />;
+  }
+
+  if (showScoreCard) {
     return (
-      <Layout hideNav>
-        <FormSuccess 
-          formValues={formResponses} 
-          fields={form.fields}
-          showTotalScore={false} // Never show score here since it was shown in score card
-        />
-      </Layout>
+      <FormScoreCard 
+        formValues={formResponses}
+        fields={form.fields}
+        formTitle={form.title}
+        onNext={handleScoreCardNext}
+        scoreData={calculatedScoreData}
+      />
     );
   }
 
-  // If we have a form, show the current question in a card
+  const totalQuestions = form.fields.length;
   const currentField = form.fields[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === form.fields.length - 1;
-  const isFirstQuestion = currentQuestionIndex === 0;
-  
-  // Check if user is an admin in preview mode
-  const isAdminPreview = currentUser?.role === "admin";
 
   return (
-    <Layout hideNav>
-      <div className="max-w-3xl mx-auto">
-        <FormHeader 
-          currentQuestion={currentQuestionIndex}
-          totalQuestions={form.fields.length}
-          onBackClick={handleBackNavigation}
-        />
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+        <div className="container max-w-4xl mx-auto px-4">
+          <FormHeader 
+            title={form.title} 
+            description={form.description}
+            isEditMode={isEditMode}
+          />
+          
+          <div className="mb-8">
+            <FormProgressBar 
+              currentQuestion={currentQuestionIndex + 1}
+              totalQuestions={totalQuestions}
+            />
+          </div>
 
-        <FormQuestion
-          field={currentField}
-          value={formResponses[currentField.id]}
-          onChange={(value) => handleFieldChange(currentField.id, value)}
-          isFirstQuestion={isFirstQuestion}
-          isLastQuestion={isLastQuestion}
-          handlePrevious={handlePrevious}
-          handleNext={handleNext}
-          handleSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          isAdminPreview={isAdminPreview}
-          isEditMode={isEditMode}
-          formColor={form.formColor}
-          title={form.title}
-          description={form.description}
-        />
-        
-        <FormProgressBar 
-          currentIndex={currentQuestionIndex}
-          totalFields={form.fields.length}
-          formColor={form.formColor}
-        />
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentQuestionIndex}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="shadow-lg border-0">
+                  <CardContent className="p-8">
+                    <FormQuestion
+                      field={currentField}
+                      value={formResponses[currentField.id]}
+                      onChange={(value) => handleFieldChange(currentField.id, value)}
+                      questionNumber={currentQuestionIndex + 1}
+                      totalQuestions={totalQuestions}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="flex justify-between items-center pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentQuestionIndex === 0}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+
+              {currentQuestionIndex === totalQuestions - 1 ? (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-8"
+                >
+                  {isSubmitting ? "Enviando..." : isEditMode ? "Actualizar respuestas" : "Enviar respuestas"}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  className="flex items-center gap-2"
+                >
+                  Siguiente
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </Layout>
   );

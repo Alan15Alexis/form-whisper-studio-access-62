@@ -3,9 +3,10 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Filter, Download, FileSpreadsheet, ExternalLink, FileIcon } from "lucide-react";
+import { Loader2, Filter, Download, FileSpreadsheet, ExternalLink, FileIcon, Award } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/types/form";
 import {
   DropdownMenu,
@@ -137,6 +138,11 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
   // Helper function to check if this is a numeric value field
   const isNumericValue = (key: string): boolean => {
     return key.includes('(Valor Numérico)');
+  };
+  
+  // Helper function to check if this is a score-related field
+  const isScoreField = (key: string): boolean => {
+    return key === '_puntuacion_total' || key === '_mensaje_puntuacion' || key === '_fecha_puntuacion';
   };
   
   // Helper function to get the file name from URL
@@ -278,6 +284,53 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     return aggregated;
   };
 
+  // Function to render score fields with special styling
+  const renderScoreField = (key: string, value: any) => {
+    if (key === '_puntuacion_total') {
+      return (
+        <div className="flex items-center gap-2">
+          <Award className="h-5 w-5 text-yellow-500" />
+          <Badge variant="outline" className="text-lg font-bold px-3 py-1 bg-yellow-50 border-yellow-200">
+            {value} puntos
+          </Badge>
+        </div>
+      );
+    }
+    
+    if (key === '_mensaje_puntuacion') {
+      return (
+        <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
+          <p className="text-green-800 font-medium">{String(value)}</p>
+        </div>
+      );
+    }
+    
+    if (key === '_fecha_puntuacion') {
+      const date = new Date(String(value));
+      return (
+        <span className="text-sm text-gray-600">
+          {date.toLocaleString()}
+        </span>
+      );
+    }
+    
+    return String(value);
+  };
+
+  // Function to get display name for score fields
+  const getScoreFieldDisplayName = (key: string) => {
+    switch (key) {
+      case '_puntuacion_total':
+        return '🏆 Puntuación Total';
+      case '_mensaje_puntuacion':
+        return '💬 Mensaje de Retroalimentación';
+      case '_fecha_puntuacion':
+        return '📅 Fecha de Evaluación';
+      default:
+        return key;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-4xl">
@@ -285,8 +338,8 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
           <DialogTitle>Respuestas del formulario: {formTitle}</DialogTitle>
           <DialogDescription>
             {adminView 
-              ? "Todas las respuestas recibidas para este formulario, incluyendo valores numéricos." 
-              : "Estas son las respuestas que enviaste para este formulario, incluyendo valores numéricos."}
+              ? "Todas las respuestas recibidas para este formulario, incluyendo puntuaciones y retroalimentación." 
+              : "Estas son las respuestas que enviaste para este formulario, incluyendo tu puntuación."}
           </DialogDescription>
         </DialogHeader>
         
@@ -394,11 +447,17 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                     {showAllResponses ? (
                       // Display aggregated responses
                       Object.entries(getAggregatedData()).map(([question, answersList]) => (
-                        <TableRow key={question} className={isNumericValue(question) ? "bg-blue-50" : ""}>
+                        <TableRow key={question} className={
+                          isNumericValue(question) ? "bg-blue-50" : 
+                          isScoreField(question) ? "bg-yellow-50" : ""
+                        }>
                           <TableCell className="font-medium align-top">
-                            {question}
+                            {isScoreField(question) ? getScoreFieldDisplayName(question) : question}
                             {isNumericValue(question) && (
                               <span className="block text-xs text-blue-600 mt-1">Valor numérico</span>
+                            )}
+                            {isScoreField(question) && (
+                              <span className="block text-xs text-yellow-600 mt-1">Campo de puntuación</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -408,6 +467,8 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                                   <div className="text-sm">
                                     {isFileUrl(item.answer) ? (
                                       renderFilePreview(item.answer, question)
+                                    ) : isScoreField(question) ? (
+                                      renderScoreField(question, item.answer)
                                     ) : (
                                       <span className={isNumericValue(question) ? "font-semibold text-blue-700" : ""}>
                                         {typeof item.answer === 'object' ? JSON.stringify(item.answer) : String(item.answer)}
@@ -426,16 +487,24 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                     ) : (
                       // Display individual response
                       Object.entries(responseData).map(([question, answer]) => (
-                        <TableRow key={question} className={isNumericValue(question) ? "bg-blue-50" : ""}>
+                        <TableRow key={question} className={
+                          isNumericValue(question) ? "bg-blue-50" : 
+                          isScoreField(question) ? "bg-yellow-50" : ""
+                        }>
                           <TableCell className="font-medium">
-                            {question}
+                            {isScoreField(question) ? getScoreFieldDisplayName(question) : question}
                             {isNumericValue(question) && (
                               <span className="block text-xs text-blue-600 mt-1">Valor numérico</span>
+                            )}
+                            {isScoreField(question) && (
+                              <span className="block text-xs text-yellow-600 mt-1">Campo de puntuación</span>
                             )}
                           </TableCell>
                           <TableCell>
                             {isFileUrl(answer) ? (
                               renderFilePreview(answer, question)
+                            ) : isScoreField(question) ? (
+                              renderScoreField(question, answer)
                             ) : (
                               <span className={isNumericValue(question) ? "font-semibold text-blue-700" : ""}>
                                 {typeof answer === 'object' ? JSON.stringify(answer) : String(answer)}
