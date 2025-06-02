@@ -18,7 +18,7 @@ export function useFormResponses(form: FormType | null) {
   const location = useLocation();
   const isEditMode = location.state?.editMode || new URLSearchParams(location.search).get('edit') === 'true';
   const navigate = useNavigate();
-  const { fetchScoreRangesFromDB } = useFormScoring();
+  const { calculateTotalScore, getScoreFeedback, fetchScoreRangesFromDB } = useFormScoring();
   
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,8 +153,25 @@ export function useFormResponses(form: FormType | null) {
         });
       }
       
+      // Calculate score and get feedback message if scoring is enabled (MOVED FROM responseOperations.ts)
+      let scoreData = null;
+      
+      if (form.showTotalScore && form.fields.some(f => f.hasNumericValues)) {
+        const totalScore = calculateTotalScore(formResponses, form.fields);
+        const scoreFeedback = await getScoreFeedback(totalScore, id, form.fields);
+        
+        scoreData = {
+          totalScore,
+          feedback: scoreFeedback,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log("Score data calculated:", scoreData);
+      }
+      
       // Pass the form from location to the submit function to ensure we have the form data
-      const result = await submitFormResponse(id, formResponses, form);
+      // Now also pass the calculated scoreData
+      const result = await submitFormResponse(id, formResponses, form, scoreData);
       console.log("Form submission result:", result);
       
       // Check both local form configuration AND database ranges

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -186,7 +187,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Response operations
-  const submitFormResponse = async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
+  const submitFormResponse = async (formId: string, data: Record<string, any>, formFromLocation: any = null, scoreData: any = null): Promise<FormResponse> => {
     const operation = submitFormResponseOperation(
       getForm,
       setResponses,
@@ -196,7 +197,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       MYSQL_API_ENDPOINT
     );
     
-    return operation(formId, data, formFromLocation);
+    return operation(formId, data, formFromLocation, scoreData);
   };
 
   const getFormResponses = getFormResponsesOperation(responses);

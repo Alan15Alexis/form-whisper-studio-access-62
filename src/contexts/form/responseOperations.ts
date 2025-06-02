@@ -1,7 +1,5 @@
-
 import { Form, FormResponse } from '@/types/form';
 import { processFormData, saveFormResponseToDatabase, formatResponsesWithLabels } from '@/utils/formResponseUtils';
-import { useFormScoring } from '@/hooks/form-builder/useFormScoring';
 
 // Submit form response operation
 export const submitFormResponseOperation = (
@@ -10,7 +8,12 @@ export const submitFormResponseOperation = (
   currentUser: { email: string } | null,
   apiEndpoint: string
 ) => {
-  return async (formId: string, data: Record<string, any>, formFromLocation: any = null): Promise<FormResponse> => {
+  return async (
+    formId: string, 
+    data: Record<string, any>, 
+    formFromLocation: any = null,
+    scoreData: any = null
+  ): Promise<FormResponse> => {
     try {
       // Get the form using the provided formId
       const form = formFromLocation || getForm(formId);
@@ -25,26 +28,10 @@ export const submitFormResponseOperation = (
       console.log("- Form ID:", formId);
       console.log("- User:", userEmail);
       console.log("- Data length:", Object.keys(data).length);
+      console.log("- Score data:", scoreData);
 
       // Process form data (handle file uploads, etc.)
       const processedData = await processFormData(form, data, userEmail, formId);
-      
-      // Calculate score and get feedback message if scoring is enabled
-      const { calculateTotalScore, getScoreFeedback } = useFormScoring();
-      let scoreData = null;
-      
-      if (form.showTotalScore && form.fields.some(f => f.hasNumericValues)) {
-        const totalScore = calculateTotalScore(processedData, form.fields);
-        const scoreFeedback = await getScoreFeedback(totalScore, formId, form.fields);
-        
-        scoreData = {
-          totalScore,
-          feedback: scoreFeedback,
-          timestamp: new Date().toISOString()
-        };
-        
-        console.log("Score data calculated:", scoreData);
-      }
       
       // Format responses to use labels instead of IDs and include score feedback from DB
       const formattedResponses = await formatResponsesWithLabels(form.fields, processedData, formId);
