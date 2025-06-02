@@ -1,4 +1,3 @@
-
 import { FormField, ScoreRange } from "@/types/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -22,7 +21,7 @@ export function useFormScoring() {
         
         const { data: directMatch, error: directError } = await supabase
           .from('formulario_construccion')
-          .select('id, titulo, rangos_mensajes, configuracion, preguntas')
+          .select('id, titulo, rangos_mensajes, configuracion, preguntas, created_at')
           .eq('id', numericFormId)
           .single();
         
@@ -49,7 +48,7 @@ export function useFormScoring() {
       
       const { data: allForms, error: allFormsError } = await supabase
         .from('formulario_construccion')
-        .select('id, titulo, preguntas, rangos_mensajes, configuracion');
+        .select('id, titulo, preguntas, rangos_mensajes, configuracion, created_at');
       
       if (allFormsError) {
         console.error("useFormScoring - Error fetching forms:", allFormsError);
