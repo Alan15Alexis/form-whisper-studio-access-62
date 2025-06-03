@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -260,7 +259,7 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     );
   };
 
-  // Create aggregate data from all responses
+  // Create aggregate data from all responses with proper ordering
   const getAggregatedData = () => {
     if (!allResponses || allResponses.length === 0) return {};
     
@@ -282,6 +281,42 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     });
     
     return aggregated;
+  };
+
+  // Function to sort entries to show score fields first
+  const getSortedEntries = (data: ResponseData) => {
+    const entries = Object.entries(data);
+    
+    // Separate score fields from regular fields
+    const scoreFields = entries.filter(([key]) => isScoreField(key));
+    const regularFields = entries.filter(([key]) => !isScoreField(key));
+    
+    // Sort score fields in specific order: total score, feedback message, date
+    const orderedScoreFields = scoreFields.sort(([keyA], [keyB]) => {
+      const scoreOrder = ['_puntuacion_total', '_mensaje_puntuacion', '_fecha_puntuacion'];
+      return scoreOrder.indexOf(keyA) - scoreOrder.indexOf(keyB);
+    });
+    
+    // Return score fields first, then regular fields
+    return [...orderedScoreFields, ...regularFields];
+  };
+
+  // Function to sort aggregated entries to show score fields first
+  const getSortedAggregatedEntries = (aggregatedData: {[key: string]: any[]}) => {
+    const entries = Object.entries(aggregatedData);
+    
+    // Separate score fields from regular fields
+    const scoreFields = entries.filter(([key]) => isScoreField(key));
+    const regularFields = entries.filter(([key]) => !isScoreField(key));
+    
+    // Sort score fields in specific order: total score, feedback message, date
+    const orderedScoreFields = scoreFields.sort(([keyA], [keyB]) => {
+      const scoreOrder = ['_puntuacion_total', '_mensaje_puntuacion', '_fecha_puntuacion'];
+      return scoreOrder.indexOf(keyA) - scoreOrder.indexOf(keyB);
+    });
+    
+    // Return score fields first, then regular fields
+    return [...orderedScoreFields, ...regularFields];
   };
 
   // Function to render score fields with special styling
@@ -445,8 +480,8 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                   </TableHeader>
                   <TableBody>
                     {showAllResponses ? (
-                      // Display aggregated responses
-                      Object.entries(getAggregatedData()).map(([question, answersList]) => (
+                      // Display aggregated responses with score fields first
+                      getSortedAggregatedEntries(getAggregatedData()).map(([question, answersList]) => (
                         <TableRow key={question} className={
                           isNumericValue(question) ? "bg-blue-50" : 
                           isScoreField(question) ? "bg-yellow-50" : ""
@@ -485,8 +520,8 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                         </TableRow>
                       ))
                     ) : (
-                      // Display individual response
-                      Object.entries(responseData).map(([question, answer]) => (
+                      // Display individual response with score fields first
+                      getSortedEntries(responseData).map(([question, answer]) => (
                         <TableRow key={question} className={
                           isNumericValue(question) ? "bg-blue-50" : 
                           isScoreField(question) ? "bg-yellow-50" : ""

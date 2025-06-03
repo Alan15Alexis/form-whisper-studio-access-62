@@ -215,38 +215,6 @@ const FormView = () => {
                 </Card>
               </motion.div>
             </AnimatePresence>
-
-            <div className="flex justify-between items-center pt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Anterior
-              </Button>
-
-              {currentQuestionIndex === totalQuestions - 1 ? (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-8"
-                >
-                  {isSubmitting ? "Enviando..." : isEditMode ? "Actualizar respuestas" : "Enviar respuestas"}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  className="flex items-center gap-2"
-                >
-                  Siguiente
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
           </form>
         </div>
       </div>
