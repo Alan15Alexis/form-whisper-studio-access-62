@@ -12,105 +12,42 @@ export function useFormScoring() {
         return [];
       }
       
-      // Strategy 1: Try direct numeric ID match first
+      // Strategy 1: Try direct numeric ID match first (most reliable)
       const numericFormId = parseInt(formId);
       if (!isNaN(numericFormId)) {
         console.log("useFormScoring - Trying numeric ID match:", numericFormId);
         
         const { data: directMatch, error: directError } = await supabase
           .from('formulario_construccion')
-          .select('id, titulo, rangos_mensajes, configuracion, preguntas, created_at')
+          .select('id, titulo, rangos_mensajes, configuracion')
           .eq('id', numericFormId)
           .single();
         
         if (!directError && directMatch) {
           console.log("useFormScoring - Found form by direct ID match:", directMatch.titulo);
           
-          if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes)) {
+          // Only return ranges if they exist specifically for this form
+          if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes) && directMatch.rangos_mensajes.length > 0) {
             console.log("useFormScoring - Found score ranges in rangos_mensajes:", directMatch.rangos_mensajes);
             return directMatch.rangos_mensajes;
           }
           
-          if (directMatch.configuracion?.scoreRanges && Array.isArray(directMatch.configuracion.scoreRanges)) {
+          // Fallback to configuracion only if rangos_mensajes is empty
+          if (!directMatch.rangos_mensajes && directMatch.configuracion?.scoreRanges && Array.isArray(directMatch.configuracion.scoreRanges) && directMatch.configuracion.scoreRanges.length > 0) {
             console.log("useFormScoring - Found score ranges in configuracion:", directMatch.configuracion.scoreRanges);
             return directMatch.configuracion.scoreRanges;
           }
           
-          console.log("useFormScoring - Form found but no score ranges configured");
+          console.log("useFormScoring - Form found but no score ranges configured for this specific form");
+          return [];
+        } else {
+          console.log("useFormScoring - No form found with numeric ID:", numericFormId);
           return [];
         }
       }
       
-      // Strategy 2: Search all forms for UUID matches in preguntas field
-      console.log("useFormScoring - Searching all forms for UUID matches");
-      
-      const { data: allForms, error: allFormsError } = await supabase
-        .from('formulario_construccion')
-        .select('id, titulo, preguntas, rangos_mensajes, configuracion, created_at');
-      
-      if (allFormsError) {
-        console.error("useFormScoring - Error fetching forms:", allFormsError);
-        return [];
-      }
-
-      if (!allForms || allForms.length === 0) {
-        console.log("useFormScoring - No forms found in database");
-        return [];
-      }
-
-      console.log(`useFormScoring - Searching through ${allForms.length} forms for UUID: ${formId}`);
-      
-      // Search for the UUID in the preguntas field or any other field
-      for (const form of allForms) {
-        console.log(`useFormScoring - Checking form ID ${form.id}: "${form.titulo}"`);
-        
-        // Convert entire form to string for comprehensive search
-        const formString = JSON.stringify(form).toLowerCase();
-        const searchId = formId.toLowerCase();
-        
-        if (formString.includes(searchId)) {
-          console.log(`useFormScoring - Found UUID match in form ID ${form.id}: "${form.titulo}"`);
-          
-          // Check rangos_mensajes first
-          if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes)) {
-            console.log("useFormScoring - Found score ranges in rangos_mensajes:", form.rangos_mensajes);
-            return form.rangos_mensajes;
-          }
-          
-          // Fallback to configuracion
-          if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges)) {
-            console.log("useFormScoring - Found score ranges in configuracion:", form.configuracion.scoreRanges);
-            return form.configuracion.scoreRanges;
-          }
-          
-          console.log(`useFormScoring - Form "${form.titulo}" found but no score ranges configured`);
-          return [];
-        }
-      }
-
-      // Strategy 3: Search by form title if no UUID match found
-      console.log("useFormScoring - No UUID match found, searching by context");
-      
-      // If we're on an edit page, try to find the most recently created form
-      const sortedForms = allForms.sort((a, b) => 
-        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-      );
-      
-      for (const form of sortedForms.slice(0, 3)) { // Check the 3 most recent forms
-        console.log(`useFormScoring - Checking recent form ID ${form.id}: "${form.titulo}"`);
-        
-        if (form.rangos_mensajes && Array.isArray(form.rangos_mensajes) && form.rangos_mensajes.length > 0) {
-          console.log(`useFormScoring - Using score ranges from recent form "${form.titulo}":`, form.rangos_mensajes);
-          return form.rangos_mensajes;
-        }
-        
-        if (form.configuracion?.scoreRanges && Array.isArray(form.configuracion.scoreRanges) && form.configuracion.scoreRanges.length > 0) {
-          console.log(`useFormScoring - Using score ranges from recent form "${form.titulo}":`, form.configuracion.scoreRanges);
-          return form.configuracion.scoreRanges;
-        }
-      }
-
-      console.log("useFormScoring - No score ranges found in any form");
+      // For UUID formIds, don't search through other forms - this prevents showing wrong ranges
+      console.log("useFormScoring - UUID formId provided, not searching other forms to avoid showing wrong ranges");
       return [];
       
     } catch (error) {

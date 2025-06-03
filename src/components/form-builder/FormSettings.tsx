@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +14,7 @@ import { Trash, Plus, AlertCircle, Save, Database, RefreshCw } from "lucide-reac
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
+
 const FORM_COLORS = [{
   name: "Azul",
   value: "#3b82f6"
@@ -35,6 +37,7 @@ const FORM_COLORS = [{
   name: "Turquesa",
   value: "#06b6d4"
 }];
+
 interface FormSettingsProps {
   isPrivate: boolean;
   onPrivateChange: (isPrivate: boolean) => void;
@@ -53,6 +56,7 @@ interface FormSettingsProps {
   onSaveScoreRanges?: (ranges: ScoreRange[]) => void;
   scoreRanges: ScoreRange[];
 }
+
 const FormSettings = ({
   isPrivate,
   onPrivateChange,
@@ -71,13 +75,10 @@ const FormSettings = ({
   onSaveScoreRanges = () => {},
   scoreRanges
 }: FormSettingsProps) => {
-  const {
-    currentUser
-  } = useAuth();
-  const {
-    fetchScoreRangesFromDB
-  } = useFormScoring();
+  const { currentUser } = useAuth();
+  const { fetchScoreRangesFromDB } = useFormScoring();
   const isAdmin = currentUser?.role === "admin";
+
   const defaultHttpConfig: HttpConfig = {
     enabled: false,
     url: "",
@@ -87,6 +88,7 @@ const FormSettings = ({
   "id_del_elemento": "respuesta"
 }`
   };
+
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
 
   // Local state for score ranges management - initialize directly from props
@@ -94,6 +96,7 @@ const FormSettings = ({
   // State for database score ranges (independent of scoring toggle)
   const [dbScoreRanges, setDbScoreRanges] = useState<ScoreRange[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState<boolean>(false);
+
   console.log("FormSettings - Component Rendered with standardized props:", {
     showTotalScore,
     scoreRanges,
@@ -107,24 +110,62 @@ const FormSettings = ({
     setLocalScoreRanges([...scoreRanges]);
   }, [scoreRanges]);
 
-  // Fetch score ranges from database on component mount with better error handling
+  // Enhanced fetch function with stricter form-specific filtering
   const loadDbScoreRanges = async () => {
     if (!formId) {
       console.log("FormSettings - No formId provided, skipping DB load");
+      setDbScoreRanges([]);
       return;
     }
+
     console.log("FormSettings - Loading score ranges from DB for formId:", formId);
     setIsLoadingDb(true);
+    
     try {
-      const ranges = await fetchScoreRangesFromDB(formId);
-      console.log("FormSettings - Loaded score ranges from DB:", ranges);
-      setDbScoreRanges(ranges);
-      if (ranges.length > 0) {
+      // First try direct numeric ID match
+      const numericFormId = parseInt(formId);
+      let dbRanges: ScoreRange[] = [];
+      
+      if (!isNaN(numericFormId)) {
+        console.log("FormSettings - Trying direct numeric ID match:", numericFormId);
+        
+        const { data: directMatch, error: directError } = await supabase
+          .from('formulario_construccion')
+          .select('id, titulo, rangos_mensajes, configuracion')
+          .eq('id', numericFormId)
+          .single();
+        
+        if (!directError && directMatch) {
+          console.log("FormSettings - Found form by direct ID match:", directMatch.titulo);
+          
+          // Only use ranges if they exist in rangos_mensajes for this specific form
+          if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes) && directMatch.rangos_mensajes.length > 0) {
+            dbRanges = directMatch.rangos_mensajes;
+            console.log("FormSettings - Found score ranges in rangos_mensajes:", dbRanges);
+          } else {
+            console.log("FormSettings - No score ranges found for this specific form");
+          }
+        } else {
+          console.log("FormSettings - No form found with numeric ID:", numericFormId);
+        }
+      }
+
+      // If no direct match found and it's a UUID, don't show ranges from other forms
+      if (dbRanges.length === 0 && isNaN(numericFormId)) {
+        console.log("FormSettings - UUID formId with no direct match, not showing ranges from other forms");
+      }
+
+      setDbScoreRanges(dbRanges);
+      
+      if (dbRanges.length > 0) {
         toast({
           title: "Rangos cargados",
-          description: `Se encontraron ${ranges.length} rango${ranges.length !== 1 ? 's' : ''} en la base de datos`
+          description: `Se encontraron ${dbRanges.length} rango${dbRanges.length !== 1 ? 's' : ''} específicos para este formulario`
         });
+      } else {
+        console.log("FormSettings - No score ranges found for this specific form");
       }
+      
     } catch (error) {
       console.error("FormSettings - Error loading score ranges from DB:", error);
       setDbScoreRanges([]);
@@ -137,6 +178,7 @@ const FormSettings = ({
       setIsLoadingDb(false);
     }
   };
+
   useEffect(() => {
     loadDbScoreRanges();
   }, [formId]);
@@ -171,6 +213,7 @@ const FormSettings = ({
       description: `Se añadió un nuevo rango de puntuación`
     });
   };
+
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
     console.log(`FormSettings - Updating score range at index ${index}, field ${String(field)} to value ${value}`);
     if (!localScoreRanges[index]) {
@@ -188,6 +231,7 @@ const FormSettings = ({
     // Immediately save to parent
     onSaveScoreRanges(updatedRanges);
   };
+
   const removeScoreRange = (index: number) => {
     console.log(`FormSettings - Removing score range at index ${index}`);
     const updatedRanges = localScoreRanges.filter((_, i) => i !== index);
@@ -201,6 +245,7 @@ const FormSettings = ({
       description: "El rango de puntuación ha sido eliminado"
     });
   };
+
   const handleToggleScoringFeature = async (enabled: boolean) => {
     console.log("FormSettings - handleToggleScoringFeature called with:", enabled);
 
@@ -215,6 +260,7 @@ const FormSettings = ({
       setTimeout(() => addScoreRange(), 100);
     }
   };
+
   console.log("FormSettings - Final render state:", {
     showTotalScore,
     localScoreRangesCount: localScoreRanges.length,
@@ -222,13 +268,20 @@ const FormSettings = ({
     isLoadingDb,
     hasFieldsWithNumericValues
   });
-  return <div className="space-y-8">
+
+  return (
+    <div className="space-y-8">
       {/* General Settings Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Configuración General</h3>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
-            <Switch id="private-form" checked={isPrivate} onCheckedChange={onPrivateChange} className="data-[state=checked]:bg-[#686df3]" />
+            <Switch 
+              id="private-form" 
+              checked={isPrivate} 
+              onCheckedChange={onPrivateChange} 
+              className="data-[state=checked]:bg-[#686df3]" 
+            />
             <div>
               <Label htmlFor="private-form" className="text-lg font-medium">Formulario Privado</Label>
               <p className="text-sm text-gray-500">
@@ -243,22 +296,26 @@ const FormSettings = ({
               <SelectTrigger className="w-44">
                 <SelectValue>
                   <span className="inline-flex items-center">
-                    <span className="w-5 h-5 rounded-full mr-2" style={{
-                    background: formColor || FORM_COLORS[0].value
-                  }} />
+                    <span 
+                      className="w-5 h-5 rounded-full mr-2" 
+                      style={{ background: formColor || FORM_COLORS[0].value }} 
+                    />
                     {FORM_COLORS.find(c => c.value === formColor)?.name || FORM_COLORS[0].name}
                   </span>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {FORM_COLORS.map(color => <SelectItem key={color.value} value={color.value}>
+                {FORM_COLORS.map(color => (
+                  <SelectItem key={color.value} value={color.value}>
                     <span className="inline-flex items-center">
-                      <span className="w-5 h-5 rounded-full mr-2" style={{
-                    background: color.value
-                  }} />
+                      <span 
+                        className="w-5 h-5 rounded-full mr-2" 
+                        style={{ background: color.value }} 
+                      />
                       {color.name}
                     </span>
-                  </SelectItem>)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -270,16 +327,25 @@ const FormSettings = ({
         <h3 className="text-lg font-medium mb-4">Puntuación y Resultados</h3>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
-            <Switch id="show-total-score" checked={!!showTotalScore} onCheckedChange={handleToggleScoringFeature} disabled={!hasFieldsWithNumericValues} className="data-[state=checked]:bg-[#686df3]" />
+            <Switch 
+              id="show-total-score" 
+              checked={!!showTotalScore} 
+              onCheckedChange={handleToggleScoringFeature} 
+              disabled={!hasFieldsWithNumericValues} 
+              className="data-[state=checked]:bg-[#686df3]" 
+            />
             <div>
               <Label htmlFor="show-total-score" className="text-lg font-medium">Agregar rangos y mensajes</Label>
               <p className="text-sm text-gray-500">
-                {hasFieldsWithNumericValues ? "Muestra la puntuación total al finalizar el formulario" : "Para activar, configura valores numéricos en al menos un campo"}
+                {hasFieldsWithNumericValues ? 
+                  "Muestra la puntuación total al finalizar el formulario" : 
+                  "Para activar, configura valores numéricos en al menos un campo"}
               </p>
             </div>
           </div>
 
-          {!hasFieldsWithNumericValues && <div className="p-4 bg-primary/5 rounded-md text-sm">
+          {!hasFieldsWithNumericValues && (
+            <div className="p-4 bg-primary/5 rounded-md text-sm">
               <p className="font-medium">Para habilitar la puntuación total:</p>
               <ol className="list-decimal ml-5 mt-2 space-y-1">
                 <li>Ve a la pestaña "Campos"</li>
@@ -287,147 +353,192 @@ const FormSettings = ({
                 <li>Activa "Habilitar valores numéricos"</li>
                 <li>Asigna valores numéricos a las opciones</li>
               </ol>
-            </div>}
+            </div>
+          )}
           
           {/* Score Ranges Configuration */}
-          {showTotalScore && <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
+          {showTotalScore && (
+            <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addScoreRange} className="flex items-center gap-1">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addScoreRange} 
+                  className="flex items-center gap-1"
+                >
                   <Plus className="h-4 w-4" /> Añadir rango
                 </Button>
               </div>
               
-              {localScoreRanges.length === 0 && <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+              {localScoreRanges.length === 0 && (
+                <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     No hay rangos definidos. Los rangos permiten mostrar mensajes personalizados según la puntuación obtenida.
                   </AlertDescription>
-                </Alert>}
+                </Alert>
+              )}
               
               <div className="space-y-3">
-                {localScoreRanges.map((range, index) => <div key={index} className="p-3 border rounded-md bg-background">
+                {localScoreRanges.map((range, index) => (
+                  <div key={index} className="p-3 border rounded-md bg-background">
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
                         <Label htmlFor={`min-${index}`}>Mínimo</Label>
-                        <Input id={`min-${index}`} type="number" value={range.min} onChange={e => updateScoreRange(index, 'min', Number(e.target.value))} className="mt-1" />
+                        <Input 
+                          id={`min-${index}`} 
+                          type="number" 
+                          value={range.min} 
+                          onChange={(e) => updateScoreRange(index, 'min', Number(e.target.value))} 
+                          className="mt-1" 
+                        />
                       </div>
                       <div>
                         <Label htmlFor={`max-${index}`}>Máximo</Label>
-                        <Input id={`max-${index}`} type="number" value={range.max} onChange={e => updateScoreRange(index, 'max', Number(e.target.value))} className="mt-1" />
+                        <Input 
+                          id={`max-${index}`} 
+                          type="number" 
+                          value={range.max} 
+                          onChange={(e) => updateScoreRange(index, 'max', Number(e.target.value))} 
+                          className="mt-1" 
+                        />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor={`message-${index}`}>Mensaje</Label>
-                      <Input id={`message-${index}`} value={range.message} onChange={e => updateScoreRange(index, 'message', e.target.value)} className="mt-1" placeholder="Mensaje que se mostrará para este rango de puntuación" />
+                      <Input 
+                        id={`message-${index}`} 
+                        value={range.message} 
+                        onChange={(e) => updateScoreRange(index, 'message', e.target.value)} 
+                        className="mt-1" 
+                        placeholder="Mensaje que se mostrará para este rango de puntuación" 
+                      />
                     </div>
-                    <Button type="button" variant="ghost" size="sm" className="mt-2 text-red-500 hover:text-red-700" onClick={() => removeScoreRange(index)}>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 text-red-500 hover:text-red-700" 
+                      onClick={() => removeScoreRange(index)}
+                    >
                       <Trash className="h-4 w-4 mr-1" /> Eliminar
                     </Button>
-                  </div>)}
+                  </div>
+                ))}
 
-                {localScoreRanges.length === 0 && <div className="text-center p-4">
+                {localScoreRanges.length === 0 && (
+                  <div className="text-center p-4">
                     <p className="text-sm text-muted-foreground italic">
                       No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
                     </p>
-                    <Button type="button" variant="outline" size="sm" onClick={addScoreRange} className="mt-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addScoreRange} 
+                      className="mt-2"
+                    >
                       <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
                     </Button>
-                  </div>}
+                  </div>
+                )}
               </div>
-            </div>}
+            </div>
+          )}
         </div>
       </Card>
 
-      {/* Database Score Ranges Card - Enhanced display */}
-      <Card className="p-6 shadow-sm border border-blue-100 bg-blue-50/20">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <Database className="h-5 w-5 text-blue-600" />
-            <h3 className="text-lg font-medium text-blue-900">Rangos de puntuación</h3>
+      {/* Database Score Ranges Card - Only show if there are actual ranges for this form */}
+      {dbScoreRanges.length > 0 && (
+        <Card className="p-6 shadow-sm border border-blue-100 bg-blue-50/20">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Database className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-medium text-blue-900">Rangos de puntuación configurados</h3>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadDbScoreRanges} 
+              disabled={isLoadingDb || !formId} 
+              className="flex items-center space-x-1"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingDb ? 'animate-spin' : ''}`} />
+              <span>Actualizar</span>
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={loadDbScoreRanges} disabled={isLoadingDb || !formId} className="flex items-center space-x-1">
-            <RefreshCw className={`h-4 w-4 ${isLoadingDb ? 'animate-spin' : ''}`} />
-            <span>Actualizar</span>
-          </Button>
-        </div>
-        
-        <div className="space-y-4">
-          <p className="text-sm text-blue-700"></p>
           
-          {isLoadingDb && <div className="p-4 bg-blue-100 border border-blue-200 rounded-lg">
-              <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <p className="text-sm text-blue-600">
-                  Cargando rangos desde la base de datos...
-                </p>
+          <div className="space-y-4">
+            {isLoadingDb && (
+              <div className="p-4 bg-blue-100 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <p className="text-sm text-blue-600">
+                    Cargando rangos desde la base de datos...
+                  </p>
+                </div>
               </div>
-            </div>}
+            )}
 
-          {!isLoadingDb && dbScoreRanges.length === 0 && <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <div className="text-center">
-                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 font-medium">
-                  No se encontraron rangos de puntuación
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Este formulario no tiene rangos configurados en la base de datos para el ID: {formId}
-                </p>
-                <Button variant="outline" size="sm" onClick={loadDbScoreRanges} className="mt-3">
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Reintentar carga
-                </Button>
-              </div>
-            </div>}
-
-          {!isLoadingDb && dbScoreRanges.length > 0 && <div className="space-y-3">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-blue-800">
-                  ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} configurado{dbScoreRanges.length !== 1 ? 's' : ''}
-                </p>
-                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                  Activo
-                </span>
-              </div>
-              
-              {dbScoreRanges.map((range, index) => <div key={index} className="p-4 bg-white border border-blue-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                          {range.min} - {range.max} puntos
-                        </span>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          Rango #{index + 1}
-                        </span>
-                      </div>
-                      <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-3 rounded-md border-l-4 border-blue-400">
-                        <p className="text-sm text-gray-700 font-medium mb-1">
-                          📄 Mensaje configurado:
-                        </p>
-                        <p className="text-sm text-gray-800 leading-relaxed italic">
-                          "{range.message}"
-                        </p>
+            {!isLoadingDb && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-blue-800">
+                    ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} configurado{dbScoreRanges.length !== 1 ? 's' : ''}
+                  </p>
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                    Activo
+                  </span>
+                </div>
+                
+                {dbScoreRanges.map((range, index) => (
+                  <div key={index} className="p-4 bg-white border border-blue-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                            {range.min} - {range.max} puntos
+                          </span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            Rango #{index + 1}
+                          </span>
+                        </div>
+                        <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-3 rounded-md border-l-4 border-blue-400">
+                          <p className="text-sm text-gray-700 font-medium mb-1">
+                            📄 Mensaje configurado:
+                          </p>
+                          <p className="text-sm text-gray-800 leading-relaxed italic">
+                            "{range.message}"
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>)}
+                ))}
 
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">
-                  🎯 <strong>Estos rangos están activos:</strong> Los usuarios verán los mensajes correspondientes según su puntuación al completar el formulario.
-                </p>
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-700">
+                    🎯 <strong>Estos rangos están activos:</strong> Los usuarios verán los mensajes correspondientes según su puntuación al completar el formulario.
+                  </p>
+                </div>
               </div>
-            </div>}
-        </div>
-      </Card>
+            )}
+          </div>
+        </Card>
+      )}
       
       {/* Access to Responses Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Acceso a Respuestas</h3>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
-            <Switch id="allow-view-own-responses" checked={!!allowViewOwnResponses} onCheckedChange={onAllowViewOwnResponsesChange} />
+            <Switch 
+              id="allow-view-own-responses" 
+              checked={!!allowViewOwnResponses} 
+              onCheckedChange={onAllowViewOwnResponsesChange} 
+            />
             <div>
               <Label htmlFor="allow-view-own-responses" className="text-lg font-medium">
                 Permitir ver respuestas propias
@@ -439,7 +550,11 @@ const FormSettings = ({
           </div>
 
           <div className="flex items-center space-x-4">
-            <Switch id="allow-edit-own-responses" checked={!!allowEditOwnResponses} onCheckedChange={onAllowEditOwnResponsesChange} />
+            <Switch 
+              id="allow-edit-own-responses" 
+              checked={!!allowEditOwnResponses} 
+              onCheckedChange={onAllowEditOwnResponsesChange} 
+            />
             <div>
               <Label htmlFor="allow-edit-own-responses" className="text-lg font-medium">
                 Permitir editar respuestas propias
@@ -452,7 +567,14 @@ const FormSettings = ({
         </div>
       </Card>
       
-      <HttpConfigSettings config={httpConfig || defaultHttpConfig} onConfigChange={config => onHttpConfigChange && onHttpConfigChange(config)} isAdmin={isAdmin} formFields={formFields} />
-    </div>;
+      <HttpConfigSettings 
+        config={httpConfig || defaultHttpConfig} 
+        onConfigChange={(config) => onHttpConfigChange && onHttpConfigChange(config)} 
+        isAdmin={isAdmin} 
+        formFields={formFields} 
+      />
+    </div>
+  );
 };
+
 export default FormSettings;

@@ -17,6 +17,27 @@ export const uploadFileToSupabase = async (
     const fileName = `${userEmail}/${formId}/${fieldId}/${timestamp}_${randomString}.${fileExtension}`;
 
     console.log(`Uploading file to bucket: ${BUCKET_NAME}, path: ${fileName}`);
+    console.log(`File details: name=${file.name}, size=${file.size}, type=${file.type}`);
+    
+    // First check if bucket exists, if not create it
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+    } else {
+      const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
+      console.log(`Bucket ${BUCKET_NAME} exists:`, bucketExists);
+      
+      if (!bucketExists) {
+        console.log(`Creating bucket: ${BUCKET_NAME}`);
+        const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+        if (createError) {
+          console.error('Error creating bucket:', createError);
+        } else {
+          console.log(`Bucket ${BUCKET_NAME} created successfully`);
+        }
+      }
+    }
     
     // Upload the file to Supabase Storage
     const { data, error } = await supabase.storage
@@ -30,6 +51,8 @@ export const uploadFileToSupabase = async (
       console.error('Error uploading file to Supabase:', error);
       throw new Error(`Error uploading file: ${error.message}`);
     }
+
+    console.log('File upload response data:', data);
 
     // Get the public URL for the uploaded file
     const { data: urlData } = supabase.storage
@@ -61,6 +84,27 @@ export const uploadDrawingToSupabase = async (
     const fileName = `${userEmail}/${formId}/${fieldId}/drawing_${timestamp}_${randomString}.png`;
     
     console.log(`Uploading drawing to bucket: ${BUCKET_NAME}, path: ${fileName}`);
+    console.log(`Drawing blob size: ${blob.size}, type: ${blob.type}`);
+    
+    // First check if bucket exists, if not create it
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+    } else {
+      const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
+      console.log(`Bucket ${BUCKET_NAME} exists:`, bucketExists);
+      
+      if (!bucketExists) {
+        console.log(`Creating bucket: ${BUCKET_NAME}`);
+        const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+        if (createError) {
+          console.error('Error creating bucket:', createError);
+        } else {
+          console.log(`Bucket ${BUCKET_NAME} created successfully`);
+        }
+      }
+    }
     
     // Upload the drawing to Supabase Storage
     const { data, error } = await supabase.storage
@@ -75,6 +119,8 @@ export const uploadDrawingToSupabase = async (
       console.error('Error uploading drawing to Supabase:', error);
       throw new Error(`Error uploading drawing: ${error.message}`);
     }
+
+    console.log('Drawing upload response data:', data);
 
     // Get the public URL for the uploaded drawing
     const { data: urlData } = supabase.storage
