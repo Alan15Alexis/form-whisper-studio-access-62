@@ -353,9 +353,7 @@ const FormSettings = ({
         </div>
         
         <div className="space-y-4">
-          <p className="text-sm text-blue-700">
-            Estos rangos están configurados directamente en la base de datos y se aplicarán automáticamente al formulario.
-          </p>
+          <p className="text-sm text-blue-700"></p>
           
           {isLoadingDb && <div className="p-4 bg-blue-100 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-center space-x-2">
