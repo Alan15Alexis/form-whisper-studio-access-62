@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Filter, Download, FileSpreadsheet, ExternalLink, FileIcon, Award } from "lucide-react";
+import { Loader2, Filter, Download, FileSpreadsheet, ExternalLink, FileIcon, Award, Image } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { getFileInfoFromUrl, isFormResponseFile } from "@/utils/fileUploadUtils";
 
 interface ViewResponseDialogProps {
   formId: string;
@@ -126,12 +127,12 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     setShowAllResponses(!showAllResponses);
   };
 
-  // Helper function to check if value is a file URL
+  // Helper function to check if value is a file URL (enhanced)
   const isFileUrl = (value: any): boolean => {
     return typeof value === 'string' && 
           (value.startsWith('http://') || 
            value.startsWith('https://') || 
-           value.includes('respuestas-formulario'));
+           isFormResponseFile(value));
   };
   
   // Helper function to check if this is a numeric value field
@@ -142,24 +143,6 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
   // Helper function to check if this is a score-related field
   const isScoreField = (key: string): boolean => {
     return key === '_puntuacion_total' || key === '_mensaje_puntuacion' || key === '_fecha_puntuacion';
-  };
-  
-  // Helper function to get the file name from URL
-  const getFileNameFromUrl = (url: string): string => {
-    try {
-      const urlParts = url.split('/');
-      const filename = urlParts[urlParts.length - 1];
-      // Decode and clean up the filename (remove any query parameters)
-      return decodeURIComponent(filename.split('?')[0]) || 'Archivo';
-    } catch (e) {
-      return 'Archivo';
-    }
-  };
-  
-  // Helper function to check if a URL is an image
-  const isImageUrl = (url: string): boolean => {
-    // Check if URL ends with typical image extensions
-    return /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(url.toLowerCase());
   };
 
   // Download responses as CSV
@@ -216,47 +199,110 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     document.body.removeChild(link);
   };
 
-  // Function to render file preview
+  // Enhanced function to render file preview with better handling for respuestas_formularios bucket
   const renderFilePreview = (fileUrl: string, fieldLabel: string) => {
-    // Check if it's an image by extension
-    const isImage = isImageUrl(fileUrl);
+    const fileInfo = getFileInfoFromUrl(fileUrl);
     
     return (
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border">
-        {isImage ? (
-          <img 
-            src={fileUrl} 
-            alt={fieldLabel || "Imagen"} 
-            className="h-16 w-16 object-cover rounded"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement?.prepend(document.createElement('div'));
-              const div = e.currentTarget.parentElement?.firstChild as HTMLDivElement;
-              if (div) {
-                div.className = "h-16 w-16 bg-gray-200 rounded flex items-center justify-center";
-                div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
-              }
-            }}
-          />
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition-colors">
+        {fileInfo.isImage ? (
+          <div className="relative">
+            <img 
+              src={fileUrl} 
+              alt={fieldLabel || "Imagen"} 
+              className="h-16 w-16 object-cover rounded border"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder');
+                if (placeholder) {
+                  (placeholder as HTMLElement).style.display = 'flex';
+                }
+              }}
+            />
+            <div className="image-placeholder hidden h-16 w-16 bg-gray-200 rounded border items-center justify-center">
+              <Image className="h-6 w-6 text-gray-400" />
+            </div>
+          </div>
         ) : (
-          <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
-            <FileIcon className="h-8 w-8 text-gray-500" />
+          <div className="h-16 w-16 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
+            <FileIcon className="h-8 w-8 text-blue-600" />
           </div>
         )}
-        <div className="flex-1">
-          <p className="text-sm font-medium">{fieldLabel}</p>
-          <p className="text-xs text-gray-500">{getFileNameFromUrl(fileUrl)}</p>
+        
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">{fieldLabel}</p>
+          <p className="text-xs text-gray-600 truncate">{fileInfo.fileName}</p>
+          {fileInfo.isFromBucket && (
+            <Badge variant="outline" className="text-xs mt-1 bg-green-50 text-green-700 border-green-200">
+              📁 Almacenado en respuestas_formularios
+            </Badge>
+          )}
         </div>
-        <a 
-          href={fileUrl}
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline text-sm flex items-center"
-        >
-          <ExternalLink className="h-4 w-4 mr-1" /> Ver
-        </a>
+        
+        <div className="flex flex-col gap-1">
+          <a 
+            href={fileUrl}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" /> Ver
+          </a>
+          {fileInfo.isImage && (
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <Image className="h-3 w-3" /> Imagen
+            </span>
+          )}
+        </div>
       </div>
     );
+  };
+
+  // Function to render score fields with special styling
+  const renderScoreField = (key: string, value: any) => {
+    if (key === '_puntuacion_total') {
+      return (
+        <div className="flex items-center gap-2">
+          <Award className="h-5 w-5 text-yellow-500" />
+          <Badge variant="outline" className="text-lg font-bold px-3 py-1 bg-yellow-50 border-yellow-200">
+            {value} puntos
+          </Badge>
+        </div>
+      );
+    }
+    
+    if (key === '_mensaje_puntuacion') {
+      return (
+        <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
+          <p className="text-green-800 font-medium">{String(value)}</p>
+        </div>
+      );
+    }
+    
+    if (key === '_fecha_puntuacion') {
+      const date = new Date(String(value));
+      return (
+        <span className="text-sm text-gray-600">
+          {date.toLocaleString()}
+        </span>
+      );
+    }
+    
+    return String(value);
+  };
+
+  // Function to get display name for score fields
+  const getScoreFieldDisplayName = (key: string) => {
+    switch (key) {
+      case '_puntuacion_total':
+        return '🏆 Puntuación Total';
+      case '_mensaje_puntuacion':
+        return '💬 Mensaje de Retroalimentación';
+      case '_fecha_puntuacion':
+        return '📅 Fecha de Evaluación';
+      default:
+        return key;
+    }
   };
 
   // Create aggregate data from all responses with proper ordering
@@ -319,53 +365,6 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     return [...orderedScoreFields, ...regularFields];
   };
 
-  // Function to render score fields with special styling
-  const renderScoreField = (key: string, value: any) => {
-    if (key === '_puntuacion_total') {
-      return (
-        <div className="flex items-center gap-2">
-          <Award className="h-5 w-5 text-yellow-500" />
-          <Badge variant="outline" className="text-lg font-bold px-3 py-1 bg-yellow-50 border-yellow-200">
-            {value} puntos
-          </Badge>
-        </div>
-      );
-    }
-    
-    if (key === '_mensaje_puntuacion') {
-      return (
-        <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-          <p className="text-green-800 font-medium">{String(value)}</p>
-        </div>
-      );
-    }
-    
-    if (key === '_fecha_puntuacion') {
-      const date = new Date(String(value));
-      return (
-        <span className="text-sm text-gray-600">
-          {date.toLocaleString()}
-        </span>
-      );
-    }
-    
-    return String(value);
-  };
-
-  // Function to get display name for score fields
-  const getScoreFieldDisplayName = (key: string) => {
-    switch (key) {
-      case '_puntuacion_total':
-        return '🏆 Puntuación Total';
-      case '_mensaje_puntuacion':
-        return '💬 Mensaje de Retroalimentación';
-      case '_fecha_puntuacion':
-        return '📅 Fecha de Evaluación';
-      default:
-        return key;
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-4xl">
@@ -373,8 +372,8 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
           <DialogTitle>Respuestas del formulario: {formTitle}</DialogTitle>
           <DialogDescription>
             {adminView 
-              ? "Todas las respuestas recibidas para este formulario, incluyendo puntuaciones y retroalimentación." 
-              : "Estas son las respuestas que enviaste para este formulario, incluyendo tu puntuación."}
+              ? "Todas las respuestas recibidas para este formulario, incluyendo archivos almacenados en respuestas_formularios." 
+              : "Estas son las respuestas que enviaste para este formulario, incluyendo tus archivos subidos."}
           </DialogDescription>
         </DialogHeader>
         

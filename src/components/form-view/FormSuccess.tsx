@@ -3,15 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/types/form";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 interface FormSuccessProps {
   formValues: Record<string, any>;
   fields: FormField[];
   showTotalScore?: boolean;
+  scoreRanges?: any[];
 }
 
-const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) => {
+const FormSuccess = ({ formValues, fields, showTotalScore, scoreRanges = [] }: FormSuccessProps) => {
   const navigate = useNavigate();
+
+  // Check if scoring is enabled but no ranges are configured
+  const hasFieldsWithNumericValues = fields.some(field => field.hasNumericValues);
+  const scoringEnabledButNoRanges = showTotalScore && hasFieldsWithNumericValues && scoreRanges.length === 0;
 
   return (
     <div className="container max-w-2xl mx-auto py-8">
@@ -24,6 +31,17 @@ const FormSuccess = ({ formValues, fields, showTotalScore }: FormSuccessProps) =
         </CardHeader>
         
         <CardContent className="space-y-6">
+          {scoringEnabledButNoRanges && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <strong>Información sobre puntuación:</strong> Este formulario tiene campos con valores numéricos, 
+                pero aún no se han configurado rangos y mensajes de retroalimentación específicos para este formulario. 
+                Los rangos de puntuación dependen de cada formulario y deben ser configurados por el administrador.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="text-center text-muted-foreground">
             <p>Gracias por tu tiempo y participación</p>
           </div>

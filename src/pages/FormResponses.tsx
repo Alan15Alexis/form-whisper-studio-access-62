@@ -5,7 +5,7 @@ import { useForm } from "@/contexts/form";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Copy, Download, Share, FileIcon, ExternalLink } from "lucide-react";
+import { ArrowLeft, Copy, Download, Share, FileIcon, ExternalLink, Image } from "lucide-react";
 import { format } from "date-fns";
 import { FormResponse, Form as FormType, FormField } from "@/types/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { getFileInfoFromUrl, isFormResponseFile } from "@/utils/fileUploadUtils";
 
 const FormResponses = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,70 +65,61 @@ const FormResponses = () => {
     });
   };
 
-  // Helper function to check if value is a file URL
+  // Helper function to check if value is a file URL (enhanced)
   const isFileUrl = (value: any): boolean => {
     return typeof value === 'string' && 
            (value.startsWith('http://') || 
             value.startsWith('https://') || 
-            value.includes('respuestas-formulario'));
-  };
-  
-  // Helper function to get the file name from URL
-  const getFileNameFromUrl = (url: string): string => {
-    try {
-      const urlParts = url.split('/');
-      const filename = urlParts[urlParts.length - 1];
-      // Decode and clean up the filename (remove any query parameters)
-      return decodeURIComponent(filename.split('?')[0]) || 'Archivo';
-    } catch (e) {
-      return 'Archivo';
-    }
-  };
-  
-  // Helper function to check if a URL is an image
-  const isImageUrl = (url: string): boolean => {
-    // Check if URL ends with typical image extensions
-    return /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(url.toLowerCase());
+            isFormResponseFile(value));
   };
 
-  // Function to render file preview
+  // Enhanced function to render file preview
   const renderFilePreview = (fileUrl: string, fieldLabel: string) => {
-    // Check if it's an image by extension
-    const isImage = isImageUrl(fileUrl);
+    const fileInfo = getFileInfoFromUrl(fileUrl);
     
     return (
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border">
-        {isImage ? (
-          <img 
-            src={fileUrl} 
-            alt={fieldLabel || "Imagen"} 
-            className="h-14 w-14 object-cover rounded"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement?.prepend(document.createElement('div'));
-              const div = e.currentTarget.parentElement?.firstChild as HTMLDivElement;
-              if (div) {
-                div.className = "h-14 w-14 bg-gray-200 rounded flex items-center justify-center";
-                div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
-              }
-            }}
-          />
+      <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 border">
+        {fileInfo.isImage ? (
+          <div className="relative">
+            <img 
+              src={fileUrl} 
+              alt={fieldLabel || "Imagen"} 
+              className="h-12 w-12 object-cover rounded"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder');
+                if (placeholder) {
+                  (placeholder as HTMLElement).style.display = 'flex';
+                }
+              }}
+            />
+            <div className="image-placeholder hidden h-12 w-12 bg-gray-200 rounded items-center justify-center">
+              <Image className="h-4 w-4 text-gray-400" />
+            </div>
+          </div>
         ) : (
-          <div className="h-14 w-14 bg-gray-200 rounded flex items-center justify-center">
-            <FileIcon className="h-6 w-6 text-gray-500" />
+          <div className="h-12 w-12 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
+            <FileIcon className="h-5 w-5 text-blue-600" />
           </div>
         )}
-        <div className="flex-1">
-          <p className="text-sm font-medium">{fieldLabel}</p>
-          <p className="text-xs text-gray-500">{getFileNameFromUrl(fileUrl)}</p>
+        
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">{fieldLabel}</p>
+          <p className="text-xs text-gray-500 truncate">{fileInfo.fileName}</p>
+          {fileInfo.isFromBucket && (
+            <Badge variant="outline" className="text-xs mt-1 bg-green-50 text-green-600 border-green-200">
+              📁 Bucket
+            </Badge>
+          )}
         </div>
+        
         <a 
           href={fileUrl}
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-blue-600 hover:underline text-sm flex items-center"
+          className="text-blue-600 hover:underline text-xs flex items-center"
         >
-          <ExternalLink className="h-4 w-4 mr-1" /> Ver
+          <ExternalLink className="h-3 w-3 mr-1" /> Ver
         </a>
       </div>
     );
@@ -373,49 +366,62 @@ const formatResponseValue = (value: any, field: FormField) => {
     return <span className="text-gray-400">No response</span>;
   }
   
-  // Check if the value is a file URL
+  // Check if the value is a file URL (enhanced check)
   if (typeof value === 'string' && 
      (value.startsWith('http://') || 
       value.startsWith('https://') || 
-      value.includes('respuestas-formulario'))) {
+      isFormResponseFile(value))) {
     
-    // Check if it's an image
-    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(value.toLowerCase());
+    const fileInfo = getFileInfoFromUrl(value);
     
-    if (isImage) {
+    if (fileInfo.isImage) {
       return (
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <img 
             src={value} 
             alt={field.label} 
-            className="h-10 w-10 object-cover rounded mr-2"
+            className="h-8 w-8 object-cover rounded border"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
-          <a 
-            href={value} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-blue-600 hover:underline text-sm"
-          >
-            Ver imagen
-          </a>
+          <div className="flex flex-col">
+            <a 
+              href={value} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-blue-600 hover:underline text-sm"
+            >
+              Ver imagen
+            </a>
+            {fileInfo.isFromBucket && (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200 w-fit">
+                📁 Bucket
+              </Badge>
+            )}
+          </div>
         </div>
       );
     } else {
       // For non-image files
       return (
-        <div className="flex items-center">
-          <FileIcon className="h-4 w-4 mr-2 text-gray-500" />
-          <a 
-            href={value} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-blue-600 hover:underline text-sm"
-          >
-            Ver archivo
-          </a>
+        <div className="flex items-center gap-2">
+          <FileIcon className="h-4 w-4 text-gray-500" />
+          <div className="flex flex-col">
+            <a 
+              href={value} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-blue-600 hover:underline text-sm"
+            >
+              Ver archivo
+            </a>
+            {fileInfo.isFromBucket && (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200 w-fit">
+                📁 Bucket
+              </Badge>
+            )}
+          </div>
         </div>
       );
     }
