@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -31,6 +30,41 @@ import { supabase } from '@/integrations/supabase/client';
 import { FormResponse } from '@/types/form';
 
 const FormContext = createContext<FormContextType | undefined>(undefined);
+
+// Helper function to safely save to localStorage with quota management
+const safeLocalStorageSet = (key: string, value: any) => {
+  try {
+    const stringValue = JSON.stringify(value);
+    localStorage.setItem(key, stringValue);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.warn(`LocalStorage quota exceeded for key: ${key}. Attempting cleanup...`);
+      
+      // If it's form responses, keep only the most recent 50 responses
+      if (key === 'formResponses' && Array.isArray(value)) {
+        try {
+          const recentResponses = value
+            .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+            .slice(0, 50); // Keep only 50 most recent responses
+          
+          const cleanedValue = JSON.stringify(recentResponses);
+          localStorage.setItem(key, cleanedValue);
+          console.log(`Cleaned up ${key}, kept ${recentResponses.length} most recent responses`);
+        } catch (cleanupError) {
+          console.error(`Failed to cleanup ${key}:`, cleanupError);
+          // If cleanup fails, clear the storage completely for this key
+          localStorage.removeItem(key);
+        }
+      } else {
+        // For other keys, just remove them if they cause quota issues
+        console.warn(`Removing ${key} from localStorage due to quota issues`);
+        localStorage.removeItem(key);
+      }
+    } else {
+      console.error(`Error saving to localStorage:`, error);
+    }
+  }
+};
 
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
@@ -134,21 +168,21 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadFormsFromSupabase();
   }, []);
   
-  // Persist state to localStorage whenever it changes
+  // Persist state to localStorage whenever it changes - with safe storage
   useMemo(() => {
-    localStorage.setItem('forms', JSON.stringify(forms));
+    safeLocalStorageSet('forms', forms);
   }, [forms]);
 
   useMemo(() => {
-    localStorage.setItem('formResponses', JSON.stringify(responses));
+    safeLocalStorageSet('formResponses', responses);
   }, [responses]);
 
   useMemo(() => {
-    localStorage.setItem('accessTokens', JSON.stringify(accessTokens));
+    safeLocalStorageSet('accessTokens', accessTokens);
   }, [accessTokens]);
 
   useMemo(() => {
-    localStorage.setItem('allowedUsers', JSON.stringify(allowedUsers));
+    safeLocalStorageSet('allowedUsers', allowedUsers);
   }, [allowedUsers]);
 
   // Create form operations
