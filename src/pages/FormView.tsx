@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/Layout";
@@ -23,6 +22,7 @@ const FormView = () => {
   const { getForm, validateAccessToken } = useForm();
   const { currentUser, isAuthenticated } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const [form, setForm] = useState(getForm(id || ''));
   const [hasAccess, setHasAccess] = useState(false);
@@ -129,15 +129,26 @@ const FormView = () => {
   }
 
   if (!form) {
-    return <FormNotFound />;
+    return <FormNotFound onBackClick={() => navigate('/')} />;
   }
 
   if (form.isPrivate && !hasAccess) {
-    return <FormAccess formId={form.id} />;
+    return (
+      <FormAccess 
+        onAccessGranted={() => setHasAccess(true)}
+        isUserAllowed={(email: string) => form.allowedUsers?.includes(email) || false}
+      />
+    );
   }
 
   if (isSubmitSuccess) {
-    return <FormSuccess formTitle={form.title} />;
+    return (
+      <FormSuccess 
+        formValues={formResponses}
+        fields={form.fields}
+        showTotalScore={form.showTotalScore}
+      />
+    );
   }
 
   if (showScoreCard) {
@@ -160,15 +171,16 @@ const FormView = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
         <div className="container max-w-4xl mx-auto px-4">
           <FormHeader 
-            title={form.title} 
-            description={form.description}
-            isEditMode={isEditMode}
+            currentQuestion={currentQuestionIndex}
+            totalQuestions={totalQuestions}
+            onBackClick={() => navigate('/')}
           />
           
           <div className="mb-8">
             <FormProgressBar 
-              currentQuestion={currentQuestionIndex + 1}
-              totalQuestions={totalQuestions}
+              currentIndex={currentQuestionIndex}
+              totalFields={totalQuestions}
+              formColor={form.formColor}
             />
           </div>
 
@@ -187,8 +199,17 @@ const FormView = () => {
                       field={currentField}
                       value={formResponses[currentField.id]}
                       onChange={(value) => handleFieldChange(currentField.id, value)}
-                      questionNumber={currentQuestionIndex + 1}
-                      totalQuestions={totalQuestions}
+                      isFirstQuestion={currentQuestionIndex === 0}
+                      isLastQuestion={currentQuestionIndex === totalQuestions - 1}
+                      handlePrevious={handlePrevious}
+                      handleNext={handleNext}
+                      handleSubmit={handleSubmit}
+                      isSubmitting={isSubmitting}
+                      isAdminPreview={false}
+                      isEditMode={isEditMode}
+                      formColor={form.formColor}
+                      title={form.title}
+                      description={form.description}
                     />
                   </CardContent>
                 </Card>
