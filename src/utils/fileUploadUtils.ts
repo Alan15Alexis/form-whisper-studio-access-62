@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-const BUCKET_NAME = 'respuestas_formularios';
+const BUCKET_NAME = 'respuestas-formulario';
 
 export const uploadFileToSupabase = async (
   file: File, 
@@ -89,9 +89,9 @@ export const uploadDrawingToSupabase = async (
   }
 };
 
-// Helper function to check if a URL is from our respuestas_formularios bucket
+// Helper function to check if a URL is from our respuestas-formulario bucket
 export const isFormResponseFile = (url: string): boolean => {
-  return typeof url === 'string' && url.includes('respuestas_formularios');
+  return typeof url === 'string' && url.includes('respuestas-formulario');
 };
 
 // Helper function to get file info from URL

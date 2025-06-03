@@ -78,13 +78,13 @@ const FormResponses = () => {
     const fileInfo = getFileInfoFromUrl(fileUrl);
     
     return (
-      <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 border">
+      <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border">
         {fileInfo.isImage ? (
           <div className="relative">
             <img 
               src={fileUrl} 
               alt={fieldLabel || "Imagen"} 
-              className="h-12 w-12 object-cover rounded"
+              className="h-10 w-10 object-cover rounded"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder');
@@ -93,19 +93,18 @@ const FormResponses = () => {
                 }
               }}
             />
-            <div className="image-placeholder hidden h-12 w-12 bg-gray-200 rounded items-center justify-center">
+            <div className="image-placeholder hidden h-10 w-10 bg-gray-200 rounded items-center justify-center">
               <Image className="h-4 w-4 text-gray-400" />
             </div>
           </div>
         ) : (
-          <div className="h-12 w-12 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
-            <FileIcon className="h-5 w-5 text-blue-600" />
+          <div className="h-10 w-10 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
+            <FileIcon className="h-4 w-4 text-blue-600" />
           </div>
         )}
         
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">{fieldLabel}</p>
-          <p className="text-xs text-gray-500 truncate">{fileInfo.fileName}</p>
+          <p className="text-xs font-medium truncate">{fileInfo.fileName}</p>
           {fileInfo.isFromBucket && (
             <Badge variant="outline" className="text-xs mt-1 bg-green-50 text-green-600 border-green-200">
               📁 Bucket
@@ -380,11 +379,18 @@ const formatResponseValue = (value: any, field: FormField) => {
           <img 
             src={value} 
             alt={field.label} 
-            className="h-8 w-8 object-cover rounded border"
+            className="h-6 w-6 object-cover rounded border"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
+              const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder');
+              if (placeholder) {
+                (placeholder as HTMLElement).style.display = 'flex';
+              }
             }}
           />
+          <div className="image-placeholder hidden h-6 w-6 bg-gray-200 rounded border items-center justify-center">
+            <Image className="h-3 w-3 text-gray-400" />
+          </div>
           <div className="flex flex-col">
             <a 
               href={value} 
@@ -403,16 +409,17 @@ const formatResponseValue = (value: any, field: FormField) => {
         </div>
       );
     } else {
-      // For non-image files
+      // For non-image files - show just the file name, not the full URL
       return (
         <div className="flex items-center gap-2">
           <FileIcon className="h-4 w-4 text-gray-500" />
           <div className="flex flex-col">
+            <span className="text-sm text-gray-700">{fileInfo.fileName}</span>
             <a 
               href={value} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-blue-600 hover:underline text-sm"
+              className="text-blue-600 hover:underline text-xs"
             >
               Ver archivo
             </a>

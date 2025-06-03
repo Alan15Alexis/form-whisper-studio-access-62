@@ -199,7 +199,7 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
     document.body.removeChild(link);
   };
 
-  // Enhanced function to render file preview with better handling for respuestas_formularios bucket
+  // Enhanced function to render file preview with better handling for respuestas-formulario bucket
   const renderFilePreview = (fileUrl: string, fieldLabel: string) => {
     const fileInfo = getFileInfoFromUrl(fileUrl);
     
@@ -210,7 +210,7 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
             <img 
               src={fileUrl} 
               alt={fieldLabel || "Imagen"} 
-              className="h-16 w-16 object-cover rounded border"
+              className="h-12 w-12 object-cover rounded border"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder');
@@ -219,22 +219,22 @@ const ViewResponseDialog = ({ formId, formTitle, fields, open, onClose, adminVie
                 }
               }}
             />
-            <div className="image-placeholder hidden h-16 w-16 bg-gray-200 rounded border items-center justify-center">
-              <Image className="h-6 w-6 text-gray-400" />
+            <div className="image-placeholder hidden h-12 w-12 bg-gray-200 rounded border items-center justify-center">
+              <Image className="h-4 w-4 text-gray-400" />
             </div>
           </div>
         ) : (
-          <div className="h-16 w-16 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
-            <FileIcon className="h-8 w-8 text-blue-600" />
+          <div className="h-12 w-12 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
+            <FileIcon className="h-6 w-6 text-blue-600" />
           </div>
         )}
         
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{fieldLabel}</p>
+          <p className="text-sm font-medium text-gray-900">{fieldLabel}</p>
           <p className="text-xs text-gray-600 truncate">{fileInfo.fileName}</p>
           {fileInfo.isFromBucket && (
             <Badge variant="outline" className="text-xs mt-1 bg-green-50 text-green-700 border-green-200">
-              📁 Almacenado en respuestas_formularios
+              📁 respuestas-formulario
             </Badge>
           )}
         </div>
