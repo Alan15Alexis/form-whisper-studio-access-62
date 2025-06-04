@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +13,7 @@ import { Trash, Plus, AlertCircle, Save, Database, RefreshCw } from "lucide-reac
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
+import { supabase } from "@/integrations/supabase/client";
 
 const FORM_COLORS = [{
   name: "Azul",
@@ -486,7 +486,7 @@ const FormSettings = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-blue-800">
-                    ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} configurado{dbScoreRanges.length !== 1 ? 's' : ''}
+                    ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''}
                   </p>
                   <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                     Activo
