@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -7,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Form as FormType } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
+import { uploadFileToSupabase, uploadDrawingToSupabase } from "@/utils/fileUploadUtils";
 
 /**
  * Custom hook to handle form responses and submission
@@ -124,6 +124,53 @@ export function useFormResponses(form: FormType | null) {
       console.log("Submitting form responses:", formResponses);
       console.log("Form fields:", form.fields);
       
+      // Process file uploads before submitting
+      const processedResponses = { ...formResponses };
+      const userEmail = currentUser?.email || localStorage.getItem('userEmail') || 'unknown';
+      
+      // Handle file uploads for each field
+      for (const field of form.fields) {
+        if ((field.type === 'image-upload' || field.type === 'file-upload' || 
+             field.type === 'drawing' || field.type === 'signature') && 
+            processedResponses[field.id]) {
+          
+          const fileData = processedResponses[field.id];
+          console.log(`Processing upload for field ${field.id}, type: ${field.type}`);
+          
+          // Skip if already a URL (already uploaded)
+          if (typeof fileData === 'string' && fileData.startsWith('http')) {
+            console.log(`Field ${field.id} already has uploaded URL`);
+            continue;
+          }
+          
+          try {
+            let uploadResult = null;
+            
+            if (fileData instanceof File) {
+              console.log(`Uploading File for field ${field.id}:`, fileData.name);
+              uploadResult = await uploadFileToSupabase(fileData, userEmail, id, field.id);
+            } else if (typeof fileData === 'string' && fileData.startsWith('data:')) {
+              console.log(`Uploading base64 data for field ${field.id}`);
+              uploadResult = await uploadDrawingToSupabase(fileData, userEmail, id, field.id);
+            }
+            
+            if (uploadResult) {
+              processedResponses[field.id] = uploadResult;
+              console.log(`Successfully uploaded ${field.type} for field ${field.id}:`, uploadResult);
+            } else {
+              console.error(`Failed to upload ${field.type} for field ${field.id}`);
+            }
+          } catch (uploadError) {
+            console.error(`Error uploading ${field.type} for field ${field.id}:`, uploadError);
+            toast({
+              title: "Error al subir archivo",
+              description: `No se pudo subir el archivo del campo ${field.label || field.id}`,
+              variant: "destructive",
+            });
+          }
+        }
+      }
+      
       // Check if we have any file fields and log them
       const fileFields = form.fields.filter(field => 
         field.type === 'image-upload' || 
@@ -135,21 +182,11 @@ export function useFormResponses(form: FormType | null) {
       if (fileFields.length > 0) {
         console.log(`Form has ${fileFields.length} file fields:`, fileFields.map(f => f.id));
         
-        // Log if any of these fields have values in the responses
+        // Log processed file fields
         fileFields.forEach(field => {
-          const value = formResponses[field.id];
+          const value = processedResponses[field.id];
           if (value) {
-            if (typeof value === 'string' && value.startsWith('data:')) {
-              console.log(`Field ${field.id} has base64 data`);
-            } else if (value instanceof File) {
-              console.log(`Field ${field.id} has File: ${value.name}, ${value.type}, ${value.size}`);
-            } else if (typeof value === 'string') {
-              console.log(`Field ${field.id} has string value:`, value.substring(0, 100) + '...');
-            } else {
-              console.log(`Field ${field.id} has value of type:`, typeof value);
-            }
-          } else {
-            console.log(`Field ${field.id} has no value`);
+            console.log(`Field ${field.id} processed value:`, typeof value === 'string' ? value.substring(0, 100) + '...' : typeof value);
           }
         });
       }
@@ -177,9 +214,8 @@ export function useFormResponses(form: FormType | null) {
         console.log("Score data prepared:", scoreData);
       }
       
-      // Pass the form from location to the submit function to ensure we have the form data
-      // Now also pass the calculated scoreData
-      const result = await submitFormResponse(id, formResponses, form, scoreData);
+      // Pass the processed responses with uploaded file URLs to the submit function
+      const result = await submitFormResponse(id, processedResponses, form, scoreData);
       console.log("Form submission result:", result);
       
       // Check both local form configuration AND database ranges

@@ -1,6 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { FormField, Form } from '@/types/form';
 
+const BUCKET_NAME = 'respuestas-formulario';
+
 // Process form data including file uploads
 export const processFormData = async (
   form: Form,
@@ -56,14 +58,18 @@ const uploadFileToSupabase = async (
   fieldId: string
 ): Promise<string | null> => {
   try {
+    // Ensure bucket exists
+    await ensureBucketExists();
+    
     const timestamp = new Date().getTime();
     const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `${sanitizedEmail}_${formId}_${fieldId}_${timestamp}_${file.name}`;
-    const filePath = `respuestas-formulario/${fileName}`;
+    const fileName = `${sanitizedEmail}/${formId}/${fieldId}/${timestamp}_${file.name}`;
+
+    console.log(`Uploading file to bucket: ${BUCKET_NAME}, path: ${fileName}`);
 
     const { data, error } = await supabase.storage
-      .from('formularios')
-      .upload(filePath, file);
+      .from(BUCKET_NAME)
+      .upload(fileName, file);
 
     if (error) {
       console.error('Error uploading file to Supabase:', error);
@@ -72,9 +78,10 @@ const uploadFileToSupabase = async (
 
     // Get the public URL
     const { data: urlData } = supabase.storage
-      .from('formularios')
-      .getPublicUrl(filePath);
+      .from(BUCKET_NAME)
+      .getPublicUrl(fileName);
 
+    console.log('File uploaded successfully, public URL:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (error) {
     console.error('Error in uploadFileToSupabase:', error);
@@ -91,6 +98,9 @@ const uploadBase64ToSupabase = async (
   fieldType: string
 ): Promise<string | null> => {
   try {
+    // Ensure bucket exists
+    await ensureBucketExists();
+    
     // Convert base64 to blob
     const base64Response = await fetch(base64Data);
     const blob = await base64Response.blob();
@@ -98,12 +108,13 @@ const uploadBase64ToSupabase = async (
     const timestamp = new Date().getTime();
     const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
     const extension = fieldType === 'drawing' ? 'png' : 'png'; // Default to PNG
-    const fileName = `${sanitizedEmail}_${formId}_${fieldId}_${timestamp}.${extension}`;
-    const filePath = `respuestas-formulario/${fileName}`;
+    const fileName = `${sanitizedEmail}/${formId}/${fieldId}/${timestamp}.${extension}`;
+
+    console.log(`Uploading base64 to bucket: ${BUCKET_NAME}, path: ${fileName}`);
 
     const { data, error } = await supabase.storage
-      .from('formularios')
-      .upload(filePath, blob);
+      .from(BUCKET_NAME)
+      .upload(fileName, blob);
 
     if (error) {
       console.error('Error uploading base64 to Supabase:', error);
@@ -112,13 +123,40 @@ const uploadBase64ToSupabase = async (
 
     // Get the public URL
     const { data: urlData } = supabase.storage
-      .from('formularios')
-      .getPublicUrl(filePath);
+      .from(BUCKET_NAME)
+      .getPublicUrl(fileName);
 
+    console.log('Base64 uploaded successfully, public URL:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (error) {
     console.error('Error in uploadBase64ToSupabase:', error);
     return null;
+  }
+};
+
+// Ensure bucket exists
+const ensureBucketExists = async () => {
+  try {
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
+    
+    if (!bucketExists) {
+      console.log(`Creating bucket: ${BUCKET_NAME}`);
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+      if (createError) {
+        console.error('Error creating bucket:', createError);
+      } else {
+        console.log(`Bucket ${BUCKET_NAME} created successfully`);
+      }
+    }
+  } catch (error) {
+    console.error('Error ensuring bucket exists:', error);
   }
 };
 
