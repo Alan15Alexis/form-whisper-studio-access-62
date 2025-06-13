@@ -164,7 +164,7 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   }, []);
 
-  // Enhanced scoring toggle with validation
+  // Simplified scoring toggle
   const handleToggleFormScoring = useCallback((enabled: boolean) => {
     console.log("useFormBuilder - Toggle scoring:", enabled);
     
@@ -188,9 +188,9 @@ export const useFormBuilder = (id?: string) => {
     }));
   }, [formData.fields]);
 
-  // Enhanced score ranges save with validation
+  // Simple score ranges save - just update local state
   const handleSaveScoreRanges = useCallback((ranges: any[]) => {
-    console.log("useFormBuilder - Save score ranges:", ranges.length);
+    console.log("useFormBuilder - Update score ranges in form data:", ranges.length);
     
     // Validate ranges
     const validRanges = ranges.filter(range => 
@@ -358,7 +358,7 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const handleSubmit = useCallback(async () => {
-    console.log("useFormBuilder - handleSubmit");
+    console.log("useFormBuilder - handleSubmit with scoreRanges:", formData.scoreRanges?.length || 0);
     
     // Validate scoring configuration
     if (formData.showTotalScore) {
