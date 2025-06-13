@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useMemo } from 'react';
+import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
 import { FormContextType } from './types';
@@ -72,87 +72,111 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [responses, setResponses] = useState(getInitialResponses());
   const [accessTokens, setAccessTokens] = useState(getInitialAccessTokens());
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
+  const [formsLoaded, setFormsLoaded] = useState(false);
 
-  // Load forms from Supabase - simplified score ranges handling
-  React.useEffect(() => {
-    const loadFormsFromSupabase = async () => {
-      try {
-        console.log("FormContext - Loading forms from Supabase...");
-        
-        const { data: formsData, error } = await supabase
-          .from('formulario_construccion')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error("FormContext - Error loading forms:", error);
-          return;
-        }
-        
-        if (formsData && formsData.length > 0) {
-          console.log("FormContext - Loading", formsData.length, "forms from database");
-          
-          const loadedForms = formsData.map(formData => {
-            const config = formData.configuracion || {};
-            
-            // Simplified: use showTotalScore from config directly
-            const showTotalScore = Boolean(config.showTotalScore);
-            
-            // Single source of truth: use rangos_mensajes column only
-            const scoreRanges = Array.isArray(formData.rangos_mensajes) ? 
-              formData.rangos_mensajes.filter(range => 
-                range && 
-                typeof range.min === 'number' && 
-                typeof range.max === 'number' && 
-                typeof range.message === 'string' &&
-                range.min <= range.max
-              ) : [];
-            
-            console.log(`FormContext - Form "${formData.titulo}": showTotalScore=${showTotalScore}, scoreRanges=${scoreRanges.length}`);
-            
-            return {
-              id: formData.id.toString(),
-              title: formData.titulo || 'Untitled Form',
-              description: formData.descripcion || '',
-              fields: formData.preguntas || [],
-              isPrivate: Boolean(config.isPrivate),
-              allowedUsers: formData.acceso || [],
-              createdAt: formData.created_at,
-              updatedAt: formData.created_at,
-              accessLink: uuidv4(),
-              ownerId: formData.administrador || 'unknown',
-              formColor: config.formColor || '#3b82f6',
-              allowViewOwnResponses: Boolean(config.allowViewOwnResponses),
-              allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
-              httpConfig: config.httpConfig,
-              showTotalScore: showTotalScore,
-              scoreRanges: scoreRanges
-            };
-          });
-          
-          console.log("FormContext - Successfully loaded forms:", loadedForms.length);
-          setForms(loadedForms);
-          safeLocalStorageSet('forms', loadedForms);
-        }
-      } catch (error) {
+  // Memoized form loading function with better error handling
+  const loadFormsFromSupabase = useCallback(async (forceReload = false) => {
+    if (formsLoaded && !forceReload) {
+      console.log("FormContext - Forms already loaded, skipping reload");
+      return;
+    }
+
+    try {
+      console.log("FormContext - Loading forms from Supabase...");
+      
+      const { data: formsData, error } = await supabase
+        .from('formulario_construccion')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
         console.error("FormContext - Error loading forms:", error);
+        throw error;
+      }
+      
+      if (formsData && formsData.length > 0) {
+        console.log("FormContext - Processing", formsData.length, "forms from database");
         
-        // Fallback to local storage
+        const loadedForms = formsData.map(formData => {
+          const config = formData.configuracion || {};
+          
+          // Simplified: use showTotalScore from config directly
+          const showTotalScore = Boolean(config.showTotalScore);
+          
+          // Single source of truth: use rangos_mensajes column only
+          const scoreRanges = Array.isArray(formData.rangos_mensajes) ? 
+            formData.rangos_mensajes.filter(range => 
+              range && 
+              typeof range.min === 'number' && 
+              typeof range.max === 'number' && 
+              typeof range.message === 'string' &&
+              range.min <= range.max
+            ) : [];
+          
+          console.log(`FormContext - Form "${formData.titulo}": showTotalScore=${showTotalScore}, scoreRanges=${scoreRanges.length}`);
+          
+          return {
+            id: formData.id.toString(),
+            title: formData.titulo || 'Untitled Form',
+            description: formData.descripcion || '',
+            fields: formData.preguntas || [],
+            isPrivate: Boolean(config.isPrivate),
+            allowedUsers: formData.acceso || [],
+            createdAt: formData.created_at,
+            updatedAt: formData.created_at,
+            accessLink: uuidv4(),
+            ownerId: formData.administrador || 'unknown',
+            formColor: config.formColor || '#3b82f6',
+            allowViewOwnResponses: Boolean(config.allowViewOwnResponses),
+            allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
+            httpConfig: config.httpConfig,
+            showTotalScore: showTotalScore,
+            scoreRanges: scoreRanges
+          };
+        });
+        
+        console.log("FormContext - Successfully loaded forms:", loadedForms.length);
+        setForms(loadedForms);
+        safeLocalStorageSet('forms', loadedForms);
+        setFormsLoaded(true);
+        
+        return loadedForms;
+      } else {
+        console.log("FormContext - No forms found in database");
+        setForms([]);
+        safeLocalStorageSet('forms', []);
+        setFormsLoaded(true);
+        return [];
+      }
+    } catch (error) {
+      console.error("FormContext - Error loading forms:", error);
+      
+      // Fallback to local storage only if we haven't loaded anything yet
+      if (!formsLoaded) {
         const localForms = getInitialForms();
         if (localForms && localForms.length > 0) {
           console.log("FormContext - Using local storage fallback");
           setForms(localForms);
+          setFormsLoaded(true);
+          return localForms;
         }
       }
-    };
-    
+      
+      throw error;
+    }
+  }, [formsLoaded]);
+
+  // Load forms from Supabase on mount
+  React.useEffect(() => {
     loadFormsFromSupabase();
-  }, []);
+  }, [loadFormsFromSupabase]);
   
   // Persist state to localStorage whenever it changes
   useMemo(() => {
-    safeLocalStorageSet('forms', forms);
-  }, [forms]);
+    if (formsLoaded) {
+      safeLocalStorageSet('forms', forms);
+    }
+  }, [forms, formsLoaded]);
 
   useMemo(() => {
     safeLocalStorageSet('formResponses', responses);
@@ -166,10 +190,18 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     safeLocalStorageSet('allowedUsers', allowedUsers);
   }, [allowedUsers]);
 
-  // Create form operations
-  const getForm = getFormOperation(forms);
+  // Enhanced form operations with reload capability
+  const getForm = useCallback((id: string) => {
+    const form = getFormOperation(forms)(id);
+    console.log(`FormContext - getForm(${id}):`, form ? {
+      title: form.title,
+      showTotalScore: form.showTotalScore,
+      scoreRangesCount: form.scoreRanges?.length || 0
+    } : 'not found');
+    return form;
+  }, [forms]);
 
-  const createForm = (formData: any) => {
+  const createForm = useCallback((formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
     const userEmail = currentUser?.email;
     return createFormOperation(
@@ -180,18 +212,27 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userId,
       userEmail
     )(formData);
-  };
+  }, [forms, currentUser]);
   
-  const updateForm = (id: string, formData: any) => {
+  const updateForm = useCallback(async (id: string, formData: any) => {
     console.log("FormContext - updateForm called with scoreRanges:", formData.scoreRanges?.length || 0);
-    return updateFormOperation(
+    
+    const result = await updateFormOperation(
       forms,
       setForms,
       setAllowedUsers
     )(id, formData);
-  };
+    
+    // Force reload from database to ensure consistency
+    if (result) {
+      console.log("FormContext - Reloading forms after update");
+      await loadFormsFromSupabase(true);
+    }
+    
+    return result;
+  }, [forms, loadFormsFromSupabase]);
   
-  const deleteForm = (id: string) => {
+  const deleteForm = useCallback((id: string) => {
     return deleteFormOperation(
       forms,
       setForms,
@@ -200,7 +241,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setResponses,
       responses
     )(id);
-  };
+  }, [forms, responses]);
 
   // Response operations
   const submitFormResponse = async (formId: string, data: Record<string, any>, formFromLocation: any = null, scoreData: any = null): Promise<FormResponse> => {

@@ -54,14 +54,23 @@ const FormBuilderTabs = ({
   allowedUserName = "",
   setAllowedUserName = () => {}
 }: FormBuilderTabsProps) => {
-  // Simplified data handling - use database values directly
+  // Enhanced data handling with validation and debugging
   const showTotalScore = formData.showTotalScore === true;
-  const scoreRanges = Array.isArray(formData.scoreRanges) ? formData.scoreRanges : [];
+  const scoreRanges = Array.isArray(formData.scoreRanges) ? 
+    formData.scoreRanges.filter(range => 
+      range && 
+      typeof range.min === 'number' && 
+      typeof range.max === 'number' && 
+      typeof range.message === 'string' &&
+      range.min <= range.max
+    ) : [];
 
-  console.log("FormBuilderTabs - Simplified rendering:", {
+  console.log("FormBuilderTabs - Enhanced rendering:", {
     title: formData.title,
     showTotalScore,
-    scoreRangesCount: scoreRanges.length
+    scoreRangesCount: scoreRanges.length,
+    formDataKeys: Object.keys(formData),
+    formDataId: formData.id
   });
 
   return (

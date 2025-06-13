@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
 import { Form, FormField } from '@/types/form';
@@ -42,7 +42,37 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
-  // Initialize form data - simplified approach
+  // Memoized form data sync to prevent unnecessary updates
+  const syncFormData = useCallback((sourceForm: Form) => {
+    console.log("useFormBuilder - Syncing form data:", {
+      title: sourceForm.title,
+      showTotalScore: sourceForm.showTotalScore,
+      scoreRangesCount: sourceForm.scoreRanges?.length || 0
+    });
+    
+    setFormData(prevData => {
+      const newData = { ...sourceForm };
+      
+      // Ensure scoreRanges is always an array
+      if (!Array.isArray(newData.scoreRanges)) {
+        newData.scoreRanges = [];
+      }
+      
+      // Only update if data has actually changed
+      const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
+      
+      if (hasChanged) {
+        console.log("useFormBuilder - Form data updated");
+        return newData;
+      }
+      
+      return prevData;
+    });
+    
+    setForm(sourceForm);
+  }, []);
+
+  // Initialize form data with better dependency tracking
   useEffect(() => {
     const initializeFormData = async () => {
       console.log("useFormBuilder - Initializing for formId:", formId);
@@ -60,9 +90,7 @@ export const useFormBuilder = (id?: string) => {
               scoreRangesCount: existingForm.scoreRanges?.length || 0
             });
             
-            // Use form data directly from database
-            setForm(existingForm);
-            setFormData(existingForm);
+            syncFormData(existingForm);
           } else {
             console.log("useFormBuilder - Form not found");
             toast({
@@ -109,24 +137,35 @@ export const useFormBuilder = (id?: string) => {
     };
 
     initializeFormData();
-  }, [formId, getForm, navigate, forms]);
+  }, [formId, getForm, navigate, syncFormData]);
+
+  // Listen for form changes and resync when needed
+  useEffect(() => {
+    if (formId && forms.length > 0) {
+      const currentForm = getForm(formId);
+      if (currentForm && form && currentForm.updatedAt !== form.updatedAt) {
+        console.log("useFormBuilder - Detected form update, resyncing");
+        syncFormData(currentForm);
+      }
+    }
+  }, [forms, formId, getForm, form, syncFormData]);
 
   const isEditMode = Boolean(formId);
 
-  const handleTitleChange = (title: string) => {
+  const handleTitleChange = useCallback((title: string) => {
     setFormData(prev => ({ ...prev, title }));
-  };
+  }, []);
 
-  const handleDescriptionChange = (description: string) => {
+  const handleDescriptionChange = useCallback((description: string) => {
     setFormData(prev => ({ ...prev, description }));
-  };
+  }, []);
 
-  const handlePrivateChange = (isPrivate: boolean) => {
+  const handlePrivateChange = useCallback((isPrivate: boolean) => {
     setFormData(prev => ({ ...prev, isPrivate }));
-  };
+  }, []);
 
-  // Simplified scoring toggle
-  const handleToggleFormScoring = (enabled: boolean) => {
+  // Enhanced scoring toggle with validation
+  const handleToggleFormScoring = useCallback((enabled: boolean) => {
     console.log("useFormBuilder - Toggle scoring:", enabled);
     
     if (enabled) {
@@ -147,17 +186,26 @@ export const useFormBuilder = (id?: string) => {
       showTotalScore: enabled,
       scoreRanges: enabled ? prev.scoreRanges : []
     }));
-  };
+  }, [formData.fields]);
 
-  // Simplified score ranges save
-  const handleSaveScoreRanges = (ranges: any[]) => {
+  // Enhanced score ranges save with validation
+  const handleSaveScoreRanges = useCallback((ranges: any[]) => {
     console.log("useFormBuilder - Save score ranges:", ranges.length);
+    
+    // Validate ranges
+    const validRanges = ranges.filter(range => 
+      range && 
+      typeof range.min === 'number' && 
+      typeof range.max === 'number' && 
+      typeof range.message === 'string' &&
+      range.min <= range.max
+    );
     
     setFormData(prev => ({ 
       ...prev, 
-      scoreRanges: [...ranges]
+      scoreRanges: [...validRanges]
     }));
-  };
+  }, []);
 
   const updateField = (id: string, updatedField: FormField) => {
     setFormData(prev => {
@@ -309,7 +357,7 @@ export const useFormBuilder = (id?: string) => {
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     console.log("useFormBuilder - handleSubmit");
     
     // Validate scoring configuration
@@ -337,7 +385,7 @@ export const useFormBuilder = (id?: string) => {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [formData, isEditMode, formId]);
 
   const handleCreateForm = async (formData: Partial<Form>) => {
     try {

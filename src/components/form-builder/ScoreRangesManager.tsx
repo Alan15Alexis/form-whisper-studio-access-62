@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -38,20 +38,36 @@ const ScoreRangesManager = ({
     localRangesCount: localRanges.length
   });
 
-  // Sync local state with prop changes
-  useEffect(() => {
-    const incomingRanges = Array.isArray(scoreRanges) ? scoreRanges : [];
+  // Enhanced sync with deep comparison and proper validation
+  const syncRanges = useCallback((incomingRanges: ScoreRange[]) => {
+    const validatedRanges = Array.isArray(incomingRanges) ? 
+      incomingRanges.filter(range => 
+        range && 
+        typeof range.min === 'number' && 
+        typeof range.max === 'number' && 
+        typeof range.message === 'string' &&
+        range.min <= range.max
+      ) : [];
+    
     const currentJson = JSON.stringify(localRanges);
-    const incomingJson = JSON.stringify(incomingRanges);
+    const incomingJson = JSON.stringify(validatedRanges);
     
     if (currentJson !== incomingJson) {
-      console.log("ScoreRangesManager - Syncing ranges:", incomingRanges.length);
-      setLocalRanges([...incomingRanges]);
+      console.log("ScoreRangesManager - Syncing ranges:", validatedRanges.length);
+      setLocalRanges([...validatedRanges]);
       setHasUnsavedChanges(false);
+      return true;
     }
-  }, [scoreRanges]);
+    
+    return false;
+  }, [localRanges]);
 
-  const addRange = () => {
+  // Sync local state with prop changes
+  useEffect(() => {
+    syncRanges(scoreRanges);
+  }, [scoreRanges, syncRanges]);
+
+  const addRange = useCallback(() => {
     let newRanges;
     if (localRanges.length === 0) {
       newRanges = [{
@@ -77,9 +93,9 @@ const ScoreRangesManager = ({
       title: "Rango añadido",
       description: "Se añadió un nuevo rango. Guarda los cambios."
     });
-  };
+  }, [localRanges]);
 
-  const updateRange = (index: number, field: keyof ScoreRange, value: string | number) => {
+  const updateRange = useCallback((index: number, field: keyof ScoreRange, value: string | number) => {
     if (!localRanges[index]) return;
     
     const updatedRanges = [...localRanges];
@@ -90,9 +106,9 @@ const ScoreRangesManager = ({
     
     setLocalRanges(updatedRanges);
     setHasUnsavedChanges(true);
-  };
+  }, [localRanges]);
 
-  const removeRange = (index: number) => {
+  const removeRange = useCallback((index: number) => {
     const updatedRanges = localRanges.filter((_, i) => i !== index);
     setLocalRanges(updatedRanges);
     setHasUnsavedChanges(true);
@@ -101,9 +117,9 @@ const ScoreRangesManager = ({
       title: "Rango eliminado",
       description: "El rango ha sido eliminado. Guarda los cambios."
     });
-  };
+  }, [localRanges]);
 
-  const saveRanges = () => {
+  const saveRanges = useCallback(() => {
     // Validate ranges before saving
     const validRanges = localRanges.filter(range => 
       range && 
@@ -121,6 +137,7 @@ const ScoreRangesManager = ({
       });
     }
     
+    console.log("ScoreRangesManager - Saving ranges:", validRanges.length);
     onSaveScoreRanges(validRanges);
     setHasUnsavedChanges(false);
     
@@ -128,9 +145,9 @@ const ScoreRangesManager = ({
       title: "Rangos guardados",
       description: "Los rangos han sido guardados correctamente."
     });
-  };
+  }, [localRanges, onSaveScoreRanges]);
 
-  const handleToggleScoring = (enabled: boolean) => {
+  const handleToggleScoring = useCallback((enabled: boolean) => {
     if (enabled && !hasFieldsWithNumericValues) {
       toast({
         title: "No se puede habilitar puntuación",
@@ -146,7 +163,7 @@ const ScoreRangesManager = ({
       setLocalRanges([]);
       setHasUnsavedChanges(true);
     }
-  };
+  }, [hasFieldsWithNumericValues, onToggleScoring]);
 
   return (
     <Card className="p-6 shadow-sm border border-gray-100">
@@ -232,7 +249,7 @@ const ScoreRangesManager = ({
               
               <div className="space-y-3">
                 {localRanges.map((range, index) => (
-                  <div key={`range-${index}`} className="p-3 border rounded-md bg-background">
+                  <div key={`range-${index}-${range.min}-${range.max}`} className="p-3 border rounded-md bg-background">
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
                         <Label htmlFor={`min-${index}`}>Mínimo</Label>
