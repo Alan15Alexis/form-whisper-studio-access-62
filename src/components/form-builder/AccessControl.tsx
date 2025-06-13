@@ -43,14 +43,14 @@ const AccessControl = ({
                 <TooltipContent className="max-w-xs">
                   <p>
                     Los usuarios añadidos aquí podrán acceder al formulario privado. 
-                    Cuando compartas el formulario, se les pedirá verificar su correo electrónico.
+                    Se añadirán automáticamente a la lista de usuarios invitados en la base de datos.
                   </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Añade direcciones de correo electrónico de usuarios que pueden acceder a este formulario privado
+            Añade el nombre y correo de usuarios que pueden acceder a este formulario privado
           </p>
           
           <div className="flex flex-col space-y-2 mb-4">
@@ -59,8 +59,9 @@ const AccessControl = ({
               <Input
                 value={allowedUserName}
                 onChange={(e) => onAllowedUserNameChange(e.target.value)}
-                placeholder="Nombre del usuario"
+                placeholder="Nombre del usuario (requerido)"
                 className="pl-10"
+                required
               />
             </div>
             
@@ -69,20 +70,21 @@ const AccessControl = ({
               <Input
                 value={allowedUserEmail}
                 onChange={(e) => onAllowedUserEmailChange(e.target.value)}
-                placeholder="usuario@ejemplo.com"
+                placeholder="usuario@ejemplo.com (requerido)"
                 type="email"
                 className="pl-10"
+                required
               />
             </div>
             
             <Button 
               type="button" 
               onClick={onAddAllowedUser}
-              disabled={!allowedUserEmail.trim()}
+              disabled={!allowedUserEmail.trim() || !allowedUserName.trim()}
               className="w-full"
             >
               <UserPlus className="mr-2 h-4 w-4" />
-              Añadir
+              Añadir Usuario
             </Button>
           </div>
           
@@ -114,7 +116,7 @@ const AccessControl = ({
             <div className="text-center py-6 border rounded-lg border-dashed">
               <Mail className="h-10 w-10 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-500">No hay usuarios con acceso añadidos aún</p>
-              <p className="text-sm text-gray-400 mt-1">Añade correos electrónicos para permitir el acceso a este formulario</p>
+              <p className="text-sm text-gray-400 mt-1">Añade nombres y correos electrónicos para permitir el acceso a este formulario</p>
             </div>
           )}
         </div>

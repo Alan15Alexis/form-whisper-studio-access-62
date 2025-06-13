@@ -1,9 +1,11 @@
+
 // Update import for toast
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
 import { Form, FormField } from '@/types/form';
 import { toast } from '@/hooks/toast';
+import { addInvitedUser } from '@/integrations/supabase/client';
 
 interface UseFormBuilderParams {
   id?: string;
@@ -178,15 +180,66 @@ export const useFormBuilder = (id?: string) => {
     }));
   };
 
-  const addAllowedUser = () => {
-    if (!allowedUserEmail) return;
+  const addAllowedUser = async () => {
+    if (!allowedUserEmail || !allowedUserName) {
+      toast({
+        title: "Error",
+        description: "Por favor, introduce tanto el nombre como el correo electrónico",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setFormData(prev => ({
-      ...prev,
-      allowedUsers: [...(prev.allowedUsers || []), allowedUserEmail],
-    }));
-    setAllowedUserEmail('');
-    setAllowedUserName('');
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(allowedUserEmail)) {
+      toast({
+        title: "Error",
+        description: "Por favor, introduce un correo electrónico válido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const lowerCaseEmail = allowedUserEmail.toLowerCase();
+
+    // Check if the email is already in the allowed users list
+    if (formData.allowedUsers?.includes(lowerCaseEmail)) {
+      toast({
+        title: "Usuario ya añadido",
+        description: "Este usuario ya tiene acceso a este formulario",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Add user to the usuario_invitado table in Supabase
+      const newInvitedUser = await addInvitedUser(allowedUserName, lowerCaseEmail);
+      
+      if (newInvitedUser) {
+        // Add user to the form's allowed users list
+        setFormData(prev => ({
+          ...prev,
+          allowedUsers: [...(prev.allowedUsers || []), lowerCaseEmail],
+        }));
+        
+        setAllowedUserEmail('');
+        setAllowedUserName('');
+        
+        toast({
+          title: "Usuario añadido",
+          description: `${allowedUserName} (${lowerCaseEmail}) ha sido añadido al formulario y a la lista de usuarios invitados`,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding invited user:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo añadir el usuario. Por favor, inténtalo de nuevo",
+        variant: "destructive",
+      });
+    }
   };
 
   const removeAllowedUser = (email: string) => {
@@ -312,10 +365,18 @@ export const useFormBuilder = (id?: string) => {
     addAllowedUser,
     removeAllowedUser,
     handleDragEnd,
-    handleAllowViewOwnResponsesChange,
-    handleAllowEditOwnResponsesChange,
-    handleFormColorChange,
-    handleHttpConfigChange,
+    handleAllowViewOwnResponsesChange: (allow: boolean) => {
+      setFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
+    },
+    handleAllowEditOwnResponsesChange: (allow: boolean) => {
+      setFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
+    },
+    handleFormColorChange: (color: string) => {
+      setFormData(prev => ({ ...prev, formColor: color }));
+    },
+    handleHttpConfigChange: (config: any) => {
+      setFormData(prev => ({ ...prev, httpConfig: config }));
+    },
     handleSubmit,
     handleCreateForm,
     handleUpdateForm
