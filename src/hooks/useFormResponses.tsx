@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -200,7 +201,8 @@ export function useFormResponses(form: FormType | null) {
         const totalScore = calculateTotalScore(formResponses, form.fields);
         console.log("Total score calculated:", totalScore);
         
-        const scoreFeedback = await getScoreFeedback(totalScore, id, form.fields);
+        // Pass the form's score ranges directly to getScoreFeedback
+        const scoreFeedback = await getScoreFeedback(totalScore, form.scoreRanges);
         console.log("Score feedback received:", scoreFeedback);
         
         scoreData = {

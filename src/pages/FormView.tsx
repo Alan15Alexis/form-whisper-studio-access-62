@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -159,6 +160,7 @@ const FormView = () => {
         formTitle={form.title}
         onNext={handleScoreCardNext}
         scoreData={calculatedScoreData}
+        scoreRanges={form.scoreRanges}
       />
     );
   }

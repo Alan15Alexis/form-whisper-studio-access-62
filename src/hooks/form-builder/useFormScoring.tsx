@@ -62,25 +62,11 @@ export function useFormScoring() {
     return totalScore;
   };
   
-  const getScoreFeedback = async (score: number, formId?: string, fields?: FormField[]): Promise<string | null> => {
-    console.log("Getting feedback for score:", score, "formId:", formId);
+  const getScoreFeedback = async (score: number, scoreRanges?: ScoreRange[]): Promise<string | null> => {
+    console.log("Getting feedback for score:", score, "with ranges:", scoreRanges);
     
-    let scoreRanges: ScoreRange[] = [];
-    
-    // Get score ranges from fields if available
-    if (fields) {
-      const fieldWithRanges = fields.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
-      );
-      
-      if (fieldWithRanges?.scoreRanges) {
-        scoreRanges = [...fieldWithRanges.scoreRanges];
-        console.log("Using field score ranges:", scoreRanges.length);
-      }
-    }
-    
-    if (scoreRanges.length === 0) {
-      console.log("No score ranges found");
+    if (!scoreRanges || scoreRanges.length === 0) {
+      console.log("No score ranges provided");
       return null;
     }
     

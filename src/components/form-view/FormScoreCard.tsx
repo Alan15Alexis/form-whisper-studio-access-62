@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +17,21 @@ interface FormScoreCardProps {
     feedback: string | null;
     timestamp: string;
   } | null;
+  scoreRanges?: Array<{
+    min: number;
+    max: number;
+    message: string;
+  }>;
 }
 
-const FormScoreCard = ({ formValues, fields, formTitle, onNext, scoreData }: FormScoreCardProps) => {
+const FormScoreCard = ({ 
+  formValues, 
+  fields, 
+  formTitle, 
+  onNext, 
+  scoreData, 
+  scoreRanges 
+}: FormScoreCardProps) => {
   const { id: formId } = useParams();
   const { calculateTotalScore, getScoreFeedback } = useFormScoring();
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
@@ -37,66 +48,62 @@ const FormScoreCard = ({ formValues, fields, formTitle, onNext, scoreData }: For
     formId, 
     fields: fields?.length, 
     scoreData,
-    providedFeedback 
+    providedFeedback,
+    scoreRanges: scoreRanges?.length
   });
 
-  // Fetch score feedback from database with improved ID handling
+  // Get score feedback with improved handling
   useEffect(() => {
     const fetchFeedback = async () => {
-      if (formId) {
-        try {
-          setIsLoading(true);
-          
-          // If we already have feedback from scoreData, use it
-          if (providedFeedback) {
-            console.log("FormScoreCard - Using provided feedback:", providedFeedback);
-            setScoreFeedback(providedFeedback);
-            setLoadingMessage("¡Mensaje personalizado encontrado!");
-            setFeedbackSource("datos del formulario");
-            setIsLoading(false);
-            return;
-          }
-          
-          setLoadingMessage("Buscando mensaje personalizado...");
-          
-          console.log("FormScoreCard - Fetching feedback for score:", currentScore, "formId:", formId);
-          
-          // Add a small delay to show loading state
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          const feedback = await getScoreFeedback(currentScore, formId, fields);
-          setScoreFeedback(feedback);
-          
-          console.log("FormScoreCard - Score feedback received:", feedback);
-          
-          if (feedback) {
-            setLoadingMessage("¡Mensaje personalizado encontrado!");
-            setFeedbackSource("base de datos");
-          } else {
-            setLoadingMessage("Mensaje genérico (sin configuración específica)");
-            setFeedbackSource("");
-          }
-          
-        } catch (error) {
-          console.error("FormScoreCard - Error fetching score feedback:", error);
-          setScoreFeedback(null);
-          setLoadingMessage("Error al obtener mensaje personalizado");
-          setFeedbackSource("");
-        } finally {
-          // Keep loading state for a moment to show the message
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 1500);
+      try {
+        setIsLoading(true);
+        
+        // If we already have feedback from scoreData, use it
+        if (providedFeedback) {
+          console.log("FormScoreCard - Using provided feedback:", providedFeedback);
+          setScoreFeedback(providedFeedback);
+          setLoadingMessage("¡Mensaje personalizado encontrado!");
+          setFeedbackSource("datos del formulario");
+          setIsLoading(false);
+          return;
         }
-      } else {
-        setIsLoading(false);
-        setLoadingMessage("ID de formulario no disponible");
+        
+        setLoadingMessage("Buscando mensaje personalizado...");
+        
+        console.log("FormScoreCard - Getting feedback for score:", currentScore, "with ranges:", scoreRanges);
+        
+        // Add a small delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Use the score ranges passed as prop or from the form
+        const feedback = await getScoreFeedback(currentScore, scoreRanges);
+        setScoreFeedback(feedback);
+        
+        console.log("FormScoreCard - Score feedback received:", feedback);
+        
+        if (feedback) {
+          setLoadingMessage("¡Mensaje personalizado encontrado!");
+          setFeedbackSource("configuración del formulario");
+        } else {
+          setLoadingMessage("Mensaje genérico (sin configuración específica)");
+          setFeedbackSource("");
+        }
+        
+      } catch (error) {
+        console.error("FormScoreCard - Error getting score feedback:", error);
+        setScoreFeedback(null);
+        setLoadingMessage("Error al obtener mensaje personalizado");
         setFeedbackSource("");
+      } finally {
+        // Keep loading state for a moment to show the message
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 1500);
       }
     };
     
     fetchFeedback();
-  }, [currentScore, formId, fields, getScoreFeedback, providedFeedback]);
+  }, [currentScore, formId, getScoreFeedback, providedFeedback, scoreRanges]);
 
   return (
     <motion.div
