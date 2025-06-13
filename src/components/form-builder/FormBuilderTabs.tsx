@@ -76,8 +76,8 @@ const FormBuilderTabs = ({
       <TabsList className="mb-8">
         <TabsTrigger value="fields">Campos</TabsTrigger>
         <TabsTrigger value="settings">Configuración</TabsTrigger>
-        {/* Show Rangos tab if there are fields with numeric values */}
-        {hasFieldsWithNumericValues && <TabsTrigger value="ranges">Rangos</TabsTrigger>}
+        {/* Always show Rangos tab now */}
+        <TabsTrigger value="ranges">Rangos</TabsTrigger>
         {formData.isPrivate && <TabsTrigger value="access">Control de Acceso</TabsTrigger>}
       </TabsList>
       
@@ -121,18 +121,16 @@ const FormBuilderTabs = ({
         />
       </TabsContent>
       
-      {/* New Rangos tab - only visible when there are fields with numeric values */}
-      {hasFieldsWithNumericValues && (
-        <TabsContent value="ranges">
-          <ScoreRangesTab
-            formFields={formData.fields || []}
-            showTotalScore={showTotalScore}
-            onToggleFormScoring={onToggleFormScoring}
-            onSaveScoreRanges={onSaveScoreRanges}
-            scoreRanges={scoreRanges}
-          />
-        </TabsContent>
-      )}
+      {/* Rangos tab is now always visible */}
+      <TabsContent value="ranges">
+        <ScoreRangesTab
+          formFields={formData.fields || []}
+          showTotalScore={showTotalScore}
+          onToggleFormScoring={onToggleFormScoring}
+          onSaveScoreRanges={onSaveScoreRanges}
+          scoreRanges={scoreRanges}
+        />
+      </TabsContent>
       
       {formData.isPrivate && (
         <TabsContent value="access">
