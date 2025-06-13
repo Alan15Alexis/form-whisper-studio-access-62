@@ -18,30 +18,6 @@ interface ScoreRangesTabProps {
   scoreRanges: ScoreRange[];
 }
 
-// Static example score ranges that will always be displayed
-const EXAMPLE_SCORE_RANGES: ScoreRange[] = [
-  {
-    min: 0,
-    max: 25,
-    message: "Resultado bajo: Necesitas mejorar en varias áreas"
-  },
-  {
-    min: 26,
-    max: 50,
-    message: "Resultado medio: Vas por buen camino, pero hay espacio para mejorar"
-  },
-  {
-    min: 51,
-    max: 75,
-    message: "Resultado bueno: Tienes un buen desempeño general"
-  },
-  {
-    min: 76,
-    max: 100,
-    message: "Resultado excelente: ¡Felicidades! Tienes un desempeño excepcional"
-  }
-];
-
 const ScoreRangesTab = ({
   formFields = [],
   showTotalScore,
@@ -62,26 +38,23 @@ const ScoreRangesTab = ({
     hasUnsavedChanges
   });
 
-  // Initialize with example ranges if no ranges exist and always show them
+  // Sync with external scoreRanges from database - only use real data
   useEffect(() => {
     console.log("ScoreRangesTab - Syncing with external scoreRanges:", scoreRanges);
     
-    // Ensure we always have a valid array
+    // Ensure we always have a valid array from props
     const incomingRanges = Array.isArray(scoreRanges) ? scoreRanges : [];
-    
-    // If no external ranges exist, use example ranges
-    const rangesToUse = incomingRanges.length > 0 ? incomingRanges : EXAMPLE_SCORE_RANGES;
     
     // Only update if there's actually a difference to prevent unnecessary re-renders
     const currentRangesJson = JSON.stringify(localScoreRanges);
-    const rangesToUseJson = JSON.stringify(rangesToUse);
+    const incomingRangesJson = JSON.stringify(incomingRanges);
     
-    if (currentRangesJson !== rangesToUseJson) {
-      console.log("ScoreRangesTab - Score ranges changed, updating local state from", localScoreRanges.length, "to", rangesToUse.length);
-      setLocalScoreRanges(JSON.parse(JSON.stringify(rangesToUse))); // Deep copy
+    if (currentRangesJson !== incomingRangesJson) {
+      console.log("ScoreRangesTab - Score ranges changed, updating local state from", localScoreRanges.length, "to", incomingRanges.length);
+      setLocalScoreRanges(JSON.parse(JSON.stringify(incomingRanges))); // Deep copy
       setHasUnsavedChanges(false);
     }
-  }, [scoreRanges]); // Remove localScoreRanges from dependencies to avoid infinite loops
+  }, [scoreRanges]);
 
   // Score range management functions
   const addScoreRange = () => {
@@ -186,13 +159,11 @@ const ScoreRangesTab = ({
       onToggleFormScoring(enabled);
     }
 
-    // If enabling scoring and no ranges exist yet, add example ranges
-    if (enabled && localScoreRanges.length === 0) {
-      console.log("ScoreRangesTab - Adding example score ranges when enabling scoring");
-      setTimeout(() => {
-        setLocalScoreRanges([...EXAMPLE_SCORE_RANGES]);
-        setHasUnsavedChanges(true);
-      }, 100);
+    // When disabling scoring, clear local ranges
+    if (!enabled) {
+      console.log("ScoreRangesTab - Clearing score ranges when disabling scoring");
+      setLocalScoreRanges([]);
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -237,131 +208,132 @@ const ScoreRangesTab = ({
               </div>
             )}
             
-            {/* Score Ranges Configuration - Always show now */}
-            <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">
-                  Rangos de puntuación y mensajes
-                  {!hasFieldsWithNumericValues && (
-                    <span className="text-sm text-gray-500 ml-2">(Vista previa - configura campos numéricos para activar)</span>
-                  )}
-                </Label>
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={addScoreRange} 
-                    className="flex items-center gap-1"
-                    disabled={!hasFieldsWithNumericValues}
-                  >
-                    <Plus className="h-4 w-4" /> Añadir rango
-                  </Button>
-                  {hasUnsavedChanges && hasFieldsWithNumericValues && (
-                    <Button 
-                      type="button" 
-                      size="sm" 
-                      onClick={saveScoreRanges} 
-                      className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
-                    >
-                      <Save className="h-4 w-4" /> Guardar cambios
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {hasUnsavedChanges && hasFieldsWithNumericValues && (
-                <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Tienes cambios sin guardar. Haz clic en "Guardar cambios" para aplicarlos.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="space-y-3">
-                {localScoreRanges.map((range, index) => (
-                  <div key={`range-${index}-${range.min}-${range.max}`} className="p-3 border rounded-md bg-background">
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div>
-                        <Label htmlFor={`min-${index}`}>Mínimo</Label>
-                        <Input 
-                          id={`min-${index}`} 
-                          type="number" 
-                          value={range.min} 
-                          onChange={(e) => updateScoreRange(index, 'min', Number(e.target.value))} 
-                          className="mt-1"
-                          disabled={!hasFieldsWithNumericValues}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`max-${index}`}>Máximo</Label>
-                        <Input 
-                          id={`max-${index}`} 
-                          type="number" 
-                          value={range.max} 
-                          onChange={(e) => updateScoreRange(index, 'max', Number(e.target.value))} 
-                          className="mt-1"
-                          disabled={!hasFieldsWithNumericValues}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor={`message-${index}`}>Mensaje</Label>
-                      <Input 
-                        id={`message-${index}`} 
-                        value={range.message} 
-                        onChange={(e) => updateScoreRange(index, 'message', e.target.value)} 
-                        className="mt-1" 
-                        placeholder="Mensaje que se mostrará para este rango de puntuación"
-                        disabled={!hasFieldsWithNumericValues}
-                      />
-                    </div>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-2 text-red-500 hover:text-red-700" 
-                      onClick={() => removeScoreRange(index)}
-                      disabled={!hasFieldsWithNumericValues}
-                    >
-                      <Trash className="h-4 w-4 mr-1" /> Eliminar
-                    </Button>
-                  </div>
-                ))}
-
-                {localScoreRanges.length === 0 && (
-                  <div className="text-center p-4">
-                    <p className="text-sm text-muted-foreground italic mb-3">
-                      No hay rangos definidos. Añade rangos para mostrar mensajes personalizados según la puntuación.
-                    </p>
+            {/* Score Ranges Configuration - Only show if scoring is enabled */}
+            {showTotalScore && hasFieldsWithNumericValues && (
+              <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-medium">
+                    Rangos de puntuación y mensajes
+                  </Label>
+                  <div className="flex gap-2">
                     <Button 
                       type="button" 
                       variant="outline" 
                       size="sm" 
                       onClick={addScoreRange} 
-                      className="mt-2"
-                      disabled={!hasFieldsWithNumericValues}
+                      className="flex items-center gap-1"
                     >
-                      <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
+                      <Plus className="h-4 w-4" /> Añadir rango
                     </Button>
+                    {hasUnsavedChanges && (
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        onClick={saveScoreRanges} 
+                        className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <Save className="h-4 w-4" /> Guardar cambios
+                      </Button>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
 
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  💡 <strong>Pasos para usar los rangos:</strong>
-                </p>
-                <ol className="text-sm text-blue-700 list-decimal ml-4 mt-2">
-                  <li>Configura campos con valores numéricos en la pestaña "Campos"</li>
-                  <li>Activa el switch "Habilitar puntuación total y rangos" arriba</li>
-                  <li>Personaliza los rangos de puntuación y sus mensajes</li>
-                  <li>Haz clic en "Guardar cambios" para aplicar los rangos</li>
-                  <li>Guarda el formulario con "Guardar Formulario"</li>
-                </ol>
+                {hasUnsavedChanges && (
+                  <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Tienes cambios sin guardar. Haz clic en "Guardar cambios" para aplicarlos.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="space-y-3">
+                  {localScoreRanges.map((range, index) => (
+                    <div key={`range-${index}-${range.min}-${range.max}`} className="p-3 border rounded-md bg-background">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                          <Label htmlFor={`min-${index}`}>Mínimo</Label>
+                          <Input 
+                            id={`min-${index}`} 
+                            type="number" 
+                            value={range.min} 
+                            onChange={(e) => updateScoreRange(index, 'min', Number(e.target.value))} 
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`max-${index}`}>Máximo</Label>
+                          <Input 
+                            id={`max-${index}`} 
+                            type="number" 
+                            value={range.max} 
+                            onChange={(e) => updateScoreRange(index, 'max', Number(e.target.value))} 
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor={`message-${index}`}>Mensaje</Label>
+                        <Input 
+                          id={`message-${index}`} 
+                          value={range.message} 
+                          onChange={(e) => updateScoreRange(index, 'message', e.target.value)} 
+                          className="mt-1" 
+                          placeholder="Mensaje que se mostrará para este rango de puntuación"
+                        />
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mt-2 text-red-500 hover:text-red-700" 
+                        onClick={() => removeScoreRange(index)}
+                      >
+                        <Trash className="h-4 w-4 mr-1" /> Eliminar
+                      </Button>
+                    </div>
+                  ))}
+
+                  {localScoreRanges.length === 0 && (
+                    <div className="text-center p-4">
+                      <p className="text-sm text-muted-foreground italic mb-3">
+                        No hay rangos configurados. Añade rangos para mostrar mensajes personalizados según la puntuación.
+                      </p>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addScoreRange} 
+                        className="mt-2"
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Añadir primer rango
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    💡 <strong>Configuración de rangos:</strong>
+                  </p>
+                  <ul className="text-sm text-blue-700 list-disc ml-4 mt-2">
+                    <li>Cada rango define un mensaje que se mostrará cuando la puntuación esté en ese rango</li>
+                    <li>Los rangos no deben solaparse para evitar ambigüedad</li>
+                    <li>Guarda los cambios antes de guardar el formulario completo</li>
+                  </ul>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Information when scoring is disabled but fields have numeric values */}
+            {!showTotalScore && hasFieldsWithNumericValues && (
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                <p className="font-medium text-gray-700">La puntuación está deshabilitada</p>
+                <p className="text-gray-600 mt-1">
+                  Activa el switch arriba para configurar rangos de puntuación y mensajes personalizados.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

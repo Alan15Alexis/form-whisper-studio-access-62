@@ -57,36 +57,21 @@ export const useFormBuilder = (id?: string) => {
             console.log("useFormBuilder - Found existing form with score data:", {
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
-              scoreRanges: existingForm.scoreRanges?.length || 0,
-              scoreConfig: existingForm.scoreConfig
+              scoreRanges: existingForm.scoreRanges?.length || 0
             });
             
-            // Ensure score ranges are properly synchronized
-            let consolidatedScoreRanges = [];
-            
-            // Priority: 1. Direct scoreRanges, 2. scoreConfig.ranges, 3. Empty array
-            if (Array.isArray(existingForm.scoreRanges) && existingForm.scoreRanges.length > 0) {
-              consolidatedScoreRanges = [...existingForm.scoreRanges];
-              console.log("useFormBuilder - Using direct scoreRanges:", consolidatedScoreRanges);
-            } else if (existingForm.scoreConfig?.ranges && Array.isArray(existingForm.scoreConfig.ranges) && existingForm.scoreConfig.ranges.length > 0) {
-              consolidatedScoreRanges = [...existingForm.scoreConfig.ranges];
-              console.log("useFormBuilder - Using scoreConfig.ranges:", consolidatedScoreRanges);
-            }
+            // Ensure scoreRanges are properly set - only use real data from database
+            const databaseScoreRanges = Array.isArray(existingForm.scoreRanges) ? existingForm.scoreRanges : [];
             
             const standardizedForm = {
               ...existingForm,
               showTotalScore: Boolean(existingForm.showTotalScore),
-              scoreRanges: consolidatedScoreRanges,
-              scoreConfig: {
-                enabled: Boolean(existingForm.showTotalScore),
-                ranges: consolidatedScoreRanges
-              }
+              scoreRanges: databaseScoreRanges
             };
             
             console.log("useFormBuilder - Standardized form data:", {
               showTotalScore: standardizedForm.showTotalScore,
-              scoreRanges: standardizedForm.scoreRanges.length,
-              scoreConfigRanges: standardizedForm.scoreConfig.ranges.length
+              scoreRanges: standardizedForm.scoreRanges.length
             });
             
             setForm(standardizedForm);
@@ -157,23 +142,16 @@ export const useFormBuilder = (id?: string) => {
     console.log("useFormBuilder - handleToggleFormScoring called with:", enabled);
     
     setFormData(prev => {
-      // When disabling scoring, clear all score ranges
-      const scoreRanges = enabled ? prev.scoreRanges : [];
-      
       const updated = { 
         ...prev, 
         showTotalScore: enabled,
-        scoreRanges: scoreRanges,
-        scoreConfig: {
-          enabled: enabled,
-          ranges: scoreRanges
-        }
+        // When disabling scoring, clear score ranges
+        scoreRanges: enabled ? prev.scoreRanges : []
       };
       
       console.log("useFormBuilder - Updated formData after toggle:", {
         showTotalScore: updated.showTotalScore,
-        scoreRanges: updated.scoreRanges.length,
-        scoreConfigRanges: updated.scoreConfig.ranges.length
+        scoreRanges: updated.scoreRanges.length
       });
       
       return updated;
@@ -204,16 +182,11 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => {
       const updated = { 
         ...prev, 
-        scoreRanges: [...validRanges],
-        scoreConfig: {
-          ...prev.scoreConfig,
-          ranges: [...validRanges]
-        }
+        scoreRanges: [...validRanges]
       };
       
       console.log("useFormBuilder - Updated formData with new score ranges:", {
-        scoreRanges: updated.scoreRanges.length,
-        scoreConfigRanges: updated.scoreConfig.ranges.length
+        scoreRanges: updated.scoreRanges.length
       });
       
       return updated;
@@ -356,8 +329,7 @@ export const useFormBuilder = (id?: string) => {
     console.log("useFormBuilder - handleSubmit called");
     console.log("useFormBuilder - Current formData before submit:", {
       showTotalScore: formData.showTotalScore,
-      scoreRanges: formData.scoreRanges.length,
-      scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
+      scoreRanges: formData.scoreRanges.length
     });
     
     setIsSaving(true);
@@ -406,8 +378,7 @@ export const useFormBuilder = (id?: string) => {
       setIsSaving(true);
       console.log("useFormBuilder - Updating form with data:", {
         showTotalScore: formData.showTotalScore,
-        scoreRanges: formData.scoreRanges?.length || 0,
-        scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
+        scoreRanges: formData.scoreRanges?.length || 0
       });
       
       await updateForm(id, formData);

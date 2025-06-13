@@ -61,14 +61,12 @@ const FormBuilderTabs = ({
   // Use formData.showTotalScore as the single source of truth
   const showTotalScore = Boolean(formData.showTotalScore);
   const scoreRanges = Array.isArray(formData.scoreRanges) ? formData.scoreRanges : [];
-  const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues);
 
-  console.log("FormBuilderTabs - Rendering with standardized props:", {
+  console.log("FormBuilderTabs - Rendering with data:", {
     title: formData.title,
     showTotalScore,
     scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges',
-    formId,
-    hasFieldsWithNumericValues
+    formId
   });
 
   return (
@@ -76,7 +74,6 @@ const FormBuilderTabs = ({
       <TabsList className="mb-8">
         <TabsTrigger value="fields">Campos</TabsTrigger>
         <TabsTrigger value="settings">Configuración</TabsTrigger>
-        {/* Always show Rangos tab now */}
         <TabsTrigger value="ranges">Rangos</TabsTrigger>
         {formData.isPrivate && <TabsTrigger value="access">Control de Acceso</TabsTrigger>}
       </TabsList>
@@ -121,7 +118,6 @@ const FormBuilderTabs = ({
         />
       </TabsContent>
       
-      {/* Rangos tab is now always visible */}
       <TabsContent value="ranges">
         <ScoreRangesTab
           formFields={formData.fields || []}
