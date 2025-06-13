@@ -38,13 +38,23 @@ const ScoreRangesTab = ({
     hasUnsavedChanges
   });
 
-  // Sync local score ranges with props
+  // Improved synchronization with external score ranges
   useEffect(() => {
-    console.log("ScoreRangesTab - Syncing local score ranges with props:", scoreRanges);
-    const rangesToSet = Array.isArray(scoreRanges) ? [...scoreRanges] : [];
-    setLocalScoreRanges(rangesToSet);
-    setHasUnsavedChanges(false);
-  }, [scoreRanges]);
+    console.log("ScoreRangesTab - Syncing with external scoreRanges:", scoreRanges);
+    
+    // Ensure we always have a valid array and create deep copy to avoid reference issues
+    const incomingRanges = Array.isArray(scoreRanges) ? scoreRanges : [];
+    
+    // Only update if there's actually a difference to prevent unnecessary re-renders
+    const currentRangesJson = JSON.stringify(localScoreRanges);
+    const incomingRangesJson = JSON.stringify(incomingRanges);
+    
+    if (currentRangesJson !== incomingRangesJson) {
+      console.log("ScoreRangesTab - Score ranges changed, updating local state");
+      setLocalScoreRanges(JSON.parse(JSON.stringify(incomingRanges))); // Deep copy
+      setHasUnsavedChanges(false);
+    }
+  }, [scoreRanges]); // Remove localScoreRanges from dependencies to avoid infinite loops
 
   // Score range management functions
   const addScoreRange = () => {
@@ -112,7 +122,27 @@ const ScoreRangesTab = ({
 
   const saveScoreRanges = () => {
     console.log("ScoreRangesTab - Saving score ranges:", localScoreRanges);
-    onSaveScoreRanges(localScoreRanges);
+    
+    // Validate ranges before saving
+    const validRanges = localScoreRanges.filter(range => 
+      range && 
+      typeof range.min === 'number' && 
+      typeof range.max === 'number' && 
+      typeof range.message === 'string' &&
+      range.min <= range.max
+    );
+    
+    if (validRanges.length !== localScoreRanges.length) {
+      console.warn("ScoreRangesTab - Some invalid ranges were filtered out");
+      toast({
+        title: "Advertencia",
+        description: "Algunos rangos tenían datos inválidos y fueron omitidos.",
+        variant: "destructive"
+      });
+    }
+    
+    // Call parent save handler with validated ranges
+    onSaveScoreRanges(validRanges);
     setHasUnsavedChanges(false);
     
     toast({
@@ -129,9 +159,9 @@ const ScoreRangesTab = ({
       onToggleFormScoring(enabled);
     }
 
-    // If toggling on and no ranges exist yet, add a default range
+    // If enabling scoring and no ranges exist yet, add a default range
     if (enabled && localScoreRanges.length === 0) {
-      console.log("ScoreRangesTab - Adding default score range when toggling on");
+      console.log("ScoreRangesTab - Adding default score range when enabling scoring");
       setTimeout(() => addScoreRange(), 100);
     }
   };
@@ -225,7 +255,7 @@ const ScoreRangesTab = ({
                 
                 <div className="space-y-3">
                   {localScoreRanges.map((range, index) => (
-                    <div key={index} className="p-3 border rounded-md bg-background">
+                    <div key={`range-${index}-${range.min}-${range.max}`} className="p-3 border rounded-md bg-background">
                       <div className="grid grid-cols-2 gap-2 mb-2">
                         <div>
                           <Label htmlFor={`min-${index}`}>Mínimo</Label>

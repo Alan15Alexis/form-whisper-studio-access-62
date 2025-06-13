@@ -74,7 +74,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessTokens, setAccessTokens] = useState(getInitialAccessTokens());
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
 
-  // Load forms from Supabase on initial render with improved error handling
+  // Load forms from Supabase on initial render with improved score ranges handling
   React.useEffect(() => {
     const loadFormsFromSupabase = async () => {
       try {
@@ -103,10 +103,11 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const config = formData.configuracion || {};
             const showTotalScore = Boolean(config.showTotalScore);
             
-            // Get score ranges with proper priority and validation
+            // Get score ranges with improved priority and validation
             let scoreRanges = [];
+            
+            // Priority 1: rangos_mensajes column (new dedicated column)
             if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
-              // Validate the structure of score ranges
               const validRanges = formData.rangos_mensajes.filter(range => 
                 range && 
                 typeof range.min === 'number' && 
@@ -121,9 +122,19 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (validRanges.length !== formData.rangos_mensajes.length) {
                 console.warn(`FormContext - Some score ranges were invalid for form "${formData.titulo}"`);
               }
-            } else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
-              scoreRanges = [...config.scoreRanges];
-              console.log(`FormContext - Using score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
+            }
+            // Priority 2: Fallback to legacy configuration (for backward compatibility)
+            else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
+              const validRanges = config.scoreRanges.filter(range => 
+                range && 
+                typeof range.min === 'number' && 
+                typeof range.max === 'number' && 
+                typeof range.message === 'string' &&
+                range.min <= range.max
+              );
+              
+              scoreRanges = validRanges;
+              console.log(`FormContext - Using legacy score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
             }
             
             console.log(`FormContext - Form "${formData.titulo}" loaded with:`, {
@@ -151,9 +162,9 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               enableScoring: showTotalScore,
               scoreConfig: {
                 enabled: showTotalScore,
-                ranges: [...scoreRanges]
+                ranges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy to avoid reference issues
               },
-              scoreRanges: [...scoreRanges]
+              scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy to avoid reference issues
             };
             
             return convertedForm;
@@ -315,7 +326,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useForm = () => {
   const context = useContext(FormContext);
   if (context === undefined) {
-    throw new Error('useForm must be used within a FormProvider');
+    throw new error('useForm must be used within a FormProvider');
   }
   return context;
 };

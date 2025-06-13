@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -55,26 +54,39 @@ export const useFormBuilder = (id?: string) => {
           const existingForm = getForm(formId);
           
           if (existingForm) {
-            console.log("useFormBuilder - Found existing form:", {
+            console.log("useFormBuilder - Found existing form with score data:", {
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
-              scoreRanges: existingForm.scoreRanges?.length || 0
+              scoreRanges: existingForm.scoreRanges?.length || 0,
+              scoreConfig: existingForm.scoreConfig
             });
+            
+            // Ensure score ranges are properly synchronized
+            let consolidatedScoreRanges = [];
+            
+            // Priority: 1. Direct scoreRanges, 2. scoreConfig.ranges, 3. Empty array
+            if (Array.isArray(existingForm.scoreRanges) && existingForm.scoreRanges.length > 0) {
+              consolidatedScoreRanges = [...existingForm.scoreRanges];
+              console.log("useFormBuilder - Using direct scoreRanges:", consolidatedScoreRanges);
+            } else if (existingForm.scoreConfig?.ranges && Array.isArray(existingForm.scoreConfig.ranges) && existingForm.scoreConfig.ranges.length > 0) {
+              consolidatedScoreRanges = [...existingForm.scoreConfig.ranges];
+              console.log("useFormBuilder - Using scoreConfig.ranges:", consolidatedScoreRanges);
+            }
             
             const standardizedForm = {
               ...existingForm,
               showTotalScore: Boolean(existingForm.showTotalScore),
-              scoreRanges: Array.isArray(existingForm.scoreRanges) ? [...existingForm.scoreRanges] : [],
+              scoreRanges: consolidatedScoreRanges,
               scoreConfig: {
-                ...existingForm.scoreConfig,
                 enabled: Boolean(existingForm.showTotalScore),
-                ranges: Array.isArray(existingForm.scoreRanges) ? [...existingForm.scoreRanges] : []
+                ranges: consolidatedScoreRanges
               }
             };
             
-            console.log("useFormBuilder - Standardized form:", {
+            console.log("useFormBuilder - Standardized form data:", {
               showTotalScore: standardizedForm.showTotalScore,
-              scoreRanges: standardizedForm.scoreRanges.length
+              scoreRanges: standardizedForm.scoreRanges.length,
+              scoreConfigRanges: standardizedForm.scoreConfig.ranges.length
             });
             
             setForm(standardizedForm);
@@ -145,20 +157,25 @@ export const useFormBuilder = (id?: string) => {
     console.log("useFormBuilder - handleToggleFormScoring called with:", enabled);
     
     setFormData(prev => {
+      // When disabling scoring, clear all score ranges
+      const scoreRanges = enabled ? prev.scoreRanges : [];
+      
       const updated = { 
         ...prev, 
         showTotalScore: enabled,
-        scoreRanges: enabled ? prev.scoreRanges : [],
+        scoreRanges: scoreRanges,
         scoreConfig: {
-          ...prev.scoreConfig,
           enabled: enabled,
-          ranges: enabled ? prev.scoreRanges : []
+          ranges: scoreRanges
         }
       };
-      console.log("useFormBuilder - Updated formData:", {
+      
+      console.log("useFormBuilder - Updated formData after toggle:", {
         showTotalScore: updated.showTotalScore,
-        scoreRanges: updated.scoreRanges
+        scoreRanges: updated.scoreRanges.length,
+        scoreConfigRanges: updated.scoreConfig.ranges.length
       });
+      
       return updated;
     });
   };
@@ -166,18 +183,39 @@ export const useFormBuilder = (id?: string) => {
   const handleSaveScoreRanges = (ranges: any[]) => {
     console.log("useFormBuilder - handleSaveScoreRanges called with:", ranges);
     
+    // Validate ranges before saving
+    const validRanges = ranges.filter(range => 
+      range && 
+      typeof range.min === 'number' && 
+      typeof range.max === 'number' && 
+      typeof range.message === 'string' &&
+      range.min <= range.max
+    );
+    
+    if (validRanges.length !== ranges.length) {
+      console.warn("useFormBuilder - Some invalid ranges were filtered out");
+      toast({
+        title: 'Advertencia',
+        description: 'Algunos rangos tenían datos inválidos y fueron omitidos.',
+        variant: 'destructive',
+      });
+    }
+    
     setFormData(prev => {
       const updated = { 
         ...prev, 
-        scoreRanges: [...ranges],
+        scoreRanges: [...validRanges],
         scoreConfig: {
           ...prev.scoreConfig,
-          ranges: [...ranges]
+          ranges: [...validRanges]
         }
       };
-      console.log("useFormBuilder - Updated formData scoreRanges to:", {
-        scoreRanges: updated.scoreRanges
+      
+      console.log("useFormBuilder - Updated formData with new score ranges:", {
+        scoreRanges: updated.scoreRanges.length,
+        scoreConfigRanges: updated.scoreConfig.ranges.length
       });
+      
       return updated;
     });
   };
@@ -316,9 +354,10 @@ export const useFormBuilder = (id?: string) => {
 
   const handleSubmit = async () => {
     console.log("useFormBuilder - handleSubmit called");
-    console.log("useFormBuilder - Current formData:", {
+    console.log("useFormBuilder - Current formData before submit:", {
       showTotalScore: formData.showTotalScore,
-      scoreRanges: formData.scoreRanges
+      scoreRanges: formData.scoreRanges.length,
+      scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
     });
     
     setIsSaving(true);
@@ -367,7 +406,8 @@ export const useFormBuilder = (id?: string) => {
       setIsSaving(true);
       console.log("useFormBuilder - Updating form with data:", {
         showTotalScore: formData.showTotalScore,
-        scoreRanges: formData.scoreRanges
+        scoreRanges: formData.scoreRanges?.length || 0,
+        scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
       });
       
       await updateForm(id, formData);

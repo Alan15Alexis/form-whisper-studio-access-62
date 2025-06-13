@@ -27,39 +27,42 @@ function removeScoreRangesFromFields(fields: FormField[]) {
   });
 }
 
-// Helper function to validate score ranges
-function validateScoreRanges(ranges: ScoreRange[]): { isValid: boolean; errors: string[] } {
+// Helper function to validate and clean score ranges
+function validateAndCleanScoreRanges(ranges: ScoreRange[]): { valid: ScoreRange[]; errors: string[] } {
   const errors: string[] = [];
   
   if (!ranges || ranges.length === 0) {
-    return { isValid: true, errors: [] };
+    return { valid: [], errors: [] };
   }
   
-  // Check each range for validity
-  for (let i = 0; i < ranges.length; i++) {
-    const range = ranges[i];
-    
+  const validRanges = ranges.filter((range, index) => {
     // Check if range has required properties
     if (typeof range.min !== 'number' || typeof range.max !== 'number' || typeof range.message !== 'string') {
-      errors.push(`Range ${i + 1}: Missing or invalid properties`);
-      continue;
+      errors.push(`Range ${index + 1}: Missing or invalid properties`);
+      return false;
     }
     
     // Check if min <= max
     if (range.min > range.max) {
-      errors.push(`Range ${i + 1}: Minimum value (${range.min}) cannot be greater than maximum value (${range.max})`);
+      errors.push(`Range ${index + 1}: Minimum value (${range.min}) cannot be greater than maximum value (${range.max})`);
+      return false;
     }
     
-    // Check for overlaps with other ranges
-    for (let j = i + 1; j < ranges.length; j++) {
-      const otherRange = ranges[j];
-      if (range.min <= otherRange.max && otherRange.min <= range.max) {
+    return true;
+  });
+  
+  // Check for overlaps between valid ranges
+  for (let i = 0; i < validRanges.length; i++) {
+    for (let j = i + 1; j < validRanges.length; j++) {
+      const range1 = validRanges[i];
+      const range2 = validRanges[j];
+      if (range1.min <= range2.max && range2.min <= range1.max) {
         errors.push(`Range ${i + 1} overlaps with Range ${j + 1}`);
       }
     }
   }
   
-  return { isValid: errors.length === 0, errors };
+  return { valid: validRanges, errors };
 }
 
 export const createFormOperation = (
@@ -79,40 +82,44 @@ export const createFormOperation = (
     const id = uuidv4();
     const accessToken = uuidv4();
     
-    // Extract and validate score ranges
+    // Extract and validate score ranges with improved consolidation
     let scoreRanges: ScoreRange[] = [];
     
-    // Get score ranges from the most reliable source
-    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      scoreRanges = JSON.parse(JSON.stringify(formData.scoreConfig.ranges));
-      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
-    } else if (formData.scoreRanges && formData.scoreRanges.length > 0) {
+    // Priority 1: scoreRanges direct property
+    if (formData.scoreRanges && Array.isArray(formData.scoreRanges) && formData.scoreRanges.length > 0) {
       scoreRanges = JSON.parse(JSON.stringify(formData.scoreRanges));
-      console.log("Using score ranges from direct scoreRanges:", JSON.stringify(scoreRanges));
-    } else if (formData.fields) {
-      // Look for a field with score ranges as a fallback
+      console.log("Using score ranges from direct scoreRanges:", scoreRanges.length);
+    } 
+    // Priority 2: scoreConfig.ranges
+    else if (formData.scoreConfig?.ranges && Array.isArray(formData.scoreConfig.ranges) && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = JSON.parse(JSON.stringify(formData.scoreConfig.ranges));
+      console.log("Using score ranges from scoreConfig:", scoreRanges.length);
+    }
+    // Priority 3: Look in fields as fallback
+    else if (formData.fields) {
       const fieldWithRanges = formData.fields.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
+        field.scoreRanges && Array.isArray(field.scoreRanges) && field.scoreRanges.length > 0
       );
       
       if (fieldWithRanges?.scoreRanges) {
         scoreRanges = JSON.parse(JSON.stringify(fieldWithRanges.scoreRanges));
-        console.log("Using score ranges from fields:", JSON.stringify(scoreRanges));
+        console.log("Using score ranges from fields:", scoreRanges.length);
       }
     }
 
-    // Validate score ranges before saving
-    const validation = validateScoreRanges(scoreRanges);
-    if (!validation.isValid) {
-      console.warn("Invalid score ranges detected:", validation.errors);
+    // Validate and clean score ranges before saving
+    const validation = validateAndCleanScoreRanges(scoreRanges);
+    if (validation.errors.length > 0) {
+      console.warn("Score range validation issues:", validation.errors);
       toast({
         title: 'Advertencia de configuración',
-        description: `Se detectaron problemas con los rangos de puntuación: ${validation.errors.join(', ')}`,
+        description: `Se detectaron problemas con los rangos de puntuación: ${validation.errors.slice(0, 2).join(', ')}${validation.errors.length > 2 ? '...' : ''}`,
         variant: 'destructive',
       });
-      // Continue with empty ranges if invalid
-      scoreRanges = [];
     }
+    
+    // Use validated ranges
+    scoreRanges = validation.valid;
 
     // Create the new form with all score properties properly set
     const newForm: Form = {
@@ -134,15 +141,15 @@ export const createFormOperation = (
       enableScoring: formData.showTotalScore || false,
       scoreConfig: {
         enabled: formData.showTotalScore || false,
-        ranges: scoreRanges
+        ranges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy
       },
-      scoreRanges: scoreRanges // Also set direct scoreRanges for backward compatibility
+      scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy for backward compatibility
     };
 
     // Check if any field has numeric values
     const fieldsWithValues = formData.fields?.some(field => field.hasNumericValues) || false;
     
-    // Save form to Supabase database with score ranges in rangos_mensajes column
+    // Save form to Supabase database with score ranges in dedicated column
     try {
       // Configuration object without score ranges (they go in separate column)
       const configObject = {
@@ -155,19 +162,18 @@ export const createFormOperation = (
         hasFieldsWithNumericValues: fieldsWithValues
       };
       
-      console.log("Saving configuration to Supabase:", JSON.stringify(configObject));
-      console.log("Saving score ranges to rangos_mensajes:", JSON.stringify(scoreRanges));
+      console.log("Saving configuration to Supabase:", configObject);
+      console.log("Saving score ranges to rangos_mensajes:", scoreRanges.length, "ranges");
       
       // Remove scoreRanges from fields before saving to database
       const fieldsForDatabase = removeScoreRangesFromFields(newForm.fields);
-      console.log("Fields for database (without scoreRanges):", JSON.stringify(fieldsForDatabase));
 
       const { data, error } = await supabase.from('formulario_construccion').insert({
         titulo: newForm.title,
         descripcion: newForm.description,
         preguntas: fieldsForDatabase,
         configuracion: configObject,
-        rangos_mensajes: scoreRanges.length > 0 ? scoreRanges : null, // Store in new column
+        rangos_mensajes: scoreRanges.length > 0 ? scoreRanges : null, // Store in dedicated column
         administrador: currentUserEmail || 'unknown@email.com',
         acceso: newForm.allowedUsers
       }).select();
@@ -180,9 +186,7 @@ export const createFormOperation = (
           variant: 'destructive',
         });
       } else {
-        console.log("Form created in Supabase:", data);
-        console.log("Form created with showTotalScore:", newForm.showTotalScore);
-        console.log("Form created with score ranges in rangos_mensajes:", JSON.stringify(scoreRanges));
+        console.log("Form created in Supabase with score ranges:", scoreRanges.length);
         
         // Update the form ID with the database ID for better synchronization
         if (data && data[0]) {
@@ -228,7 +232,11 @@ export const updateFormOperation = (
   setAllowedUsers: React.Dispatch<React.SetStateAction<Record<string, string[]>>>,
 ) => {
   return async (id: string, formData: Partial<Form>): Promise<Form | null> => {
-    console.log("Updating form with ID:", id, "and data:", formData);
+    console.log("Updating form with ID:", id, "and score data:", {
+      showTotalScore: formData.showTotalScore,
+      scoreRanges: formData.scoreRanges?.length || 0,
+      scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
+    });
     
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -244,40 +252,38 @@ export const updateFormOperation = (
       return null;
     }
 
-    // Extract and validate score ranges from the most reliable source
+    // Extract and validate score ranges with improved consolidation
     let scoreRanges: ScoreRange[] = [];
     
-    // Get score ranges from the most reliable source
-    if (formData.scoreConfig?.ranges && formData.scoreConfig.ranges.length > 0) {
-      scoreRanges = JSON.parse(JSON.stringify(formData.scoreConfig.ranges));
-      console.log("Using score ranges from scoreConfig:", JSON.stringify(scoreRanges));
-    } else if (formData.scoreRanges && formData.scoreRanges.length > 0) {
+    // Priority 1: scoreRanges direct property
+    if (formData.scoreRanges && Array.isArray(formData.scoreRanges) && formData.scoreRanges.length > 0) {
       scoreRanges = JSON.parse(JSON.stringify(formData.scoreRanges));
-      console.log("Using score ranges from direct scoreRanges:", JSON.stringify(scoreRanges));
-    } else if (formData.fields) {
-      // Look for a field with score ranges as a fallback
-      const fieldWithRanges = formData.fields.find(field => 
-        field.scoreRanges && field.scoreRanges.length > 0
-      );
-      
-      if (fieldWithRanges?.scoreRanges) {
-        scoreRanges = JSON.parse(JSON.stringify(fieldWithRanges.scoreRanges));
-        console.log("Using score ranges from fields:", JSON.stringify(scoreRanges));
-      }
+      console.log("Update: Using score ranges from direct scoreRanges:", scoreRanges.length);
+    } 
+    // Priority 2: scoreConfig.ranges
+    else if (formData.scoreConfig?.ranges && Array.isArray(formData.scoreConfig.ranges) && formData.scoreConfig.ranges.length > 0) {
+      scoreRanges = JSON.parse(JSON.stringify(formData.scoreConfig.ranges));
+      console.log("Update: Using score ranges from scoreConfig:", scoreRanges.length);
+    }
+    // Priority 3: Keep existing ranges from current form
+    else if (forms[formIndex].scoreRanges && Array.isArray(forms[formIndex].scoreRanges)) {
+      scoreRanges = JSON.parse(JSON.stringify(forms[formIndex].scoreRanges));
+      console.log("Update: Keeping existing score ranges:", scoreRanges.length);
     }
     
-    // Validate score ranges before saving
-    const validation = validateScoreRanges(scoreRanges);
-    if (!validation.isValid) {
-      console.warn("Invalid score ranges detected:", validation.errors);
+    // Validate and clean score ranges before saving
+    const validation = validateAndCleanScoreRanges(scoreRanges);
+    if (validation.errors.length > 0) {
+      console.warn("Score range validation issues during update:", validation.errors);
       toast({
         title: 'Advertencia de configuración',
-        description: `Se detectaron problemas con los rangos de puntuación: ${validation.errors.join(', ')}`,
+        description: `Se detectaron problemas con los rangos de puntuación: ${validation.errors.slice(0, 2).join(', ')}${validation.errors.length > 2 ? '...' : ''}`,
         variant: 'destructive',
       });
-      // Continue with empty ranges if invalid
-      scoreRanges = [];
     }
+    
+    // Use validated ranges
+    scoreRanges = validation.valid;
     
     // Check if any field has numeric values
     const fieldsWithValues = formData.fields?.some(field => field.hasNumericValues) || 
@@ -292,16 +298,16 @@ export const updateFormOperation = (
       enableScoring: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
       scoreConfig: {
         enabled: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
-        ranges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreConfig?.ranges || [])
+        ranges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy
       },
-      scoreRanges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreRanges || [])
+      scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy
     };
 
     // Update fields with score ranges if scoring is enabled
     if (updatedForm.showTotalScore && scoreRanges.length > 0) {
       updatedForm.fields = updatedForm.fields.map(field => {
         if (field.hasNumericValues) {
-          return { ...field, scoreRanges: [...scoreRanges] };
+          return { ...field, scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) };
         }
         return field;
       });
@@ -328,15 +334,13 @@ export const updateFormOperation = (
       hasFieldsWithNumericValues: fieldsWithValues
     };
 
-    console.log("Saving configuration to Supabase:", JSON.stringify(configObject));
-    console.log("Saving score ranges to rangos_mensajes:", JSON.stringify(scoreRanges));
-    console.log("Form has showTotalScore:", updatedForm.showTotalScore);
+    console.log("Update: Saving configuration to Supabase:", configObject);
+    console.log("Update: Saving score ranges to rangos_mensajes:", scoreRanges.length, "ranges");
     
     // Remove scoreRanges from fields before saving to database
     const fieldsForDatabase = removeScoreRangesFromFields(updatedForm.fields);
-    console.log("Fields for database (without scoreRanges):", JSON.stringify(fieldsForDatabase));
     
-    // Update the form in Supabase with proper ID handling and better error handling
+    // Update the form in Supabase with proper ID handling
     try {
       // Convert form ID to number if it's a string that represents a number
       let queryId: string | number = id;
@@ -345,10 +349,6 @@ export const updateFormOperation = (
       // If the ID can be converted to a number, use it for the database query
       if (!isNaN(numericId)) {
         queryId = numericId;
-        console.log("Using numeric ID for database query:", queryId);
-      } else {
-        // If it's not a number, try to find by title as fallback
-        console.log("ID is not numeric, will search by title:", id);
       }
       
       let existingForm;
@@ -374,7 +374,7 @@ export const updateFormOperation = (
       }
 
       if (existingForm) {
-        // Update existing form with score ranges in separate column
+        // Update existing form with score ranges in dedicated column
         const { data, error } = await supabase
           .from('formulario_construccion')
           .update({
@@ -382,7 +382,7 @@ export const updateFormOperation = (
             descripcion: updatedForm.description,
             preguntas: fieldsForDatabase,
             configuracion: configObject,
-            rangos_mensajes: scoreRanges.length > 0 ? scoreRanges : null, // Store in new column
+            rangos_mensajes: scoreRanges.length > 0 ? scoreRanges : null, // Store in dedicated column
             acceso: updatedForm.allowedUsers
           })
           .eq('id', existingForm.id);
@@ -395,9 +395,7 @@ export const updateFormOperation = (
             variant: 'destructive',
           });
         } else {
-          console.log("Form updated in Supabase successfully");
-          console.log("Form updated with showTotalScore:", updatedForm.showTotalScore);
-          console.log("Form updated with score ranges in rangos_mensajes:", JSON.stringify(scoreRanges));
+          console.log("Form updated in Supabase with score ranges:", scoreRanges.length);
           
           toast({
             title: 'Formulario actualizado',
@@ -405,7 +403,7 @@ export const updateFormOperation = (
           });
         }
       } else {
-        // Form doesn't exist, insert it with score ranges in separate column
+        // Form doesn't exist, insert it
         const { data, error } = await supabase
           .from('formulario_construccion')
           .insert({
@@ -413,7 +411,7 @@ export const updateFormOperation = (
             descripcion: updatedForm.description,
             preguntas: fieldsForDatabase,
             configuracion: configObject,
-            rangos_mensajes: scoreRanges.length > 0 ? scoreRanges : null, // Store in new column
+            rangos_mensajes: scoreRanges.length > 0 ? scoreRanges : null, // Store in dedicated column
             administrador: updatedForm.ownerId,
             acceso: updatedForm.allowedUsers
           });
@@ -426,9 +424,7 @@ export const updateFormOperation = (
             variant: 'destructive',
           });
         } else {
-          console.log("Form created in Supabase successfully");
-          console.log("Form created with showTotalScore:", updatedForm.showTotalScore);
-          console.log("Form created with score ranges in rangos_mensajes:", JSON.stringify(scoreRanges));
+          console.log("Form created in Supabase with score ranges:", scoreRanges.length);
           
           toast({
             title: 'Formulario creado',
