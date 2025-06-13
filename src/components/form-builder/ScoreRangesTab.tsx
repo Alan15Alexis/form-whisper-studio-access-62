@@ -1,8 +1,6 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Settings, AlertCircle, Trash, Edit } from "lucide-react";
 import { ScoreRange, FormField } from "@/types/form";
@@ -74,26 +72,6 @@ const ScoreRangesTab = ({
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <div className="space-y-6">
-            <div className="flex items-center space-x-4">
-              <Switch 
-                id="show-total-score" 
-                checked={!!showTotalScore} 
-                onCheckedChange={onToggleFormScoring} 
-                disabled={!hasFieldsWithNumericValues} 
-                className="data-[state=checked]:bg-[#686df3]" 
-              />
-              <div>
-                <Label htmlFor="show-total-score" className="text-lg font-medium">
-                  Habilitar puntuación total
-                </Label>
-                <p className="text-sm text-gray-500">
-                  {hasFieldsWithNumericValues ? 
-                    "Muestra la puntuación total al finalizar el formulario" : 
-                    "Para activar, configura valores numéricos en al menos un campo"}
-                </p>
-              </div>
-            </div>
-
             {!hasFieldsWithNumericValues && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-sm">
                 <div className="flex items-center gap-2 mb-2">
@@ -114,9 +92,9 @@ const ScoreRangesTab = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base font-medium">
+                    <h3 className="text-base font-medium">
                       Configurar rangos de puntuación
-                    </Label>
+                    </h3>
                     <p className="text-sm text-gray-500">
                       Define mensajes personalizados según la puntuación obtenida
                     </p>
@@ -202,16 +180,6 @@ const ScoreRangesTab = ({
                     </div>
                   )}
                 </div>
-
-                {/* Information when scoring is disabled but fields have numeric values */}
-                {!showTotalScore && (
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-md text-sm">
-                    <p className="font-medium text-gray-700">La puntuación está deshabilitada</p>
-                    <p className="text-gray-600 mt-1">
-                      Activa el switch arriba para usar los rangos configurados.
-                    </p>
-                  </div>
-                )}
               </div>
             )}
           </div>
