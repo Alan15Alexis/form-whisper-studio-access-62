@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -75,7 +74,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
   const [formsLoaded, setFormsLoaded] = useState(false);
 
-  // Enhanced form loading function with better error handling and data normalization
+  // Enhanced form loading function with extensive debugging for score ranges
   const loadFormsFromSupabase = useCallback(async (forceReload = false) => {
     if (formsLoaded && !forceReload) {
       console.log("FormContext - Forms already loaded, skipping reload");
@@ -98,42 +97,92 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (formsData && formsData.length > 0) {
         console.log("FormContext - Processing", formsData.length, "forms from database");
         
+        // Log raw data from database to see what we're working with
+        console.log("FormContext - Raw database data:", formsData.map(form => ({
+          id: form.id,
+          titulo: form.titulo,
+          rawRangosMensajes: form.rangos_mensajes,
+          rangosMensajesType: typeof form.rangos_mensajes,
+          rangosMensajesLength: Array.isArray(form.rangos_mensajes) ? form.rangos_mensajes.length : 'not array',
+          configuracion: form.configuracion,
+          configShowTotalScore: form.configuracion?.showTotalScore
+        })));
+        
         const loadedForms = formsData.map(formData => {
           const config = formData.configuracion || {};
           
-          // Fix showTotalScore processing - look in both config and root level
+          // Enhanced showTotalScore processing with detailed logging
           const showTotalScore = Boolean(config.showTotalScore || formData.showTotalScore);
-          console.log(`FormContext - Form "${formData.titulo}" showTotalScore processing:`, {
-            configShowTotalScore: config.showTotalScore,
-            rootShowTotalScore: formData.showTotalScore,
-            finalShowTotalScore: showTotalScore
+          
+          // Enhanced score ranges processing with extensive validation and logging
+          let scoreRanges = [];
+          
+          console.log(`FormContext - Processing form "${formData.titulo}" (ID: ${formData.id}):`, {
+            hasRangosMensajes: !!formData.rangos_mensajes,
+            rangosMensajesType: typeof formData.rangos_mensajes,
+            isArray: Array.isArray(formData.rangos_mensajes),
+            rawValue: formData.rangos_mensajes,
+            stringified: JSON.stringify(formData.rangos_mensajes)
           });
           
-          // Fix score ranges processing - look in rangos_mensajes column
-          let scoreRanges = [];
-          if (Array.isArray(formData.rangos_mensajes)) {
-            scoreRanges = formData.rangos_mensajes.filter(range => {
-              const isValid = range && 
-                typeof range.min === 'number' && 
-                typeof range.max === 'number' && 
-                typeof range.message === 'string' &&
-                range.min <= range.max;
+          if (formData.rangos_mensajes) {
+            if (Array.isArray(formData.rangos_mensajes)) {
+              console.log(`FormContext - Form "${formData.titulo}" has ${formData.rangos_mensajes.length} ranges in database`);
               
-              if (!isValid) {
-                console.warn(`FormContext - Invalid range found in form "${formData.titulo}":`, range);
-              }
-              return isValid;
-            });
+              scoreRanges = formData.rangos_mensajes.map((range, index) => {
+                console.log(`FormContext - Processing range ${index} for form "${formData.titulo}":`, {
+                  originalRange: range,
+                  hasMin: 'min' in range,
+                  hasMax: 'max' in range,
+                  hasMessage: 'message' in range,
+                  minType: typeof range.min,
+                  maxType: typeof range.max,
+                  messageType: typeof range.message,
+                  minValue: range.min,
+                  maxValue: range.max,
+                  message: range.message
+                });
+                
+                const isValid = range && 
+                  typeof range.min === 'number' && 
+                  typeof range.max === 'number' && 
+                  typeof range.message === 'string' &&
+                  range.min <= range.max;
+                
+                if (!isValid) {
+                  console.warn(`FormContext - Invalid range found in form "${formData.titulo}" at index ${index}:`, {
+                    range,
+                    reasons: {
+                      noRange: !range,
+                      invalidMin: typeof range?.min !== 'number',
+                      invalidMax: typeof range?.max !== 'number',
+                      invalidMessage: typeof range?.message !== 'string',
+                      minGreaterThanMax: range?.min > range?.max
+                    }
+                  });
+                  return null;
+                }
+                
+                console.log(`FormContext - Valid range processed for form "${formData.titulo}":`, range);
+                return range;
+              }).filter(range => range !== null);
+              
+              console.log(`FormContext - Form "${formData.titulo}" final score ranges:`, {
+                originalCount: formData.rangos_mensajes.length,
+                validCount: scoreRanges.length,
+                filteredRanges: scoreRanges
+              });
+            } else {
+              console.warn(`FormContext - Form "${formData.titulo}" has non-array rangos_mensajes:`, {
+                type: typeof formData.rangos_mensajes,
+                value: formData.rangos_mensajes
+              });
+            }
+          } else {
+            console.log(`FormContext - Form "${formData.titulo}" has no rangos_mensajes in database`);
           }
           
-          console.log(`FormContext - Form "${formData.titulo}" final processing:`, {
-            showTotalScore,
-            scoreRangesCount: scoreRanges.length,
-            hasRangesInDatabase: Array.isArray(formData.rangos_mensajes) && formData.rangos_mensajes.length > 0,
-            rawRanges: formData.rangos_mensajes
-          });
-          
-          return {
+          const finalForm = {
             id: formData.id.toString(),
             title: formData.titulo || 'Untitled Form',
             description: formData.descripcion || '',
@@ -151,10 +200,32 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             showTotalScore: showTotalScore,
             scoreRanges: scoreRanges
           };
+          
+          console.log(`FormContext - Final processed form "${formData.titulo}":`, {
+            id: finalForm.id,
+            showTotalScore: finalForm.showTotalScore,
+            scoreRangesCount: finalForm.scoreRanges.length,
+            scoreRanges: finalForm.scoreRanges
+          });
+          
+          return finalForm;
         });
         
         console.log("FormContext - Successfully loaded forms:", loadedForms.length);
-        console.log("FormContext - Forms with score ranges:", loadedForms.filter(f => f.scoreRanges && f.scoreRanges.length > 0).map(f => ({ id: f.id, title: f.title, scoreRangesCount: f.scoreRanges.length })));
+        
+        // Enhanced logging for forms with score ranges
+        const formsWithRanges = loadedForms.filter(f => f.scoreRanges && f.scoreRanges.length > 0);
+        console.log("FormContext - Forms with score ranges:", {
+          totalForms: loadedForms.length,
+          formsWithRanges: formsWithRanges.length,
+          details: formsWithRanges.map(f => ({ 
+            id: f.id, 
+            title: f.title, 
+            scoreRangesCount: f.scoreRanges.length,
+            showTotalScore: f.showTotalScore,
+            ranges: f.scoreRanges 
+          }))
+        });
         
         setForms(loadedForms);
         safeLocalStorageSet('forms', loadedForms);
@@ -210,7 +281,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     safeLocalStorageSet('allowedUsers', allowedUsers);
   }, [allowedUsers]);
 
-  // Enhanced form operations with better error handling
+  // Enhanced form operations with better error handling and extensive logging
   const getForm = useCallback((id: string) => {
     console.log(`FormContext - getForm called with id: "${id}"`);
     
@@ -231,14 +302,20 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     if (form) {
-      console.log(`FormContext - getForm(${id}) found:`, {
+      console.log(`FormContext - getForm(${id}) found form:`, {
         title: form.title,
         showTotalScore: form.showTotalScore,
-        scoreRangesCount: form.scoreRanges?.length || 0
+        scoreRangesCount: form.scoreRanges?.length || 0,
+        scoreRanges: form.scoreRanges,
+        hasValidRanges: form.scoreRanges && form.scoreRanges.length > 0
       });
     } else {
       console.warn(`FormContext - getForm(${id}) not found. Available forms:`, 
-        forms.map(f => ({ id: f.id, title: f.title }))
+        forms.map(f => ({ 
+          id: f.id, 
+          title: f.title, 
+          scoreRangesCount: f.scoreRanges?.length || 0 
+        }))
       );
     }
     

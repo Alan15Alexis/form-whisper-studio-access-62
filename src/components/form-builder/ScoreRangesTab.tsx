@@ -26,34 +26,99 @@ const ScoreRangesTab = ({
   // Check for fields with numeric values
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues === true);
 
-  console.log("ScoreRangesTab - Component Rendered:", {
+  // Enhanced logging for debugging score ranges display issues
+  console.log("ScoreRangesTab - Component Rendered with detailed analysis:", {
     showTotalScore,
-    scoreRanges: scoreRanges?.length || 0,
+    scoreRangesReceived: scoreRanges,
+    scoreRangesType: typeof scoreRanges,
+    isScoreRangesArray: Array.isArray(scoreRanges),
+    scoreRangesLength: scoreRanges?.length || 0,
+    scoreRangesStringified: JSON.stringify(scoreRanges),
     hasFieldsWithNumericValues,
-    fieldsWithNumericValues: formFields.filter(f => f.hasNumericValues).map(f => ({ id: f.id, label: f.label }))
+    fieldsWithNumericValues: formFields.filter(f => f.hasNumericValues).map(f => ({ id: f.id, label: f.label })),
+    allFormFields: formFields.map(f => ({ id: f.id, label: f.label, hasNumericValues: f.hasNumericValues }))
   });
 
-  const validScoreRanges = Array.isArray(scoreRanges) ? scoreRanges : [];
+  // Validate and process score ranges with extensive logging
+  const validScoreRanges = (() => {
+    if (!scoreRanges) {
+      console.log("ScoreRangesTab - No scoreRanges provided (null/undefined)");
+      return [];
+    }
+    
+    if (!Array.isArray(scoreRanges)) {
+      console.warn("ScoreRangesTab - scoreRanges is not an array:", typeof scoreRanges, scoreRanges);
+      return [];
+    }
+    
+    const filtered = scoreRanges.filter((range, index) => {
+      const isValid = range && 
+        typeof range.min === 'number' && 
+        typeof range.max === 'number' && 
+        typeof range.message === 'string' &&
+        range.min <= range.max;
+      
+      if (!isValid) {
+        console.warn(`ScoreRangesTab - Invalid range at index ${index}:`, {
+          range,
+          reasons: {
+            noRange: !range,
+            invalidMin: typeof range?.min !== 'number',
+            invalidMax: typeof range?.max !== 'number', 
+            invalidMessage: typeof range?.message !== 'string',
+            minGreaterThanMax: range?.min > range?.max
+          }
+        });
+      } else {
+        console.log(`ScoreRangesTab - Valid range at index ${index}:`, range);
+      }
+      
+      return isValid;
+    });
+    
+    console.log("ScoreRangesTab - Filtered score ranges:", {
+      originalLength: scoreRanges.length,
+      filteredLength: filtered.length,
+      filtered
+    });
+    
+    return filtered;
+  })();
 
   const handleOpenModal = () => {
     if (!hasFieldsWithNumericValues) {
+      console.log("ScoreRangesTab - Cannot open modal: no fields with numeric values");
       return;
     }
+    console.log("ScoreRangesTab - Opening modal with ranges:", validScoreRanges);
     setIsModalOpen(true);
   };
 
   const handleSaveRanges = (newRanges: ScoreRange[]) => {
+    console.log("ScoreRangesTab - Saving new ranges:", newRanges);
     onSaveScoreRanges(newRanges);
     
     // If ranges are being saved and scoring is not enabled, enable it
     if (newRanges.length > 0 && !showTotalScore) {
+      console.log("ScoreRangesTab - Enabling scoring since ranges were added");
       onToggleFormScoring(true);
     }
   };
 
   const clearAllRanges = () => {
+    console.log("ScoreRangesTab - Clearing all ranges");
     onSaveScoreRanges([]);
   };
+
+  // Final render decision logging
+  console.log("ScoreRangesTab - Render decision:", {
+    shouldShowWarning: !hasFieldsWithNumericValues,
+    shouldShowConfiguration: hasFieldsWithNumericValues,
+    configurationWillReceive: {
+      scoreRanges: validScoreRanges,
+      scoreRangesLength: validScoreRanges.length
+    }
+  });
 
   return (
     <div className="space-y-8">
