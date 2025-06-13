@@ -18,7 +18,7 @@ export function useFormResponses(form: FormType | null) {
   const location = useLocation();
   const isEditMode = location.state?.editMode || new URLSearchParams(location.search).get('edit') === 'true';
   const navigate = useNavigate();
-  const { calculateTotalScore, getScoreFeedback, fetchScoreRangesFromDB } = useFormScoring();
+  const { calculateTotalScore, getScoreFeedback, shouldShowScoreCard } = useFormScoring();
   
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -225,37 +225,18 @@ export function useFormResponses(form: FormType | null) {
       const result = await submitFormResponse(id, processedResponses, form, scoreData);
       console.log("Form submission result:", result);
       
-      // Check both local form configuration AND database ranges
-      const hasNumericFields = form.fields.some(f => f.hasNumericValues);
-      const localScoringEnabled = (form.showTotalScore || form.enableScoring) && hasNumericFields;
-      
-      // Also check if there are score ranges in the database
-      let dbRangesExist = false;
-      if (id && hasNumericFields) {
-        try {
-          const dbRanges = await fetchScoreRangesFromDB(id);
-          dbRangesExist = dbRanges.length > 0;
-          console.log("Database ranges check:", { dbRangesExist, rangesCount: dbRanges.length });
-        } catch (error) {
-          console.error("Error checking database ranges:", error);
-        }
-      }
-      
-      const shouldShowScore = localScoringEnabled || dbRangesExist;
+      // Check if we should show the score card
+      const shouldShowScore = shouldShowScoreCard(form.fields, form.showTotalScore);
       
       console.log("Score check:", { 
         showTotalScore: form.showTotalScore, 
-        enableScoring: form.enableScoring,
-        hasNumericFields,
-        localScoringEnabled,
-        dbRangesExist,
         shouldShowScore,
         scoreData
       });
       
       if (shouldShowScore) {
         // Show score card first - NO TOAST HERE to avoid interference
-        console.log("Setting showScoreCard to true (local or DB ranges found)");
+        console.log("Setting showScoreCard to true");
         setShowScoreCard(true);
       } else {
         // Show toast and go directly to thank you card if no score to show
