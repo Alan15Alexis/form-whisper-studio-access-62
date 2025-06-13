@@ -1,6 +1,6 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { authenticateAdminUser, registerAdminUser } from '@/integrations/supabase/client';
+import { authenticateAdminUser, authenticateInvitedUser } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/toast';
 
 interface User {
   id: string | number;
@@ -29,10 +29,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check if user is stored in localStorage
     const storedUser = localStorage.getItem('currentUser');
+    const storedEmail = localStorage.getItem('userEmail');
+    
     if (storedUser) {
-      const user = JSON.parse(storedUser);
+      try {
+        const user = JSON.parse(storedUser);
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        console.log('Restored user from localStorage:', user);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('currentUser');
+      }
+    } else if (storedEmail) {
+      // If we have a stored email but no user object, create a basic user
+      console.log('Found stored email, creating user object:', storedEmail);
+      const user = {
+        id: storedEmail,
+        email: storedEmail,
+        name: storedEmail,
+        role: 'user' as const
+      };
       setCurrentUser(user);
       setIsAuthenticated(true);
+      localStorage.setItem('currentUser', JSON.stringify(user));
     }
     setIsLoading(false);
   }, []);
@@ -40,19 +60,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (credentials: { email: string; password: string; role?: string }): Promise<User | null> => {
     setIsLoading(true);
     try {
-      // Authenticate user against the usuario_administrador or usuario_invitado table
-      const user = await authenticateAdminUser(credentials.email, credentials.password);
+      console.log('Login attempt for:', credentials.email);
+      
+      let user = null;
+      
+      // If password is provided, try admin authentication first
+      if (credentials.password && credentials.password.trim() !== '') {
+        user = await authenticateAdminUser(credentials.email, credentials.password);
+      }
+      
+      // If no user found and no password (or password failed), try invited user
+      if (!user) {
+        user = await authenticateInvitedUser(credentials.email);
+      }
 
       if (user) {
+        console.log('Authentication successful:', user);
         setCurrentUser(user);
         setIsAuthenticated(true);
+        
         // Store user in localStorage
         localStorage.setItem('currentUser', JSON.stringify(user));
+        localStorage.setItem('userEmail', user.email);
+        
+        toast({
+          title: "Inicio de sesión exitoso",
+          description: `Bienvenido, ${user.name || user.email}`,
+        });
+        
         return user;
+      } else {
+        console.log('Authentication failed for:', credentials.email);
+        toast({
+          title: "Error de autenticación",
+          description: "Credenciales inválidas o usuario no autorizado",
+          variant: "destructive",
+        });
+        return null;
       }
-      return null;
     } catch (error) {
       console.error('Login error:', error);
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      });
       return null;
     } finally {
       setIsLoading(false);
@@ -60,10 +112,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
+    console.log('Logging out user');
     // Clear user from state and localStorage
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('userEmail');
+    
+    toast({
+      title: "Sesión cerrada",
+      description: "Has cerrado sesión exitosamente",
+    });
   };
 
   const register = async (userData: { email: string; password: string; name: string; role: string }): Promise<User | null> => {

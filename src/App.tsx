@@ -1,6 +1,5 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ToastProvider } from "@/hooks/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -29,25 +28,25 @@ const App = () => (
     <AuthProvider>
       <FormProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard-admin" element={<PrivateRoute role="admin"><DashboardAdmin /></PrivateRoute>} />
-              <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
-              <Route path="/forms/new" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
-              <Route path="/forms/:id/edit" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
-              <Route path="/forms/:id/responses" element={<PrivateRoute role="admin"><FormResponses /></PrivateRoute>} />
-              <Route path="/forms/:id" element={<FormView />} />
-              <Route path="/forms/:id/access/:token" element={<FormView />} />
-              <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <ToastProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard-admin" element={<PrivateRoute role="admin"><DashboardAdmin /></PrivateRoute>} />
+                <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
+                <Route path="/forms/new" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
+                <Route path="/forms/:id/edit" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
+                <Route path="/forms/:id/responses" element={<PrivateRoute role="admin"><FormResponses /></PrivateRoute>} />
+                <Route path="/forms/:id" element={<FormView />} />
+                <Route path="/forms/:id/access/:token" element={<FormView />} />
+                <Route path="/users" element={<PrivateRoute role="admin"><UserManagement /></PrivateRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
         </TooltipProvider>
       </FormProvider>
     </AuthProvider>

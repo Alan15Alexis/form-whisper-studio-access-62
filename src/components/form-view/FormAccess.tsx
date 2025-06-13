@@ -38,6 +38,8 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
     setValidatingAccess(true);
     
     try {
+      console.log("Starting form access validation for:", emailToCheck);
+      
       // Check if the user is in the invited users table - PRIMARY validation method
       const isInvited = await validateInvitedUser(emailToCheck);
       
@@ -51,21 +53,32 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
       });
       
       if (isInvited || hasStandardAccess) {
-        // If not already authenticated, log the user in
+        // If not already authenticated, log the user in without password
         if (!isAuthenticated) {
-          await login({ 
+          console.log("User not authenticated, attempting login...");
+          const loginResult = await login({ 
             email: emailToCheck, 
-            password: "", // No password needed for invited users
-            role: "user" 
+            password: "" // No password needed for invited users
           });
+          
+          if (!loginResult) {
+            toast({
+              title: "Error de autenticación",
+              description: "No se pudo autenticar el usuario",
+              variant: "destructive",
+            });
+            return;
+          }
         }
         
+        console.log("Access granted, calling onAccessGranted");
         toast({
           title: "Acceso Concedido",
           description: "Tu correo electrónico ha sido verificado. Tienes acceso a este formulario.",
         });
         onAccessGranted();
       } else {
+        console.log("Access denied for user:", emailToCheck);
         toast({
           title: "Acceso Denegado",
           description: "Tu correo electrónico no está en la lista de usuarios invitados.",
@@ -73,12 +86,12 @@ const FormAccess = ({ onAccessGranted, isUserAllowed }: FormAccessProps) => {
         });
       }
     } catch (error) {
+      console.error("Error validating access:", error);
       toast({
         title: "Error",
         description: "Ha ocurrido un error al verificar tu acceso.",
         variant: "destructive", 
       });
-      console.error("Error validating access:", error);
     } finally {
       setValidatingAccess(false);
     }

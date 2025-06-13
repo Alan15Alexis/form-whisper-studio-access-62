@@ -1,14 +1,21 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://tsajriavcmbwgnlsonmq.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYWpyaWF2Y21id2dubHNvbm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyMzMxODIsImV4cCI6MjA2MTgwOTE4Mn0.-gUjFTy1CR2gvrubQLi66Fcy_QKxQuwPIOi9F5j8g6w';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Utility function to authenticate against usuario_administrador table
 export const authenticateAdminUser = async (email: string, password: string) => {
   try {
-    console.info(`Attempting to authenticate user: ${email}`);
+    console.log(`Attempting to authenticate user: ${email}`);
     
     // Query the usuario_administrador table for matching credentials
     const { data, error } = await supabase
@@ -19,12 +26,13 @@ export const authenticateAdminUser = async (email: string, password: string) => 
       .single();
     
     if (error) {
-      console.error('Authentication error:', error);
-      return null;
+      console.log('Admin authentication failed, trying invited user...');
+      // If admin auth fails, try invited user authentication
+      return await authenticateInvitedUser(email);
     }
     
     if (data) {
-      console.info('Admin authenticated successfully:', {
+      console.log('Admin authenticated successfully:', {
         id: data.id,
         nombre: data.nombre,
         correo: data.correo,
@@ -39,8 +47,7 @@ export const authenticateAdminUser = async (email: string, password: string) => 
       };
     }
     
-    // Also try to authenticate invited users
-    return await authenticateInvitedUser(email);
+    return null;
     
   } catch (error) {
     console.error('Authentication error:', error);
@@ -51,7 +58,7 @@ export const authenticateAdminUser = async (email: string, password: string) => 
 // Utility function to authenticate against usuario_invitado table
 export const authenticateInvitedUser = async (email: string) => {
   try {
-    console.info(`Validating invited user: ${email}`);
+    console.log(`Validating invited user: ${email}`);
     
     // Check if the email exists in the usuario_invitado table
     const { data, error } = await supabase
@@ -61,13 +68,12 @@ export const authenticateInvitedUser = async (email: string) => {
       .single();
     
     if (error) {
-      console.info('Invited user validation result: false');
-      console.info('User is not in the invited users table, authentication failed');
+      console.log('Invited user validation failed');
       return null;
     }
     
     if (data) {
-      console.info('Invited user validated successfully:', {
+      console.log('Invited user validated successfully:', {
         id: data.id,
         nombre: data.nombre,
         correo: data.correo,
@@ -92,7 +98,7 @@ export const authenticateInvitedUser = async (email: string) => {
 // Utility function to validate if a user is in the invited users list
 export const validateInvitedUser = async (email: string): Promise<boolean> => {
   try {
-    console.info(`Checking if ${email} is in the invited users list`);
+    console.log(`Checking if ${email} is in the invited users list`);
     
     const { data, error } = await supabase
       .from('usuario_invitado')
@@ -106,7 +112,7 @@ export const validateInvitedUser = async (email: string): Promise<boolean> => {
     }
     
     const isInvited = !!data;
-    console.info(`User ${email} invitation status: ${isInvited ? 'Invited' : 'Not invited'}`);
+    console.log(`User ${email} invitation status: ${isInvited ? 'Invited' : 'Not invited'}`);
     return isInvited;
   } catch (error) {
     console.error('Error validating invited user:', error);

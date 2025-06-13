@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/toast";
 import { Form as FormType } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 import { uploadFileToSupabase, uploadDrawingToSupabase } from "@/utils/fileUploadUtils";
@@ -14,7 +14,7 @@ import { uploadFileToSupabase, uploadDrawingToSupabase } from "@/utils/fileUploa
 export function useFormResponses(form: FormType | null) {
   const { id } = useParams();
   const { submitFormResponse } = useForm();
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const location = useLocation();
   const isEditMode = location.state?.editMode || new URLSearchParams(location.search).get('edit') === 'true';
   const navigate = useNavigate();
@@ -92,10 +92,26 @@ export function useFormResponses(form: FormType | null) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!form || !id) return;
+    if (!form || !id) {
+      console.error("Form or ID missing");
+      toast({
+        title: "Error",
+        description: "Formulario no disponible",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log("Starting form submission:", {
+      formId: id,
+      isAuthenticated,
+      currentUser,
+      userRole: currentUser?.role
+    });
     
     // Check if the current user is an admin in preview mode
     if (isAuthenticated && currentUser?.role === "admin") {
+      console.log("Admin user detected - showing preview message");
       toast({
         title: "Vista previa",
         description: "Esto es solo una vista previa, no se puede responder formulario desde esta vista",
@@ -110,6 +126,7 @@ export function useFormResponses(form: FormType | null) {
       .map(field => field.label || `Campo #${field.id}`);
     
     if (missingFields.length > 0) {
+      console.log("Missing required fields:", missingFields);
       toast({
         title: "Campos requeridos faltantes",
         description: `Por favor completa los siguientes campos: ${missingFields.join(", ")}`,
@@ -123,10 +140,14 @@ export function useFormResponses(form: FormType | null) {
     try {
       console.log("Submitting form responses:", formResponses);
       console.log("Form fields:", form.fields);
+      console.log("Current user:", currentUser);
+      
+      // Get user email for submission
+      const userEmail = currentUser?.email || localStorage.getItem('userEmail') || 'unknown';
+      console.log("Using user email for submission:", userEmail);
       
       // Process file uploads before submitting
       const processedResponses = { ...formResponses };
-      const userEmail = currentUser?.email || localStorage.getItem('userEmail') || 'unknown';
       
       // Handle file uploads for each field
       for (const field of form.fields) {
@@ -171,26 +192,6 @@ export function useFormResponses(form: FormType | null) {
         }
       }
       
-      // Check if we have any file fields and log them
-      const fileFields = form.fields.filter(field => 
-        field.type === 'image-upload' || 
-        field.type === 'file-upload' || 
-        field.type === 'drawing' || 
-        field.type === 'signature'
-      );
-      
-      if (fileFields.length > 0) {
-        console.log(`Form has ${fileFields.length} file fields:`, fileFields.map(f => f.id));
-        
-        // Log processed file fields
-        fileFields.forEach(field => {
-          const value = processedResponses[field.id];
-          if (value) {
-            console.log(`Field ${field.id} processed value:`, typeof value === 'string' ? value.substring(0, 100) + '...' : typeof value);
-          }
-        });
-      }
-      
       // Calculate score and get feedback message if scoring is enabled
       let scoreData = null;
       
@@ -215,6 +216,12 @@ export function useFormResponses(form: FormType | null) {
       }
       
       // Pass the processed responses with uploaded file URLs to the submit function
+      console.log("Calling submitFormResponse with:", {
+        formId: id,
+        responsesCount: Object.keys(processedResponses).length,
+        hasScoreData: !!scoreData
+      });
+      
       const result = await submitFormResponse(id, processedResponses, form, scoreData);
       console.log("Form submission result:", result);
       
@@ -252,6 +259,7 @@ export function useFormResponses(form: FormType | null) {
         setShowScoreCard(true);
       } else {
         // Show toast and go directly to thank you card if no score to show
+        console.log("No scoring enabled, showing success message");
         toast({
           title: isEditMode ? "Respuesta actualizada correctamente" : "Respuesta enviada correctamente",
           description: isEditMode ? "Gracias por actualizar tus respuestas" : "Gracias por completar este formulario",
@@ -310,8 +318,6 @@ export function useFormResponses(form: FormType | null) {
     }, 5000);
   };
 
-  const { isAuthenticated } = useAuth();
-  
   return {
     formResponses,
     isSubmitting,
