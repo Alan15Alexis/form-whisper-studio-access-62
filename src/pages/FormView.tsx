@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Form } from "@/types/form";
 
 const FormView = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,9 +26,10 @@ const FormView = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  const [form, setForm] = useState(getForm(id || ''));
+  const [form, setForm] = useState<Form | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   
   const {
     formResponses,
@@ -47,15 +49,26 @@ const FormView = () => {
   useEffect(() => {
     const loadFormFromSupabase = async () => {
       if (!id) {
+        setLoadingError("No form ID provided");
         setLoading(false);
         return;
       }
 
-      // First try to get from context
-      let foundForm = getForm(id);
-      
-      if (!foundForm) {
-        try {
+      console.log("FormView - Loading form with ID:", id);
+
+      try {
+        // First try to get from context (local storage)
+        let foundForm = getForm(id);
+        
+        if (foundForm) {
+          console.log("FormView - Found form in local storage:", {
+            title: foundForm.title,
+            showTotalScore: foundForm.showTotalScore,
+            scoreRanges: foundForm.scoreRanges?.length || 0
+          });
+        } else {
+          console.log("FormView - Form not found in local storage, checking Supabase...");
+          
           // Try to fetch from Supabase by ID
           const numericId = parseInt(id);
           if (!isNaN(numericId)) {
@@ -66,51 +79,89 @@ const FormView = () => {
               .single();
             
             if (!error && formData) {
-              // Convert Supabase data to our form format
+              console.log("FormView - Found form in Supabase:", {
+                id: formData.id,
+                title: formData.titulo,
+                configuration: formData.configuracion,
+                scoreRanges: formData.rangos_mensajes
+              });
+              
+              // Convert Supabase data to our form format with proper score ranges handling
+              const config = formData.configuracion || {};
+              const showTotalScore = Boolean(config.showTotalScore);
+              
+              // Get score ranges with proper priority
+              let scoreRanges = [];
+              if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
+                scoreRanges = [...formData.rangos_mensajes];
+                console.log("FormView - Using score ranges from rangos_mensajes:", scoreRanges);
+              } else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
+                scoreRanges = [...config.scoreRanges];
+                console.log("FormView - Using score ranges from configuracion:", scoreRanges);
+              }
+              
               foundForm = {
                 id: formData.id.toString(),
                 title: formData.titulo || 'Untitled Form',
                 description: formData.descripcion || '',
                 fields: formData.preguntas || [],
-                isPrivate: formData.configuracion?.isPrivate || false,
+                isPrivate: Boolean(config.isPrivate),
                 allowedUsers: formData.acceso || [],
                 createdAt: formData.created_at,
                 updatedAt: formData.created_at,
                 accessLink: '',
                 ownerId: formData.administrador || 'unknown',
-                enableScoring: formData.configuracion?.enableScoring || false,
-                showTotalScore: formData.configuracion?.showTotalScore || false,
-                formColor: formData.configuracion?.formColor,
-                allowViewOwnResponses: formData.configuracion?.allowViewOwnResponses || false,
-                allowEditOwnResponses: formData.configuracion?.allowEditOwnResponses || false,
-                httpConfig: formData.configuracion?.httpConfig,
-                scoreRanges: formData.rangos_mensajes || []
+                enableScoring: showTotalScore,
+                showTotalScore: showTotalScore,
+                formColor: config.formColor,
+                allowViewOwnResponses: Boolean(config.allowViewOwnResponses),
+                allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
+                httpConfig: config.httpConfig,
+                scoreRanges: scoreRanges,
+                scoreConfig: {
+                  enabled: showTotalScore,
+                  ranges: scoreRanges
+                }
               };
+              
+              console.log("FormView - Converted form:", {
+                showTotalScore: foundForm.showTotalScore,
+                scoreRanges: foundForm.scoreRanges?.length || 0
+              });
+            } else {
+              console.error("FormView - Form not found in Supabase:", error);
+              setLoadingError("Form not found in database");
             }
+          } else {
+            console.error("FormView - Invalid form ID format:", id);
+            setLoadingError("Invalid form ID format");
           }
-        } catch (error) {
-          console.error("Error loading form from Supabase:", error);
         }
-      }
 
-      if (foundForm) {
-        setForm(foundForm);
-        
-        // Check access
-        const searchParams = new URLSearchParams(location.search);
-        const token = searchParams.get('token');
-        
-        if (!foundForm.isPrivate) {
-          setHasAccess(true);
-        } else if (token && validateAccessToken(foundForm.id, token)) {
-          setHasAccess(true);
-        } else if (currentUser && foundForm.allowedUsers?.includes(currentUser.email)) {
-          setHasAccess(true);
-        } else if (isAuthenticated && currentUser?.role === "admin") {
-          setHasAccess(true);
+        if (foundForm) {
+          setForm(foundForm);
+          
+          // Check access
+          const searchParams = new URLSearchParams(location.search);
+          const token = searchParams.get('token');
+          
+          if (!foundForm.isPrivate) {
+            setHasAccess(true);
+          } else if (token && validateAccessToken(foundForm.id, token)) {
+            setHasAccess(true);
+          } else if (currentUser && foundForm.allowedUsers?.includes(currentUser.email)) {
+            setHasAccess(true);
+          } else if (isAuthenticated && currentUser?.role === "admin") {
+            setHasAccess(true);
+          } else {
+            setHasAccess(false);
+          }
         } else {
-          setHasAccess(false);
+          setLoadingError("Form not found");
         }
+      } catch (error) {
+        console.error("FormView - Error loading form:", error);
+        setLoadingError("Error loading form data");
       }
       
       setLoading(false);
@@ -123,14 +174,22 @@ const FormView = () => {
     return (
       <Layout>
         <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando formulario...</p>
+          </div>
         </div>
       </Layout>
     );
   }
 
-  if (!form) {
-    return <FormNotFound onBackClick={() => navigate('/')} />;
+  if (loadingError || !form) {
+    return (
+      <FormNotFound 
+        onBackClick={() => navigate('/')} 
+        errorMessage={loadingError || "Form not found"}
+      />
+    );
   }
 
   if (form.isPrivate && !hasAccess) {
@@ -153,6 +212,12 @@ const FormView = () => {
   }
 
   if (showScoreCard) {
+    console.log("FormView - Rendering score card with:", {
+      scoreRanges: form.scoreRanges?.length || 0,
+      calculatedScoreData,
+      showTotalScore: form.showTotalScore
+    });
+    
     return (
       <FormScoreCard 
         formValues={formResponses}
@@ -160,7 +225,7 @@ const FormView = () => {
         formTitle={form.title}
         onNext={handleScoreCardNext}
         scoreData={calculatedScoreData}
-        scoreRanges={form.scoreRanges}
+        scoreRanges={form.scoreRanges || []}
       />
     );
   }

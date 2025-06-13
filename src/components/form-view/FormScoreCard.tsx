@@ -1,11 +1,14 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FormField } from "@/types/form";
 import { useFormScoring } from "@/hooks/form-builder/useFormScoring";
 import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 interface FormScoreCardProps {
   formValues: Record<string, any>;
@@ -33,11 +36,12 @@ const FormScoreCard = ({
   scoreRanges 
 }: FormScoreCardProps) => {
   const { id: formId } = useParams();
-  const { calculateTotalScore, getScoreFeedback } = useFormScoring();
+  const { calculateTotalScore, getScoreFeedback, validateScoreRanges } = useFormScoring();
   const [scoreFeedback, setScoreFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState("Calculando puntuación...");
   const [feedbackSource, setFeedbackSource] = useState<string>("");
+  const [hasValidRanges, setHasValidRanges] = useState(true);
   
   // Use score data if provided, otherwise calculate
   const currentScore = scoreData?.totalScore ?? calculateTotalScore(formValues, fields || []);
@@ -49,10 +53,22 @@ const FormScoreCard = ({
     fields: fields?.length, 
     scoreData,
     providedFeedback,
-    scoreRanges: scoreRanges?.length
+    scoreRanges: scoreRanges?.length,
+    hasValidRanges: validateScoreRanges(scoreRanges || [])
   });
 
-  // Get score feedback with improved handling
+  // Validate score ranges on mount
+  useEffect(() => {
+    if (scoreRanges && scoreRanges.length > 0) {
+      const isValid = validateScoreRanges(scoreRanges);
+      setHasValidRanges(isValid);
+      if (!isValid) {
+        console.warn("Invalid score ranges detected:", scoreRanges);
+      }
+    }
+  }, [scoreRanges, validateScoreRanges]);
+
+  // Get score feedback with improved handling and validation
   useEffect(() => {
     const fetchFeedback = async () => {
       try {
@@ -63,12 +79,22 @@ const FormScoreCard = ({
           console.log("FormScoreCard - Using provided feedback:", providedFeedback);
           setScoreFeedback(providedFeedback);
           setLoadingMessage("¡Mensaje personalizado encontrado!");
-          setFeedbackSource("datos del formulario");
+          setFeedbackSource("datos guardados del formulario");
           setIsLoading(false);
           return;
         }
         
         setLoadingMessage("Buscando mensaje personalizado...");
+        
+        // Validate score ranges before using them
+        if (scoreRanges && scoreRanges.length > 0 && !hasValidRanges) {
+          console.warn("Skipping feedback lookup due to invalid score ranges");
+          setScoreFeedback(null);
+          setLoadingMessage("Configuración de rangos inválida");
+          setFeedbackSource("");
+          setIsLoading(false);
+          return;
+        }
         
         console.log("FormScoreCard - Getting feedback for score:", currentScore, "with ranges:", scoreRanges);
         
@@ -85,7 +111,7 @@ const FormScoreCard = ({
           setLoadingMessage("¡Mensaje personalizado encontrado!");
           setFeedbackSource("configuración del formulario");
         } else {
-          setLoadingMessage("Mensaje genérico (sin configuración específica)");
+          setLoadingMessage("Sin mensaje personalizado para esta puntuación");
           setFeedbackSource("");
         }
         
@@ -103,7 +129,7 @@ const FormScoreCard = ({
     };
     
     fetchFeedback();
-  }, [currentScore, formId, getScoreFeedback, providedFeedback, scoreRanges]);
+  }, [currentScore, formId, getScoreFeedback, providedFeedback, scoreRanges, hasValidRanges]);
 
   return (
     <motion.div
@@ -133,6 +159,16 @@ const FormScoreCard = ({
               </Badge>
             </div>
             
+            {/* Validation warning for invalid ranges */}
+            {scoreRanges && scoreRanges.length > 0 && !hasValidRanges && (
+              <Alert className="mt-4 border-amber-200 bg-amber-50">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-amber-800">
+                  La configuración de rangos de puntuación contiene errores. Los mensajes personalizados pueden no mostrarse correctamente.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {isLoading ? (
               <div className="mt-6 p-4 bg-background rounded border text-center">
                 <div className="flex items-center justify-center space-x-2">
@@ -145,7 +181,10 @@ const FormScoreCard = ({
               </div>
             ) : scoreFeedback ? (
               <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-200 text-center">
-                <h4 className="text-lg font-semibold mb-3 text-green-800">🎯 Tu Resultado Personalizado:</h4>
+                <div className="flex items-center justify-center mb-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <h4 className="text-lg font-semibold text-green-800">Tu Resultado Personalizado</h4>
+                </div>
                 <p className="text-lg font-medium text-gray-800 leading-relaxed mb-3">{scoreFeedback}</p>
                 <div className="flex items-center justify-center space-x-2 mt-3">
                   <div className="text-sm text-green-600 bg-green-100 rounded-full px-3 py-1">
@@ -163,7 +202,10 @@ const FormScoreCard = ({
                 <div className="text-gray-600">
                   <p className="font-medium">Puntuación registrada: {currentScore} puntos</p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    No hay mensaje personalizado configurado para esta puntuación
+                    {scoreRanges && scoreRanges.length > 0 
+                      ? "No hay mensaje configurado para esta puntuación específica"
+                      : "No hay mensajes personalizados configurados para este formulario"
+                    }
                   </p>
                   <div className="mt-3 text-xs text-amber-600 bg-amber-50 rounded px-3 py-2 inline-block">
                     💡 Tip: Los administradores pueden configurar mensajes personalizados para diferentes rangos de puntuación
@@ -177,6 +219,9 @@ const FormScoreCard = ({
             <p>Gracias por completar el formulario</p>
             {formId && (
               <p className="text-xs mt-1">ID del formulario: {formId}</p>
+            )}
+            {scoreRanges && scoreRanges.length > 0 && (
+              <p className="text-xs mt-1">Rangos configurados: {scoreRanges.length}</p>
             )}
           </div>
           

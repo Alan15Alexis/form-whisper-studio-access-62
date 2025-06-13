@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -73,42 +74,62 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessTokens, setAccessTokens] = useState(getInitialAccessTokens());
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
 
-  // Load forms from Supabase on initial render
+  // Load forms from Supabase on initial render with improved error handling
   React.useEffect(() => {
     const loadFormsFromSupabase = async () => {
       try {
+        console.log("FormContext - Loading forms from Supabase...");
+        
         const { data: formsData, error } = await supabase
           .from('formulario_construccion')
           .select('*')
           .order('created_at', { ascending: false });
         
         if (error) {
-          console.error("Error loading forms from Supabase:", error);
+          console.error("FormContext - Error loading forms from Supabase:", error);
           return;
         }
         
         if (formsData && formsData.length > 0) {
-          console.log("Loading forms from Supabase:", formsData.length);
+          console.log("FormContext - Successfully loaded forms from Supabase:", formsData.length);
           
           const loadedForms = formsData.map(formData => {
-            console.log(`Processing form "${formData.titulo}" with configuration:`, formData.configuracion);
+            console.log(`FormContext - Processing form "${formData.titulo}":`, {
+              id: formData.id,
+              configuration: formData.configuracion,
+              scoreRanges: formData.rangos_mensajes
+            });
             
             const config = formData.configuracion || {};
             const showTotalScore = Boolean(config.showTotalScore);
             
-            // Get score ranges with proper priority (saved ranges only)
+            // Get score ranges with proper priority and validation
             let scoreRanges = [];
             if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
-              scoreRanges = [...formData.rangos_mensajes];
-              console.log(`Using saved score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
+              // Validate the structure of score ranges
+              const validRanges = formData.rangos_mensajes.filter(range => 
+                range && 
+                typeof range.min === 'number' && 
+                typeof range.max === 'number' && 
+                typeof range.message === 'string' &&
+                range.min <= range.max
+              );
+              
+              scoreRanges = validRanges;
+              console.log(`FormContext - Using validated score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
+              
+              if (validRanges.length !== formData.rangos_mensajes.length) {
+                console.warn(`FormContext - Some score ranges were invalid for form "${formData.titulo}"`);
+              }
             } else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
               scoreRanges = [...config.scoreRanges];
-              console.log(`Using saved score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
+              console.log(`FormContext - Using score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
             }
             
-            console.log(`Form "${formData.titulo}" loaded with:`, {
+            console.log(`FormContext - Form "${formData.titulo}" loaded with:`, {
               showTotalScore,
-              scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No saved score ranges'
+              scoreRanges: scoreRanges.length > 0 ? `${scoreRanges.length} ranges` : 'No score ranges',
+              hasNumericFields: config.hasFieldsWithNumericValues
             });
             
             const convertedForm = {
@@ -127,6 +148,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
               httpConfig: config.httpConfig,
               showTotalScore: showTotalScore,
+              enableScoring: showTotalScore,
               scoreConfig: {
                 enabled: showTotalScore,
                 ranges: [...scoreRanges]
@@ -137,11 +159,23 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return convertedForm;
           });
           
-          console.log("Setting loaded forms:", loadedForms.length);
+          console.log("FormContext - Setting loaded forms:", loadedForms.length);
           setForms(loadedForms);
+          
+          // Save to local storage for backup
+          safeLocalStorageSet('forms', loadedForms);
+        } else {
+          console.log("FormContext - No forms found in Supabase");
         }
       } catch (error) {
-        console.error("Error loading forms from Supabase:", error);
+        console.error("FormContext - Error loading forms from Supabase:", error);
+        
+        // Try to recover from local storage if Supabase fails
+        const localForms = getInitialForms();
+        if (localForms && localForms.length > 0) {
+          console.log("FormContext - Recovered forms from local storage as fallback:", localForms.length);
+          setForms(localForms);
+        }
       }
     };
     

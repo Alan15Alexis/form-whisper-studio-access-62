@@ -97,9 +97,30 @@ export function useFormScoring() {
     return hasNumericFields && showTotalScore === true;
   };
 
+  const validateScoreRanges = (ranges: ScoreRange[]): boolean => {
+    if (!ranges || ranges.length === 0) return true;
+    
+    // Check for overlapping ranges
+    for (let i = 0; i < ranges.length; i++) {
+      for (let j = i + 1; j < ranges.length; j++) {
+        const range1 = ranges[i];
+        const range2 = ranges[j];
+        
+        // Check if ranges overlap
+        if (range1.min <= range2.max && range2.min <= range1.max) {
+          console.warn("Overlapping score ranges detected:", range1, range2);
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  };
+
   return {
     calculateTotalScore,
     getScoreFeedback,
-    shouldShowScoreCard
+    shouldShowScoreCard,
+    validateScoreRanges
   };
 }

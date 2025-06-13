@@ -27,6 +27,41 @@ function removeScoreRangesFromFields(fields: FormField[]) {
   });
 }
 
+// Helper function to validate score ranges
+function validateScoreRanges(ranges: ScoreRange[]): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (!ranges || ranges.length === 0) {
+    return { isValid: true, errors: [] };
+  }
+  
+  // Check each range for validity
+  for (let i = 0; i < ranges.length; i++) {
+    const range = ranges[i];
+    
+    // Check if range has required properties
+    if (typeof range.min !== 'number' || typeof range.max !== 'number' || typeof range.message !== 'string') {
+      errors.push(`Range ${i + 1}: Missing or invalid properties`);
+      continue;
+    }
+    
+    // Check if min <= max
+    if (range.min > range.max) {
+      errors.push(`Range ${i + 1}: Minimum value (${range.min}) cannot be greater than maximum value (${range.max})`);
+    }
+    
+    // Check for overlaps with other ranges
+    for (let j = i + 1; j < ranges.length; j++) {
+      const otherRange = ranges[j];
+      if (range.min <= otherRange.max && otherRange.min <= range.max) {
+        errors.push(`Range ${i + 1} overlaps with Range ${j + 1}`);
+      }
+    }
+  }
+  
+  return { isValid: errors.length === 0, errors };
+}
+
 export const createFormOperation = (
   forms: Form[], 
   setForms: React.Dispatch<React.SetStateAction<Form[]>>,
@@ -44,7 +79,7 @@ export const createFormOperation = (
     const id = uuidv4();
     const accessToken = uuidv4();
     
-    // Extract score ranges
+    // Extract and validate score ranges
     let scoreRanges: ScoreRange[] = [];
     
     // Get score ranges from the most reliable source
@@ -66,6 +101,19 @@ export const createFormOperation = (
       }
     }
 
+    // Validate score ranges before saving
+    const validation = validateScoreRanges(scoreRanges);
+    if (!validation.isValid) {
+      console.warn("Invalid score ranges detected:", validation.errors);
+      toast({
+        title: 'Advertencia de configuración',
+        description: `Se detectaron problemas con los rangos de puntuación: ${validation.errors.join(', ')}`,
+        variant: 'destructive',
+      });
+      // Continue with empty ranges if invalid
+      scoreRanges = [];
+    }
+
     // Create the new form with all score properties properly set
     const newForm: Form = {
       id,
@@ -83,6 +131,7 @@ export const createFormOperation = (
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
       showTotalScore: formData.showTotalScore || false,
+      enableScoring: formData.showTotalScore || false,
       scoreConfig: {
         enabled: formData.showTotalScore || false,
         ranges: scoreRanges
@@ -125,6 +174,11 @@ export const createFormOperation = (
       
       if (error) {
         console.error("Error saving form to Supabase:", error);
+        toast({
+          title: 'Error al guardar',
+          description: 'No se pudo guardar el formulario en la base de datos. Se mantendrá en almacenamiento local.',
+          variant: 'destructive',
+        });
       } else {
         console.log("Form created in Supabase:", data);
         console.log("Form created with showTotalScore:", newForm.showTotalScore);
@@ -135,9 +189,19 @@ export const createFormOperation = (
           newForm.id = data[0].id.toString();
           console.log("Updated form ID to database ID:", newForm.id);
         }
+        
+        toast({
+          title: 'Formulario guardado',
+          description: `"${newForm.title}" ha sido guardado exitosamente en la base de datos`,
+        });
       }
     } catch (error) {
       console.error("Error saving form to Supabase:", error);
+      toast({
+        title: 'Error de conexión',
+        description: 'No se pudo conectar con la base de datos. El formulario se guardará localmente.',
+        variant: 'destructive',
+      });
     }
 
     // Add to local state
@@ -164,6 +228,8 @@ export const updateFormOperation = (
   setAllowedUsers: React.Dispatch<React.SetStateAction<Record<string, string[]>>>,
 ) => {
   return async (id: string, formData: Partial<Form>): Promise<Form | null> => {
+    console.log("Updating form with ID:", id, "and data:", formData);
+    
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -178,7 +244,7 @@ export const updateFormOperation = (
       return null;
     }
 
-    // Extract score ranges from the most reliable source
+    // Extract and validate score ranges from the most reliable source
     let scoreRanges: ScoreRange[] = [];
     
     // Get score ranges from the most reliable source
@@ -200,6 +266,19 @@ export const updateFormOperation = (
       }
     }
     
+    // Validate score ranges before saving
+    const validation = validateScoreRanges(scoreRanges);
+    if (!validation.isValid) {
+      console.warn("Invalid score ranges detected:", validation.errors);
+      toast({
+        title: 'Advertencia de configuración',
+        description: `Se detectaron problemas con los rangos de puntuación: ${validation.errors.join(', ')}`,
+        variant: 'destructive',
+      });
+      // Continue with empty ranges if invalid
+      scoreRanges = [];
+    }
+    
     // Check if any field has numeric values
     const fieldsWithValues = formData.fields?.some(field => field.hasNumericValues) || 
                             forms[formIndex].fields.some(field => field.hasNumericValues);
@@ -210,6 +289,7 @@ export const updateFormOperation = (
       ...formData,
       updatedAt: new Date().toISOString(),
       showTotalScore: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
+      enableScoring: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
       scoreConfig: {
         enabled: formData.showTotalScore === true || forms[formIndex].showTotalScore === true,
         ranges: scoreRanges.length > 0 ? scoreRanges : (forms[formIndex].scoreConfig?.ranges || [])
@@ -256,7 +336,7 @@ export const updateFormOperation = (
     const fieldsForDatabase = removeScoreRangesFromFields(updatedForm.fields);
     console.log("Fields for database (without scoreRanges):", JSON.stringify(fieldsForDatabase));
     
-    // Update the form in Supabase with proper ID handling
+    // Update the form in Supabase with proper ID handling and better error handling
     try {
       // Convert form ID to number if it's a string that represents a number
       let queryId: string | number = id;
@@ -309,10 +389,20 @@ export const updateFormOperation = (
           
         if (error) {
           console.error("Error updating form in Supabase:", error);
+          toast({
+            title: 'Error al actualizar',
+            description: 'No se pudo actualizar el formulario en la base de datos. Los cambios se mantienen localmente.',
+            variant: 'destructive',
+          });
         } else {
           console.log("Form updated in Supabase successfully");
           console.log("Form updated with showTotalScore:", updatedForm.showTotalScore);
           console.log("Form updated with score ranges in rangos_mensajes:", JSON.stringify(scoreRanges));
+          
+          toast({
+            title: 'Formulario actualizado',
+            description: 'Los cambios se han guardado exitosamente en la base de datos',
+          });
         }
       } else {
         // Form doesn't exist, insert it with score ranges in separate column
@@ -330,14 +420,29 @@ export const updateFormOperation = (
           
         if (error) {
           console.error("Error creating form in Supabase:", error);
+          toast({
+            title: 'Error al crear',
+            description: 'No se pudo crear el formulario en la base de datos. Se mantendrá en almacenamiento local.',
+            variant: 'destructive',
+          });
         } else {
           console.log("Form created in Supabase successfully");
           console.log("Form created with showTotalScore:", updatedForm.showTotalScore);
           console.log("Form created with score ranges in rangos_mensajes:", JSON.stringify(scoreRanges));
+          
+          toast({
+            title: 'Formulario creado',
+            description: 'El formulario se ha guardado exitosamente en la base de datos',
+          });
         }
       }
     } catch (error) {
       console.error("Error with Supabase operation:", error);
+      toast({
+        title: 'Error de conexión',
+        description: 'No se pudo conectar con la base de datos. Los cambios se mantienen localmente.',
+        variant: 'destructive',
+      });
     }
 
     toast({
