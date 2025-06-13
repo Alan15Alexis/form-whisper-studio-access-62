@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle } from "lucide-react";
+import { Trash, Plus, AlertCircle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import { ScoreRange, FormField } from "@/types/form";
@@ -26,6 +26,7 @@ const ScoreRangesTab = ({
   scoreRanges
 }: ScoreRangesTabProps) => {
   const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
 
@@ -33,7 +34,8 @@ const ScoreRangesTab = ({
     showTotalScore,
     scoreRanges: scoreRanges?.length || 0,
     hasFieldsWithNumericValues,
-    localScoreRangesCount: localScoreRanges.length
+    localScoreRangesCount: localScoreRanges.length,
+    hasUnsavedChanges
   });
 
   // Sync local score ranges with props
@@ -41,6 +43,7 @@ const ScoreRangesTab = ({
     console.log("ScoreRangesTab - Syncing local score ranges with props:", scoreRanges);
     const rangesToSet = Array.isArray(scoreRanges) ? [...scoreRanges] : [];
     setLocalScoreRanges(rangesToSet);
+    setHasUnsavedChanges(false);
   }, [scoreRanges]);
 
   // Score range management functions
@@ -66,11 +69,11 @@ const ScoreRangesTab = ({
     
     console.log("ScoreRangesTab - New score ranges:", newRanges);
     setLocalScoreRanges(newRanges);
-    onSaveScoreRanges(newRanges);
+    setHasUnsavedChanges(true);
     
     toast({
       title: "Rango añadido",
-      description: `Se añadió un nuevo rango de puntuación`
+      description: `Se añadió un nuevo rango de puntuación. No olvides guardar los cambios.`
     });
   };
 
@@ -90,7 +93,7 @@ const ScoreRangesTab = ({
     
     console.log("ScoreRangesTab - Updated score ranges:", updatedRanges);
     setLocalScoreRanges(updatedRanges);
-    onSaveScoreRanges(updatedRanges);
+    setHasUnsavedChanges(true);
   };
 
   const removeScoreRange = (index: number) => {
@@ -99,11 +102,22 @@ const ScoreRangesTab = ({
     
     console.log("ScoreRangesTab - Updated score ranges after removal:", updatedRanges);
     setLocalScoreRanges(updatedRanges);
-    onSaveScoreRanges(updatedRanges);
+    setHasUnsavedChanges(true);
     
     toast({
       title: "Rango eliminado",
-      description: "El rango de puntuación ha sido eliminado"
+      description: "El rango de puntuación ha sido eliminado. No olvides guardar los cambios."
+    });
+  };
+
+  const saveScoreRanges = () => {
+    console.log("ScoreRangesTab - Saving score ranges:", localScoreRanges);
+    onSaveScoreRanges(localScoreRanges);
+    setHasUnsavedChanges(false);
+    
+    toast({
+      title: "Rangos guardados",
+      description: "Los rangos de puntuación han sido guardados correctamente."
     });
   };
 
@@ -168,19 +182,40 @@ const ScoreRangesTab = ({
               <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-medium">Rangos de puntuación y mensajes</Label>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={addScoreRange} 
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="h-4 w-4" /> Añadir rango
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addScoreRange} 
+                      className="flex items-center gap-1"
+                    >
+                      <Plus className="h-4 w-4" /> Añadir rango
+                    </Button>
+                    {hasUnsavedChanges && (
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        onClick={saveScoreRanges} 
+                        className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <Save className="h-4 w-4" /> Guardar cambios
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {hasUnsavedChanges && (
+                  <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Tienes cambios sin guardar. Haz clic en "Guardar cambios" para aplicarlos.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 
                 {localScoreRanges.length === 0 && (
-                  <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
+                  <Alert className="bg-blue-50 border-blue-200 text-blue-800">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       No hay rangos definidos. Los rangos permiten mostrar mensajes personalizados según la puntuación obtenida.
@@ -235,10 +270,10 @@ const ScoreRangesTab = ({
                     </div>
                   ))}
 
-                  {localScoreRanges.length === 0 && (
+                  {localScoreRanges.length === 0 && showTotalScore && (
                     <div className="text-center p-4">
-                      <p className="text-sm text-muted-foreground italic">
-                        No hay rangos definidos. Añada rangos para mostrar mensajes personalizados según la puntuación.
+                      <p className="text-sm text-muted-foreground italic mb-3">
+                        No hay rangos definidos. Añade rangos para mostrar mensajes personalizados según la puntuación.
                       </p>
                       <Button 
                         type="button" 
@@ -255,8 +290,14 @@ const ScoreRangesTab = ({
 
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-700">
-                    💡 <strong>Nota:</strong> Los rangos configurados se guardarán cuando hagas clic en "Guardar Formulario" y estarán disponibles para los usuarios al completar el formulario.
+                    💡 <strong>Pasos para usar los rangos:</strong>
                   </p>
+                  <ol className="text-sm text-blue-700 list-decimal ml-4 mt-2">
+                    <li>Activa el switch "Habilitar puntuación total y rangos" arriba</li>
+                    <li>Añade los rangos de puntuación y sus mensajes</li>
+                    <li>Haz clic en "Guardar cambios" para aplicar los rangos</li>
+                    <li>Guarda el formulario con "Guardar Formulario"</li>
+                  </ol>
                 </div>
               </div>
             )}
