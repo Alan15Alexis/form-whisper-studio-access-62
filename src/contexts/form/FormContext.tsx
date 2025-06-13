@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -67,46 +66,6 @@ const safeLocalStorageSet = (key: string, value: any) => {
   }
 };
 
-// Helper function to load score ranges for a specific form from Supabase
-const loadFormScoreRanges = async (formId: string) => {
-  try {
-    console.log("FormContext - Loading score ranges for formId:", formId);
-    
-    if (!formId) {
-      console.log("FormContext - No formId provided");
-      return [];
-    }
-    
-    const numericFormId = parseInt(formId);
-    if (!isNaN(numericFormId)) {
-      const { data: formData, error } = await supabase
-        .from('formulario_construccion')
-        .select('id, titulo, rangos_mensajes, configuracion')
-        .eq('id', numericFormId)
-        .single();
-      
-      if (!error && formData) {
-        console.log("FormContext - Found form:", formData.titulo);
-        
-        // Get score ranges from rangos_mensajes column first, then fallback
-        if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes) && formData.rangos_mensajes.length > 0) {
-          console.log("FormContext - Found score ranges in rangos_mensajes:", formData.rangos_mensajes);
-          return formData.rangos_mensajes;
-        } else if (formData.configuracion?.scoreRanges && Array.isArray(formData.configuracion.scoreRanges)) {
-          console.log("FormContext - Found score ranges in configuracion:", formData.configuracion.scoreRanges);
-          return formData.configuracion.scoreRanges;
-        }
-      }
-    }
-    
-    console.log("FormContext - No score ranges found for form:", formId);
-    return [];
-  } catch (error) {
-    console.error("FormContext - Error loading score ranges:", error);
-    return [];
-  }
-};
-
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [forms, setForms] = useState(getInitialForms());
@@ -133,39 +92,30 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           const loadedForms = formsData.map(formData => {
             console.log(`Processing form "${formData.titulo}" with configuration:`, formData.configuracion);
-            console.log(`Form "${formData.titulo}" rangos_mensajes:`, formData.rangos_mensajes);
             
             const config = formData.configuracion || {};
             const showTotalScore = Boolean(config.showTotalScore);
             
-            // Get score ranges with proper priority
+            // Get score ranges with proper priority (saved ranges only)
             let scoreRanges = [];
             if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
-              scoreRanges = [...formData.rangos_mensajes]; // Create a copy
-              console.log(`Using score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
+              scoreRanges = [...formData.rangos_mensajes];
+              console.log(`Using saved score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
             } else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
-              scoreRanges = [...config.scoreRanges]; // Create a copy
-              console.log(`Using fallback score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
+              scoreRanges = [...config.scoreRanges];
+              console.log(`Using saved score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
             }
             
-            console.log(`Form "${formData.titulo}":`, {
+            console.log(`Form "${formData.titulo}" loaded with:`, {
               showTotalScore,
-              scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges'
+              scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No saved score ranges'
             });
-            
-            const processedFields = formData.preguntas?.map(field => {
-              if (field.hasNumericValues && scoreRanges.length > 0 && showTotalScore) {
-                console.log(`Applying score ranges to field ${field.id || field.label}`);
-                return { ...field, scoreRanges: [...scoreRanges] }; // Create a copy
-              }
-              return field;
-            }) || [];
             
             const convertedForm = {
               id: formData.id.toString(),
               title: formData.titulo || 'Untitled Form',
               description: formData.descripcion || '',
-              fields: processedFields,
+              fields: formData.preguntas || [],
               isPrivate: Boolean(config.isPrivate),
               allowedUsers: formData.acceso || [],
               createdAt: formData.created_at,
@@ -179,16 +129,10 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               showTotalScore: showTotalScore,
               scoreConfig: {
                 enabled: showTotalScore,
-                ranges: [...scoreRanges] // Create a copy
+                ranges: [...scoreRanges]
               },
-              scoreRanges: [...scoreRanges] // Create a copy
+              scoreRanges: [...scoreRanges]
             };
-            
-            console.log(`Final converted form "${convertedForm.title}":`, {
-              id: convertedForm.id,
-              showTotalScore: convertedForm.showTotalScore,
-              scoreRanges: convertedForm.scoreRanges.length
-            });
             
             return convertedForm;
           });
@@ -223,38 +167,6 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Create form operations
   const getForm = getFormOperation(forms);
-
-  // Enhanced getForm that can reload score ranges from database
-  const getFormWithFreshScoreRanges = async (formId: string) => {
-    const form = getForm(formId);
-    if (!form) return undefined;
-    
-    // Load fresh score ranges from database
-    const freshScoreRanges = await loadFormScoreRanges(formId);
-    
-    if (freshScoreRanges.length > 0) {
-      console.log("FormContext - Updating form with fresh score ranges:", freshScoreRanges);
-      
-      // Update the form with fresh score ranges
-      const updatedForm = {
-        ...form,
-        scoreRanges: [...freshScoreRanges],
-        scoreConfig: {
-          ...form.scoreConfig,
-          ranges: [...freshScoreRanges]
-        }
-      };
-      
-      // Update the forms array
-      setForms(prevForms => 
-        prevForms.map(f => f.id === formId ? updatedForm : f)
-      );
-      
-      return updatedForm;
-    }
-    
-    return form;
-  };
 
   const createForm = (formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
@@ -353,7 +265,6 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateForm,
     deleteForm,
     getForm,
-    getFormWithFreshScoreRanges, // Add the new enhanced getter
     submitFormResponse,
     getFormResponses,
     addAllowedUser,
@@ -361,8 +272,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isUserAllowed,
     generateAccessLink,
     validateAccessToken,
-    setForms,
-    loadFormScoreRanges // Expose the helper function
+    setForms
   };
 
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;

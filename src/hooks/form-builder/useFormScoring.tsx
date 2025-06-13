@@ -1,61 +1,7 @@
 
 import { FormField, ScoreRange } from "@/types/form";
-import { supabase } from "@/integrations/supabase/client";
 
 export function useFormScoring() {
-  const fetchScoreRangesFromDB = async (formId: string): Promise<ScoreRange[]> => {
-    try {
-      console.log("useFormScoring - Fetching score ranges for formId:", formId);
-      
-      if (!formId) {
-        console.log("useFormScoring - No formId provided");
-        return [];
-      }
-      
-      // Enhanced strategy: Try direct numeric ID match first (most reliable)
-      const numericFormId = parseInt(formId);
-      if (!isNaN(numericFormId)) {
-        console.log("useFormScoring - Trying numeric ID match:", numericFormId);
-        
-        const { data: directMatch, error: directError } = await supabase
-          .from('formulario_construccion')
-          .select('id, titulo, rangos_mensajes, configuracion')
-          .eq('id', numericFormId)
-          .single();
-        
-        if (!directError && directMatch) {
-          console.log("useFormScoring - Found form by direct ID match:", directMatch.titulo);
-          
-          // Priority 1: rangos_mensajes column (new dedicated column)
-          if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes) && directMatch.rangos_mensajes.length > 0) {
-            console.log("useFormScoring - Found score ranges in rangos_mensajes:", directMatch.rangos_mensajes);
-            return [...directMatch.rangos_mensajes]; // Return a copy
-          }
-          
-          // Priority 2: configuracion.scoreRanges (fallback for older data)
-          if (!directMatch.rangos_mensajes && directMatch.configuracion?.scoreRanges && Array.isArray(directMatch.configuracion.scoreRanges) && directMatch.configuracion.scoreRanges.length > 0) {
-            console.log("useFormScoring - Found score ranges in configuracion (fallback):", directMatch.configuracion.scoreRanges);
-            return [...directMatch.configuracion.scoreRanges]; // Return a copy
-          }
-          
-          console.log("useFormScoring - Form found but no score ranges configured for this specific form");
-          return [];
-        } else {
-          console.log("useFormScoring - No form found with numeric ID:", numericFormId, "Error:", directError?.message);
-          return [];
-        }
-      }
-      
-      // For UUID formIds, don't search through other forms to avoid showing wrong ranges
-      console.log("useFormScoring - UUID formId provided, not searching other forms to avoid showing wrong ranges");
-      return [];
-      
-    } catch (error) {
-      console.error("useFormScoring - Unexpected error:", error);
-      return [];
-    }
-  };
-
   const calculateTotalScore = (responses: Record<string, any>, fields: FormField[]): number => {
     let totalScore = 0;
     
@@ -121,30 +67,20 @@ export function useFormScoring() {
     
     let scoreRanges: ScoreRange[] = [];
     
-    // Enhanced: First try to get score ranges from database if formId is provided
-    if (formId) {
-      try {
-        scoreRanges = await fetchScoreRangesFromDB(formId);
-        console.log("Database score ranges found:", scoreRanges.length, scoreRanges);
-      } catch (error) {
-        console.error("Error fetching score ranges from DB:", error);
-      }
-    }
-    
-    // Fallback to fields if no ranges found in DB
-    if (scoreRanges.length === 0 && fields) {
+    // Get score ranges from fields if available
+    if (fields) {
       const fieldWithRanges = fields.find(field => 
         field.scoreRanges && field.scoreRanges.length > 0
       );
       
       if (fieldWithRanges?.scoreRanges) {
-        scoreRanges = [...fieldWithRanges.scoreRanges]; // Create a copy
+        scoreRanges = [...fieldWithRanges.scoreRanges];
         console.log("Using field score ranges:", scoreRanges.length);
       }
     }
     
     if (scoreRanges.length === 0) {
-      console.log("No score ranges found anywhere");
+      console.log("No score ranges found");
       return null;
     }
     
@@ -178,7 +114,6 @@ export function useFormScoring() {
   return {
     calculateTotalScore,
     getScoreFeedback,
-    shouldShowScoreCard,
-    fetchScoreRangesFromDB
+    shouldShowScoreCard
   };
 }

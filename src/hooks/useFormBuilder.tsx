@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -17,9 +18,7 @@ export const useFormBuilder = (id?: string) => {
     forms, 
     createForm, 
     updateForm, 
-    getForm, 
-    getFormWithFreshScoreRanges,
-    loadFormScoreRanges 
+    getForm
   } = useForm();
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,21 +43,6 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
-  // Load fresh score ranges specifically for the current form
-  const refreshFormScoreRanges = async (currentFormId: string) => {
-    if (!currentFormId || !loadFormScoreRanges) return [];
-    
-    console.log("useFormBuilder - Refreshing score ranges for form:", currentFormId);
-    try {
-      const freshRanges = await loadFormScoreRanges(currentFormId);
-      console.log("useFormBuilder - Fresh score ranges loaded:", freshRanges);
-      return freshRanges;
-    } catch (error) {
-      console.error("useFormBuilder - Error refreshing score ranges:", error);
-      return [];
-    }
-  };
-
   // Initialize form data from existing form or defaults
   useEffect(() => {
     const initializeFormData = async () => {
@@ -68,56 +52,33 @@ export const useFormBuilder = (id?: string) => {
         setIsLoading(true);
         
         try {
-          // Try to get form with fresh score ranges if available
-          let existingForm;
-          if (getFormWithFreshScoreRanges) {
-            console.log("useFormBuilder - Getting form with fresh score ranges");
-            existingForm = await getFormWithFreshScoreRanges(formId);
-          } else {
-            console.log("useFormBuilder - Getting form normally");
-            existingForm = getForm(formId);
-          }
+          const existingForm = getForm(formId);
           
           if (existingForm) {
             console.log("useFormBuilder - Found existing form:", {
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
-              scoreRanges: existingForm.scoreRanges?.length || 0,
-              rawData: existingForm
+              scoreRanges: existingForm.scoreRanges?.length || 0
             });
             
-            // Also try to refresh score ranges from database
-            let finalScoreRanges = existingForm.scoreRanges || [];
-            
-            try {
-              const freshRanges = await refreshFormScoreRanges(formId);
-              if (freshRanges.length > 0) {
-                console.log("useFormBuilder - Using fresh score ranges from database:", freshRanges);
-                finalScoreRanges = freshRanges;
-              }
-            } catch (error) {
-              console.warn("useFormBuilder - Could not load fresh ranges, using existing:", error);
-            }
-            
-            const formWithFreshRanges = {
+            const standardizedForm = {
               ...existingForm,
               showTotalScore: Boolean(existingForm.showTotalScore),
-              scoreRanges: Array.isArray(finalScoreRanges) ? [...finalScoreRanges] : [],
+              scoreRanges: Array.isArray(existingForm.scoreRanges) ? [...existingForm.scoreRanges] : [],
               scoreConfig: {
                 ...existingForm.scoreConfig,
                 enabled: Boolean(existingForm.showTotalScore),
-                ranges: Array.isArray(finalScoreRanges) ? [...finalScoreRanges] : []
+                ranges: Array.isArray(existingForm.scoreRanges) ? [...existingForm.scoreRanges] : []
               }
             };
             
-            console.log("useFormBuilder - Final form with fresh ranges:", {
-              showTotalScore: formWithFreshRanges.showTotalScore,
-              scoreRanges: formWithFreshRanges.scoreRanges.length,
-              scoreConfigRanges: formWithFreshRanges.scoreConfig?.ranges?.length || 0
+            console.log("useFormBuilder - Standardized form:", {
+              showTotalScore: standardizedForm.showTotalScore,
+              scoreRanges: standardizedForm.scoreRanges.length
             });
             
-            setForm(formWithFreshRanges);
-            setFormData(formWithFreshRanges);
+            setForm(standardizedForm);
+            setFormData(standardizedForm);
           } else {
             console.log("useFormBuilder - Form not found, redirecting to forms list");
             toast({
@@ -164,7 +125,7 @@ export const useFormBuilder = (id?: string) => {
     };
 
     initializeFormData();
-  }, [formId, getForm, getFormWithFreshScoreRanges, navigate, loadFormScoreRanges]);
+  }, [formId, getForm, navigate]);
 
   const isEditMode = Boolean(formId);
 
@@ -196,8 +157,7 @@ export const useFormBuilder = (id?: string) => {
       };
       console.log("useFormBuilder - Updated formData:", {
         showTotalScore: updated.showTotalScore,
-        scoreRanges: updated.scoreRanges,
-        scoreConfigRanges: updated.scoreConfig?.ranges?.length || 0
+        scoreRanges: updated.scoreRanges
       });
       return updated;
     });
@@ -216,8 +176,7 @@ export const useFormBuilder = (id?: string) => {
         }
       };
       console.log("useFormBuilder - Updated formData scoreRanges to:", {
-        scoreRanges: updated.scoreRanges,
-        scoreConfigRanges: updated.scoreConfig?.ranges?.length || 0
+        scoreRanges: updated.scoreRanges
       });
       return updated;
     });
@@ -359,8 +318,7 @@ export const useFormBuilder = (id?: string) => {
     console.log("useFormBuilder - handleSubmit called");
     console.log("useFormBuilder - Current formData:", {
       showTotalScore: formData.showTotalScore,
-      scoreRanges: formData.scoreRanges,
-      scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
+      scoreRanges: formData.scoreRanges
     });
     
     setIsSaving(true);
@@ -450,21 +408,12 @@ export const useFormBuilder = (id?: string) => {
     addAllowedUser,
     removeAllowedUser,
     handleDragEnd,
-    handleAllowViewOwnResponsesChange: (allow: boolean) => {
-      setFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
-    },
-    handleAllowEditOwnResponsesChange: (allow: boolean) => {
-      setFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
-    },
-    handleFormColorChange: (color: string) => {
-      setFormData(prev => ({ ...prev, formColor: color }));
-    },
-    handleHttpConfigChange: (config: any) => {
-      setFormData(prev => ({ ...prev, httpConfig: config }));
-    },
+    handleAllowViewOwnResponsesChange,
+    handleAllowEditOwnResponsesChange,
+    handleFormColorChange,
+    handleHttpConfigChange,
     handleSubmit,
     handleCreateForm,
-    handleUpdateForm,
-    refreshFormScoreRanges // Expose the refresh function
+    handleUpdateForm
   };
 };

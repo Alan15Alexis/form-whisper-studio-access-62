@@ -9,7 +9,6 @@ export interface FormContextType {
   updateForm: (id: string, formData: Partial<Form>) => Promise<Form | null>;
   deleteForm: (id: string) => Promise<boolean>;
   getForm: (id: string) => Form | undefined;
-  getFormWithFreshScoreRanges?: (id: string) => Promise<Form | undefined>;
   submitFormResponse: (formId: string, data: Record<string, any>, formFromLocation?: any, scoreData?: any) => Promise<FormResponse>;
   getFormResponses: (formId: string) => FormResponse[];
   addAllowedUser: (formId: string, email: string) => void;
@@ -18,5 +17,4 @@ export interface FormContextType {
   generateAccessLink: (formId: string) => string;
   validateAccessToken: (formId: string, token: string) => boolean;
   setForms: React.Dispatch<React.SetStateAction<Form[]>>;
-  loadFormScoreRanges?: (formId: string) => Promise<any[]>;
 }
