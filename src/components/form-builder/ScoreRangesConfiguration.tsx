@@ -23,14 +23,30 @@ const ScoreRangesConfiguration = ({
   onClearRanges
 }: ScoreRangesConfigurationProps) => {
   
-  // Enhanced logging for debugging display issues
-  console.log("ScoreRangesConfiguration - Component render:", {
-    scoreRanges,
-    scoreRangesLength: scoreRanges?.length || 0,
-    scoreRangesType: typeof scoreRanges,
-    isArray: Array.isArray(scoreRanges),
-    hasRanges: scoreRanges && scoreRanges.length > 0,
-    stringified: JSON.stringify(scoreRanges)
+  // Clean malformed scoreRanges data
+  const cleanScoreRanges = (() => {
+    if (!scoreRanges) {
+      return [];
+    }
+    
+    // Handle malformed scoreRanges
+    if (scoreRanges && typeof scoreRanges === 'object' && scoreRanges._type === 'undefined') {
+      console.log("ScoreRangesConfiguration - Cleaning malformed scoreRanges:", scoreRanges);
+      return [];
+    }
+    
+    if (!Array.isArray(scoreRanges)) {
+      console.warn("ScoreRangesConfiguration - scoreRanges is not an array:", typeof scoreRanges, scoreRanges);
+      return [];
+    }
+    
+    return scoreRanges;
+  })();
+
+  console.log("ScoreRangesConfiguration - Cleaned data:", {
+    original: scoreRanges,
+    cleaned: cleanScoreRanges,
+    hasRanges: cleanScoreRanges && cleanScoreRanges.length > 0
   });
 
   return (
@@ -55,10 +71,10 @@ const ScoreRangesConfiguration = ({
       </div>
 
       <div className="border rounded-md">
-        {scoreRanges && scoreRanges.length > 0 ? (
+        {cleanScoreRanges && cleanScoreRanges.length > 0 ? (
           <div>
             <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-              <h4 className="font-medium">Rangos Configurados ({scoreRanges.length})</h4>
+              <h4 className="font-medium">Rangos Configurados ({cleanScoreRanges.length})</h4>
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
@@ -88,7 +104,7 @@ const ScoreRangesConfiguration = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scoreRanges.map((range, index) => {
+                {cleanScoreRanges.map((range, index) => {
                   console.log(`ScoreRangesConfiguration - Rendering range ${index}:`, range);
                   return (
                     <TableRow key={`range-display-${index}`}>
@@ -103,12 +119,6 @@ const ScoreRangesConfiguration = ({
                 })}
               </TableBody>
             </Table>
-            
-            {/* Debug information panel - remove this after fixing the issue */}
-            <div className="p-3 bg-blue-50 border-t text-xs text-blue-800">
-              <strong>Debug Info:</strong> Mostrando {scoreRanges.length} rango(s) | 
-              Datos: {JSON.stringify(scoreRanges)}
-            </div>
           </div>
         ) : (
           <div className="p-8 text-center">
@@ -130,14 +140,6 @@ const ScoreRangesConfiguration = ({
               <Settings className="h-4 w-4" />
               Configurar Rangos
             </Button>
-            
-            {/* Debug information for empty state */}
-            <div className="mt-4 p-3 bg-gray-50 border text-xs text-gray-600">
-              <strong>Debug Info:</strong> scoreRanges = {JSON.stringify(scoreRanges)} | 
-              Tipo: {typeof scoreRanges} | 
-              Es Array: {Array.isArray(scoreRanges) ? 'Sí' : 'No'} | 
-              Longitud: {scoreRanges?.length || 'N/A'}
-            </div>
           </div>
         )}
       </div>

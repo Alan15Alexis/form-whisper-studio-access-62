@@ -49,9 +49,40 @@ const FormBuilder = () => {
     );
   }
 
-  console.log("FormBuilder - Rendering with standardized formData:", {
-    showTotalScore: formData.showTotalScore,
-    scoreRanges: formData.scoreRanges
+  // Clean up malformed data before using it
+  const cleanFormData = {
+    ...formData,
+    showTotalScore: (() => {
+      if (typeof formData.showTotalScore === 'boolean') {
+        return formData.showTotalScore;
+      }
+      if (formData.showTotalScore && typeof formData.showTotalScore === 'object' && formData.showTotalScore._type === 'undefined') {
+        console.log("FormBuilder - Cleaning malformed showTotalScore:", formData.showTotalScore);
+        return false;
+      }
+      return Boolean(formData.showTotalScore);
+    })(),
+    scoreRanges: (() => {
+      if (Array.isArray(formData.scoreRanges)) {
+        return formData.scoreRanges;
+      }
+      if (formData.scoreRanges && typeof formData.scoreRanges === 'object' && formData.scoreRanges._type === 'undefined') {
+        console.log("FormBuilder - Cleaning malformed scoreRanges:", formData.scoreRanges);
+        return [];
+      }
+      return [];
+    })()
+  };
+
+  console.log("FormBuilder - Cleaned formData:", {
+    original: {
+      showTotalScore: formData.showTotalScore,
+      scoreRanges: formData.scoreRanges
+    },
+    cleaned: {
+      showTotalScore: cleanFormData.showTotalScore,
+      scoreRanges: cleanFormData.scoreRanges
+    }
   });
 
   return (
@@ -59,14 +90,14 @@ const FormBuilder = () => {
       <div className="container py-8">
         <FormBuilderHeader
           isEditMode={isEditMode}
-          formTitle={formData.title || ''}
+          formTitle={cleanFormData.title || ''}
           isSaving={isSaving}
           onSave={handleSubmit}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <FormBuilderTabs
-            formData={formData}
+            formData={cleanFormData}
             onTitleChange={handleTitleChange}
             onDescriptionChange={handleDescriptionChange}
             onPrivateChange={handlePrivateChange}

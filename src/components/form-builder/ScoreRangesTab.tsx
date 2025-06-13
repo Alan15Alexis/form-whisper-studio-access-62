@@ -24,25 +24,24 @@ const ScoreRangesTab = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check for fields with numeric values
-  const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues === true);
-
-  // Enhanced logging for debugging score ranges display issues
-  console.log("ScoreRangesTab - Component Rendered with detailed analysis:", {
-    showTotalScore,
-    scoreRangesReceived: scoreRanges,
-    scoreRangesType: typeof scoreRanges,
-    isScoreRangesArray: Array.isArray(scoreRanges),
-    scoreRangesLength: scoreRanges?.length || 0,
-    scoreRangesStringified: JSON.stringify(scoreRanges),
-    hasFieldsWithNumericValues,
-    fieldsWithNumericValues: formFields.filter(f => f.hasNumericValues).map(f => ({ id: f.id, label: f.label })),
-    allFormFields: formFields.map(f => ({ id: f.id, label: f.label, hasNumericValues: f.hasNumericValues }))
+  const hasFieldsWithNumericValues = formFields.some(field => {
+    // Clean malformed hasNumericValues data
+    if (field.hasNumericValues && typeof field.hasNumericValues === 'object' && field.hasNumericValues._type === 'undefined') {
+      return false;
+    }
+    return field.hasNumericValues === true;
   });
 
-  // Validate and process score ranges with extensive logging
+  // Clean and validate score ranges
   const validScoreRanges = (() => {
     if (!scoreRanges) {
       console.log("ScoreRangesTab - No scoreRanges provided (null/undefined)");
+      return [];
+    }
+    
+    // Handle malformed scoreRanges
+    if (scoreRanges && typeof scoreRanges === 'object' && scoreRanges._type === 'undefined') {
+      console.log("ScoreRangesTab - Cleaning malformed scoreRanges:", scoreRanges);
       return [];
     }
     
@@ -69,17 +68,16 @@ const ScoreRangesTab = ({
             minGreaterThanMax: range?.min > range?.max
           }
         });
-      } else {
-        console.log(`ScoreRangesTab - Valid range at index ${index}:`, range);
       }
       
       return isValid;
     });
     
-    console.log("ScoreRangesTab - Filtered score ranges:", {
+    console.log("ScoreRangesTab - Processed score ranges:", {
       originalLength: scoreRanges.length,
       filteredLength: filtered.length,
-      filtered
+      filtered,
+      hasFieldsWithNumericValues
     });
     
     return filtered;
@@ -110,14 +108,11 @@ const ScoreRangesTab = ({
     onSaveScoreRanges([]);
   };
 
-  // Final render decision logging
-  console.log("ScoreRangesTab - Render decision:", {
+  console.log("ScoreRangesTab - Final render state:", {
     shouldShowWarning: !hasFieldsWithNumericValues,
     shouldShowConfiguration: hasFieldsWithNumericValues,
-    configurationWillReceive: {
-      scoreRanges: validScoreRanges,
-      scoreRangesLength: validScoreRanges.length
-    }
+    validScoreRangesLength: validScoreRanges.length,
+    formFieldsWithNumeric: formFields.filter(f => f.hasNumericValues === true).length
   });
 
   return (
