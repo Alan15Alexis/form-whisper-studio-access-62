@@ -5,8 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash, Plus, AlertCircle, Save } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Trash, Plus, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { ScoreRange, FormField } from "@/types/form";
 
@@ -26,39 +25,32 @@ const ScoreRangesTab = ({
   scoreRanges
 }: ScoreRangesTabProps) => {
   const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>([]);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Improved check for fields with numeric values
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues === true);
 
-  console.log("ScoreRangesTab - Component Rendered with improved props:", {
+  console.log("ScoreRangesTab - Component Rendered:", {
     showTotalScore,
     scoreRanges: scoreRanges?.length || 0,
     hasFieldsWithNumericValues,
     localScoreRangesCount: localScoreRanges.length,
-    hasUnsavedChanges,
     fieldsWithNumericValues: formFields.filter(f => f.hasNumericValues).map(f => ({ id: f.id, label: f.label }))
   });
 
-  // Sync with external scoreRanges from database - only use real data
+  // Sync with external scoreRanges - immediate updates
   useEffect(() => {
     console.log("ScoreRangesTab - Syncing with external scoreRanges:", scoreRanges);
     
-    // Ensure we always have a valid array from props
     const incomingRanges = Array.isArray(scoreRanges) ? scoreRanges : [];
-    
-    // Only update if there's actually a difference to prevent unnecessary re-renders
-    const currentRangesJson = JSON.stringify(localScoreRanges);
-    const incomingRangesJson = JSON.stringify(incomingRanges);
-    
-    if (currentRangesJson !== incomingRangesJson) {
-      console.log("ScoreRangesTab - Score ranges changed, updating local state from", localScoreRanges.length, "to", incomingRanges.length);
-      setLocalScoreRanges(JSON.parse(JSON.stringify(incomingRanges))); // Deep copy
-      setHasUnsavedChanges(false);
-    }
+    setLocalScoreRanges([...incomingRanges]); // Always sync, simple deep copy
   }, [scoreRanges]);
 
-  // Score range management functions
+  // Immediate update function - no pending state
+  const updateParentRanges = (newRanges: ScoreRange[]) => {
+    console.log("ScoreRangesTab - Immediate update to parent:", newRanges.length);
+    onSaveScoreRanges(newRanges);
+  };
+
   const addScoreRange = () => {
     console.log("ScoreRangesTab - Adding new score range");
     let newRanges;
@@ -81,11 +73,11 @@ const ScoreRangesTab = ({
     
     console.log("ScoreRangesTab - New score ranges:", newRanges);
     setLocalScoreRanges(newRanges);
-    setHasUnsavedChanges(true);
+    updateParentRanges(newRanges);
     
     toast({
       title: "Rango añadido",
-      description: `Se añadió un nuevo rango de puntuación. No olvides guardar los cambios.`
+      description: "Se añadió un nuevo rango de puntuación."
     });
   };
 
@@ -105,7 +97,7 @@ const ScoreRangesTab = ({
     
     console.log("ScoreRangesTab - Updated score ranges:", updatedRanges);
     setLocalScoreRanges(updatedRanges);
-    setHasUnsavedChanges(true);
+    updateParentRanges(updatedRanges);
   };
 
   const removeScoreRange = (index: number) => {
@@ -114,42 +106,11 @@ const ScoreRangesTab = ({
     
     console.log("ScoreRangesTab - Updated score ranges after removal:", updatedRanges);
     setLocalScoreRanges(updatedRanges);
-    setHasUnsavedChanges(true);
+    updateParentRanges(updatedRanges);
     
     toast({
       title: "Rango eliminado",
-      description: "El rango de puntuación ha sido eliminado. No olvides guardar los cambios."
-    });
-  };
-
-  const saveScoreRanges = () => {
-    console.log("ScoreRangesTab - Saving score ranges:", localScoreRanges);
-    
-    // Validate ranges before saving
-    const validRanges = localScoreRanges.filter(range => 
-      range && 
-      typeof range.min === 'number' && 
-      typeof range.max === 'number' && 
-      typeof range.message === 'string' &&
-      range.min <= range.max
-    );
-    
-    if (validRanges.length !== localScoreRanges.length) {
-      console.warn("ScoreRangesTab - Some invalid ranges were filtered out");
-      toast({
-        title: "Advertencia",
-        description: "Algunos rangos tenían datos inválidos y fueron omitidos.",
-        variant: "destructive"
-      });
-    }
-    
-    // Call parent save handler with validated ranges
-    onSaveScoreRanges(validRanges);
-    setHasUnsavedChanges(false);
-    
-    toast({
-      title: "Rangos guardados",
-      description: "Los rangos de puntuación han sido guardados correctamente."
+      description: "El rango de puntuación ha sido eliminado."
     });
   };
 
@@ -172,13 +133,16 @@ const ScoreRangesTab = ({
       onToggleFormScoring(enabled);
     }
 
-    // When disabling scoring, clear local ranges
+    // When disabling scoring, clear ranges immediately
     if (!enabled) {
       console.log("ScoreRangesTab - Clearing score ranges when disabling scoring");
       setLocalScoreRanges([]);
-      setHasUnsavedChanges(true);
+      updateParentRanges([]);
     }
   };
+
+  // Only show ranges if scoring is enabled AND there are fields with numeric values
+  const shouldShowRanges = showTotalScore && hasFieldsWithNumericValues;
 
   return (
     <div className="space-y-8">
@@ -225,43 +189,22 @@ const ScoreRangesTab = ({
             )}
             
             {/* Score Ranges Configuration - Only show if scoring is enabled */}
-            {showTotalScore && hasFieldsWithNumericValues && (
+            {shouldShowRanges && (
               <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-medium">
                     Rangos de puntuación y mensajes
                   </Label>
-                  <div className="flex gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={addScoreRange} 
-                      className="flex items-center gap-1"
-                    >
-                      <Plus className="h-4 w-4" /> Añadir rango
-                    </Button>
-                    {hasUnsavedChanges && (
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        onClick={saveScoreRanges} 
-                        className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <Save className="h-4 w-4" /> Guardar cambios
-                      </Button>
-                    )}
-                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addScoreRange} 
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" /> Añadir rango
+                  </Button>
                 </div>
-
-                {hasUnsavedChanges && (
-                  <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Tienes cambios sin guardar. Haz clic en "Guardar cambios" para aplicarlos.
-                    </AlertDescription>
-                  </Alert>
-                )}
                 
                 <div className="space-y-3">
                   {localScoreRanges.map((range, index) => (
@@ -335,7 +278,7 @@ const ScoreRangesTab = ({
                   <ul className="text-sm text-blue-700 list-disc ml-4 mt-2">
                     <li>Cada rango define un mensaje que se mostrará cuando la puntuación esté en ese rango</li>
                     <li>Los rangos no deben solaparse para evitar ambigüedad</li>
-                    <li>Guarda los cambios antes de guardar el formulario completo</li>
+                    <li>Los cambios se aplican automáticamente y se guardan con el formulario</li>
                   </ul>
                 </div>
               </div>
