@@ -29,9 +29,10 @@ const ScoreRangesConfiguration = ({
       return [];
     }
     
-    // Handle malformed scoreRanges
-    if (scoreRanges && typeof scoreRanges === 'object' && scoreRanges._type === 'undefined') {
-      console.log("ScoreRangesConfiguration - Cleaning malformed scoreRanges:", scoreRanges);
+    // Handle malformed scoreRanges using any type
+    const malformedValue = scoreRanges as any;
+    if (malformedValue && typeof malformedValue === 'object' && malformedValue._type === 'undefined') {
+      console.log("ScoreRangesConfiguration - Cleaning malformed scoreRanges:", malformedValue);
       return [];
     }
     

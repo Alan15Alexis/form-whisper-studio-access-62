@@ -25,8 +25,8 @@ const ScoreRangesTab = ({
 
   // Check for fields with numeric values
   const hasFieldsWithNumericValues = formFields.some(field => {
-    // Clean malformed hasNumericValues data
-    if (field.hasNumericValues && typeof field.hasNumericValues === 'object' && field.hasNumericValues._type === 'undefined') {
+    // Clean malformed hasNumericValues data with proper null check
+    if (field.hasNumericValues && typeof field.hasNumericValues === 'object' && (field.hasNumericValues as any)._type === 'undefined') {
       return false;
     }
     return field.hasNumericValues === true;
@@ -39,9 +39,10 @@ const ScoreRangesTab = ({
       return [];
     }
     
-    // Handle malformed scoreRanges
-    if (scoreRanges && typeof scoreRanges === 'object' && scoreRanges._type === 'undefined') {
-      console.log("ScoreRangesTab - Cleaning malformed scoreRanges:", scoreRanges);
+    // Handle malformed scoreRanges using any type
+    const malformedValue = scoreRanges as any;
+    if (malformedValue && typeof malformedValue === 'object' && malformedValue._type === 'undefined') {
+      console.log("ScoreRangesTab - Cleaning malformed scoreRanges:", malformedValue);
       return [];
     }
     

@@ -56,8 +56,10 @@ const FormBuilder = () => {
       if (typeof formData.showTotalScore === 'boolean') {
         return formData.showTotalScore;
       }
-      if (formData.showTotalScore && typeof formData.showTotalScore === 'object' && formData.showTotalScore._type === 'undefined') {
-        console.log("FormBuilder - Cleaning malformed showTotalScore:", formData.showTotalScore);
+      // Check for malformed data using any type
+      const malformedValue = formData.showTotalScore as any;
+      if (malformedValue && typeof malformedValue === 'object' && malformedValue._type === 'undefined') {
+        console.log("FormBuilder - Cleaning malformed showTotalScore:", malformedValue);
         return false;
       }
       return Boolean(formData.showTotalScore);
@@ -66,8 +68,10 @@ const FormBuilder = () => {
       if (Array.isArray(formData.scoreRanges)) {
         return formData.scoreRanges;
       }
-      if (formData.scoreRanges && typeof formData.scoreRanges === 'object' && formData.scoreRanges._type === 'undefined') {
-        console.log("FormBuilder - Cleaning malformed scoreRanges:", formData.scoreRanges);
+      // Check for malformed data using any type
+      const malformedValue = formData.scoreRanges as any;
+      if (malformedValue && typeof malformedValue === 'object' && malformedValue._type === 'undefined') {
+        console.log("FormBuilder - Cleaning malformed scoreRanges:", malformedValue);
         return [];
       }
       return [];
