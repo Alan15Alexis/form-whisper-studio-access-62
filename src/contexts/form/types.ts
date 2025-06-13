@@ -16,7 +16,7 @@ export interface FormContextType {
   removeAllowedUser: (formId: string, email: string) => void;
   isUserAllowed: (formId: string, email?: string) => boolean;
   generateAccessLink: (formId: string) => string;
-  validateAccessToken: (token: string) => string | null;
+  validateAccessToken: (formId: string, token: string) => boolean;
   setForms: React.Dispatch<React.SetStateAction<Form[]>>;
   loadFormScoreRanges?: (formId: string) => Promise<any[]>;
 }
