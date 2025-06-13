@@ -63,15 +63,22 @@ export const useFormBuilder = (id?: string) => {
             // Ensure scoreRanges are properly set - only use real data from database
             const databaseScoreRanges = Array.isArray(existingForm.scoreRanges) ? existingForm.scoreRanges : [];
             
+            // Improved showTotalScore handling - explicitly convert to boolean
+            const showTotalScore = existingForm.showTotalScore === true;
+            
+            // Check if any fields have numeric values configured
+            const hasFieldsWithNumericValues = (existingForm.fields || []).some(field => field.hasNumericValues === true);
+            
             const standardizedForm = {
               ...existingForm,
-              showTotalScore: Boolean(existingForm.showTotalScore),
+              showTotalScore: showTotalScore,
               scoreRanges: databaseScoreRanges
             };
             
             console.log("useFormBuilder - Standardized form data:", {
               showTotalScore: standardizedForm.showTotalScore,
-              scoreRanges: standardizedForm.scoreRanges.length
+              scoreRanges: standardizedForm.scoreRanges.length,
+              hasFieldsWithNumericValues
             });
             
             setForm(standardizedForm);
@@ -122,7 +129,7 @@ export const useFormBuilder = (id?: string) => {
     };
 
     initializeFormData();
-  }, [formId, getForm, navigate, forms]); // Add forms dependency to react to changes
+  }, [formId, getForm, navigate, forms]);
 
   const isEditMode = Boolean(formId);
 
@@ -140,6 +147,21 @@ export const useFormBuilder = (id?: string) => {
 
   const handleToggleFormScoring = (enabled: boolean) => {
     console.log("useFormBuilder - handleToggleFormScoring called with:", enabled);
+    
+    // Validate that fields have numeric values if enabling scoring
+    if (enabled) {
+      const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues === true);
+      
+      if (!hasFieldsWithNumericValues) {
+        console.warn("useFormBuilder - Cannot enable scoring: no fields with numeric values");
+        toast({
+          title: 'No se puede habilitar puntuación',
+          description: 'Primero configura valores numéricos en al menos un campo.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     
     setFormData(prev => {
       const updated = { 
@@ -194,12 +216,31 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const updateField = (id: string, updatedField: FormField) => {
-    setFormData(prev => ({
-      ...prev,
-      fields: (prev.fields || []).map(field =>
-        field.id === id ? updatedField : field
-      ),
-    }));
+    setFormData(prev => {
+      const updatedFormData = {
+        ...prev,
+        fields: (prev.fields || []).map(field =>
+          field.id === id ? updatedField : field
+        ),
+      };
+      
+      // Check if numeric field configuration changed and update scoring availability
+      const hasFieldsWithNumericValues = updatedFormData.fields.some(field => field.hasNumericValues === true);
+      
+      // If no fields have numeric values anymore, disable scoring
+      if (!hasFieldsWithNumericValues && updatedFormData.showTotalScore) {
+        console.log("useFormBuilder - Disabling scoring: no fields with numeric values remaining");
+        updatedFormData.showTotalScore = false;
+        updatedFormData.scoreRanges = [];
+        
+        toast({
+          title: 'Puntuación deshabilitada',
+          description: 'Se deshabilitó la puntuación porque ningún campo tiene valores numéricos.',
+        });
+      }
+      
+      return updatedFormData;
+    });
   };
 
   const removeField = (id: string) => {
@@ -331,6 +372,20 @@ export const useFormBuilder = (id?: string) => {
       showTotalScore: formData.showTotalScore,
       scoreRanges: formData.scoreRanges.length
     });
+    
+    // Validate scoring configuration before saving
+    if (formData.showTotalScore) {
+      const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues === true);
+      
+      if (!hasFieldsWithNumericValues) {
+        toast({
+          title: 'Error de configuración',
+          description: 'No se puede guardar con puntuación habilitada sin campos con valores numéricos.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     
     setIsSaving(true);
     

@@ -58,14 +58,21 @@ const FormBuilderTabs = ({
   externalScoreRanges = [],
   isScoringEnabled = false
 }: FormBuilderTabsProps) => {
-  // Use formData.showTotalScore as the single source of truth
-  const showTotalScore = Boolean(formData.showTotalScore);
+  // Improved showTotalScore handling - explicitly handle undefined/null from database
+  const showTotalScore = formData.showTotalScore === true;
   const scoreRanges = Array.isArray(formData.scoreRanges) ? formData.scoreRanges : [];
+  
+  // Check if fields have numeric values configured
+  const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues === true);
 
-  console.log("FormBuilderTabs - Rendering with data:", {
+  console.log("FormBuilderTabs - Rendering with improved data handling:", {
     title: formData.title,
-    showTotalScore,
+    showTotalScore: {
+      raw: formData.showTotalScore,
+      processed: showTotalScore
+    },
     scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges',
+    hasFieldsWithNumericValues,
     formId
   });
 

@@ -28,14 +28,16 @@ const ScoreRangesTab = ({
   const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
+  // Improved check for fields with numeric values
+  const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues === true);
 
-  console.log("ScoreRangesTab - Component Rendered with props:", {
+  console.log("ScoreRangesTab - Component Rendered with improved props:", {
     showTotalScore,
     scoreRanges: scoreRanges?.length || 0,
     hasFieldsWithNumericValues,
     localScoreRangesCount: localScoreRanges.length,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    fieldsWithNumericValues: formFields.filter(f => f.hasNumericValues).map(f => ({ id: f.id, label: f.label }))
   });
 
   // Sync with external scoreRanges from database - only use real data
@@ -154,7 +156,18 @@ const ScoreRangesTab = ({
   const handleToggleScoringFeature = async (enabled: boolean) => {
     console.log("ScoreRangesTab - handleToggleScoringFeature called with:", enabled);
 
-    // Call the parent handler first
+    // Validate that fields have numeric values if enabling scoring
+    if (enabled && !hasFieldsWithNumericValues) {
+      console.warn("ScoreRangesTab - Cannot enable scoring: no fields with numeric values");
+      toast({
+        title: "No se puede habilitar puntuación",
+        description: "Primero configura valores numéricos en al menos un campo desde la pestaña 'Campos'.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Call the parent handler
     if (onToggleFormScoring) {
       onToggleFormScoring(enabled);
     }
@@ -197,9 +210,12 @@ const ScoreRangesTab = ({
             </div>
 
             {!hasFieldsWithNumericValues && (
-              <div className="p-4 bg-primary/5 rounded-md text-sm">
-                <p className="font-medium">Para habilitar la puntuación total:</p>
-                <ol className="list-decimal ml-5 mt-2 space-y-1">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <p className="font-medium text-amber-800">Para habilitar la puntuación total:</p>
+                </div>
+                <ol className="list-decimal ml-5 mt-2 space-y-1 text-amber-700">
                   <li>Ve a la pestaña "Campos"</li>
                   <li>Selecciona un campo y haz clic en el ícono de configuración</li>
                   <li>Activa "Habilitar valores numéricos"</li>
