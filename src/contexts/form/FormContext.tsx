@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -74,7 +75,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
   const [formsLoaded, setFormsLoaded] = useState(false);
 
-  // Memoized form loading function with better error handling
+  // Enhanced form loading function with better error handling and data normalization
   const loadFormsFromSupabase = useCallback(async (forceReload = false) => {
     if (formsLoaded && !forceReload) {
       console.log("FormContext - Forms already loaded, skipping reload");
@@ -100,20 +101,36 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const loadedForms = formsData.map(formData => {
           const config = formData.configuracion || {};
           
-          // Simplified: use showTotalScore from config directly
+          // Enhanced data normalization with better debugging
           const showTotalScore = Boolean(config.showTotalScore);
+          console.log(`FormContext - Form "${formData.titulo}" config:`, {
+            showTotalScore: config.showTotalScore,
+            normalizedShowTotalScore: showTotalScore,
+            configKeys: Object.keys(config)
+          });
           
-          // Single source of truth: use rangos_mensajes column only
-          const scoreRanges = Array.isArray(formData.rangos_mensajes) ? 
-            formData.rangos_mensajes.filter(range => 
-              range && 
-              typeof range.min === 'number' && 
-              typeof range.max === 'number' && 
-              typeof range.message === 'string' &&
-              range.min <= range.max
-            ) : [];
+          // Enhanced score ranges processing with validation
+          let scoreRanges = [];
+          if (Array.isArray(formData.rangos_mensajes)) {
+            scoreRanges = formData.rangos_mensajes.filter(range => {
+              const isValid = range && 
+                typeof range.min === 'number' && 
+                typeof range.max === 'number' && 
+                typeof range.message === 'string' &&
+                range.min <= range.max;
+              
+              if (!isValid) {
+                console.warn(`FormContext - Invalid range found in form "${formData.titulo}":`, range);
+              }
+              return isValid;
+            });
+          }
           
-          console.log(`FormContext - Form "${formData.titulo}": showTotalScore=${showTotalScore}, scoreRanges=${scoreRanges.length}`);
+          console.log(`FormContext - Form "${formData.titulo}" final processing:`, {
+            showTotalScore,
+            scoreRangesCount: scoreRanges.length,
+            hasRangesInDatabase: Array.isArray(formData.rangos_mensajes) && formData.rangos_mensajes.length > 0
+          });
           
           return {
             id: formData.id.toString(),
@@ -190,14 +207,33 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     safeLocalStorageSet('allowedUsers', allowedUsers);
   }, [allowedUsers]);
 
-  // Enhanced form operations with reload capability
+  // Enhanced form operations with better error handling
   const getForm = useCallback((id: string) => {
-    const form = getFormOperation(forms)(id);
-    console.log(`FormContext - getForm(${id}):`, form ? {
-      title: form.title,
-      showTotalScore: form.showTotalScore,
-      scoreRangesCount: form.scoreRanges?.length || 0
-    } : 'not found');
+    console.log(`FormContext - getForm called with id: "${id}"`);
+    
+    // Try to find by exact ID match first
+    let form = forms.find(f => f.id === id);
+    
+    // If not found by ID, try by title (for backwards compatibility)
+    if (!form) {
+      form = forms.find(f => f.title === id);
+      if (form) {
+        console.warn(`FormContext - Form found by title "${id}" instead of ID`);
+      }
+    }
+    
+    if (form) {
+      console.log(`FormContext - getForm(${id}) found:`, {
+        title: form.title,
+        showTotalScore: form.showTotalScore,
+        scoreRangesCount: form.scoreRanges?.length || 0
+      });
+    } else {
+      console.warn(`FormContext - getForm(${id}) not found. Available forms:`, 
+        forms.map(f => ({ id: f.id, title: f.title }))
+      );
+    }
+    
     return form;
   }, [forms]);
 
@@ -215,7 +251,11 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [forms, currentUser]);
   
   const updateForm = useCallback(async (id: string, formData: any) => {
-    console.log("FormContext - updateForm called with scoreRanges:", formData.scoreRanges?.length || 0);
+    console.log("FormContext - updateForm called with:", {
+      id,
+      showTotalScore: formData.showTotalScore,
+      scoreRangesCount: formData.scoreRanges?.length || 0
+    });
     
     const result = await updateFormOperation(
       forms,

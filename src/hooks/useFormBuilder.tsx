@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -42,7 +43,7 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
-  // Memoized form data sync to prevent unnecessary updates
+  // Enhanced form data sync to prevent unnecessary updates
   const syncFormData = useCallback((sourceForm: Form) => {
     console.log("useFormBuilder - Syncing form data:", {
       title: sourceForm.title,
@@ -72,7 +73,7 @@ export const useFormBuilder = (id?: string) => {
     setForm(sourceForm);
   }, []);
 
-  // Initialize form data with better dependency tracking
+  // Enhanced initialization with better error handling
   useEffect(() => {
     const initializeFormData = async () => {
       console.log("useFormBuilder - Initializing for formId:", formId);
@@ -81,7 +82,16 @@ export const useFormBuilder = (id?: string) => {
         setIsLoading(true);
         
         try {
-          const existingForm = getForm(formId);
+          // Wait a bit for forms to load if they haven't loaded yet
+          let retryCount = 0;
+          let existingForm = getForm(formId);
+          
+          while (!existingForm && retryCount < 5) {
+            console.log(`useFormBuilder - Form not found, retrying... (attempt ${retryCount + 1})`);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            existingForm = getForm(formId);
+            retryCount++;
+          }
           
           if (existingForm) {
             console.log("useFormBuilder - Found form:", {
@@ -92,7 +102,7 @@ export const useFormBuilder = (id?: string) => {
             
             syncFormData(existingForm);
           } else {
-            console.log("useFormBuilder - Form not found");
+            console.log("useFormBuilder - Form not found after retries");
             toast({
               title: 'Form not found',
               description: 'The form you are trying to edit does not exist.',
@@ -164,7 +174,7 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   }, []);
 
-  // Simplified scoring toggle
+  // Enhanced scoring toggle with validation
   const handleToggleFormScoring = useCallback((enabled: boolean) => {
     console.log("useFormBuilder - Toggle scoring:", enabled);
     
@@ -188,7 +198,7 @@ export const useFormBuilder = (id?: string) => {
     }));
   }, [formData.fields]);
 
-  // Simple score ranges save - just update local state
+  // Simple score ranges save - just update local state (no automatic saving)
   const handleSaveScoreRanges = useCallback((ranges: any[]) => {
     console.log("useFormBuilder - Update score ranges in form data:", ranges.length);
     

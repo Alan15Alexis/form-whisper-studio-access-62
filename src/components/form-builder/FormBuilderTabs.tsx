@@ -6,7 +6,7 @@ import FormFieldsList from "./FormFieldsList";
 import FieldsSidebar from "./FieldsSidebar";
 import FormSettings from "./FormSettings";
 import AccessControl from "../form-builder/AccessControl";
-import ScoreRangesManager from "./ScoreRangesManager";
+import ScoreRangesTab from "./ScoreRangesTab";
 import { Form, FormField, ScoreRange } from "@/types/form";
 
 interface FormBuilderTabsProps {
@@ -65,7 +65,7 @@ const FormBuilderTabs = ({
       range.min <= range.max
     ) : [];
 
-  console.log("FormBuilderTabs - Enhanced rendering:", {
+  console.log("FormBuilderTabs - Using ScoreRangesTab:", {
     title: formData.title,
     showTotalScore,
     scoreRangesCount: scoreRanges.length,
@@ -123,11 +123,11 @@ const FormBuilderTabs = ({
       </TabsContent>
       
       <TabsContent value="ranges">
-        <ScoreRangesManager
+        <ScoreRangesTab
           formFields={formData.fields || []}
           showTotalScore={showTotalScore}
           scoreRanges={scoreRanges}
-          onToggleScoring={onToggleFormScoring}
+          onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
         />
       </TabsContent>
