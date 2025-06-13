@@ -6,6 +6,7 @@ import FormFieldsList from "./FormFieldsList";
 import FieldsSidebar from "./FieldsSidebar";
 import FormSettings from "./FormSettings";
 import AccessControl from "../form-builder/AccessControl";
+import ScoreRangesTab from "./ScoreRangesTab";
 import { Form, FormField, ScoreRange } from "@/types/form";
 
 interface FormBuilderTabsProps {
@@ -60,12 +61,14 @@ const FormBuilderTabs = ({
   // Use formData.showTotalScore as the single source of truth
   const showTotalScore = Boolean(formData.showTotalScore);
   const scoreRanges = Array.isArray(formData.scoreRanges) ? formData.scoreRanges : [];
+  const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues);
 
   console.log("FormBuilderTabs - Rendering with standardized props:", {
     title: formData.title,
     showTotalScore,
     scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges',
-    formId
+    formId,
+    hasFieldsWithNumericValues
   });
 
   return (
@@ -73,6 +76,8 @@ const FormBuilderTabs = ({
       <TabsList className="mb-8">
         <TabsTrigger value="fields">Campos</TabsTrigger>
         <TabsTrigger value="settings">Configuración</TabsTrigger>
+        {/* Show Rangos tab if there are fields with numeric values */}
+        {hasFieldsWithNumericValues && <TabsTrigger value="ranges">Rangos</TabsTrigger>}
         {formData.isPrivate && <TabsTrigger value="access">Control de Acceso</TabsTrigger>}
       </TabsList>
       
@@ -113,12 +118,21 @@ const FormBuilderTabs = ({
           onHttpConfigChange={onHttpConfigChange}
           formFields={formData.fields || []}
           formId={formId}
-          showTotalScore={showTotalScore}
-          onToggleFormScoring={onToggleFormScoring}
-          onSaveScoreRanges={onSaveScoreRanges}
-          scoreRanges={scoreRanges}
         />
       </TabsContent>
+      
+      {/* New Rangos tab - only visible when there are fields with numeric values */}
+      {hasFieldsWithNumericValues && (
+        <TabsContent value="ranges">
+          <ScoreRangesTab
+            formFields={formData.fields || []}
+            showTotalScore={showTotalScore}
+            onToggleFormScoring={onToggleFormScoring}
+            onSaveScoreRanges={onSaveScoreRanges}
+            scoreRanges={scoreRanges}
+          />
+        </TabsContent>
+      )}
       
       {formData.isPrivate && (
         <TabsContent value="access">
