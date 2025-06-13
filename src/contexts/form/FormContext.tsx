@@ -101,15 +101,15 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const loadedForms = formsData.map(formData => {
           const config = formData.configuracion || {};
           
-          // Enhanced data normalization with better debugging
-          const showTotalScore = Boolean(config.showTotalScore);
-          console.log(`FormContext - Form "${formData.titulo}" config:`, {
-            showTotalScore: config.showTotalScore,
-            normalizedShowTotalScore: showTotalScore,
-            configKeys: Object.keys(config)
+          // Fix showTotalScore processing - look in both config and root level
+          const showTotalScore = Boolean(config.showTotalScore || formData.showTotalScore);
+          console.log(`FormContext - Form "${formData.titulo}" showTotalScore processing:`, {
+            configShowTotalScore: config.showTotalScore,
+            rootShowTotalScore: formData.showTotalScore,
+            finalShowTotalScore: showTotalScore
           });
           
-          // Enhanced score ranges processing with validation
+          // Fix score ranges processing - look in rangos_mensajes column
           let scoreRanges = [];
           if (Array.isArray(formData.rangos_mensajes)) {
             scoreRanges = formData.rangos_mensajes.filter(range => {
@@ -129,7 +129,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log(`FormContext - Form "${formData.titulo}" final processing:`, {
             showTotalScore,
             scoreRangesCount: scoreRanges.length,
-            hasRangesInDatabase: Array.isArray(formData.rangos_mensajes) && formData.rangos_mensajes.length > 0
+            hasRangesInDatabase: Array.isArray(formData.rangos_mensajes) && formData.rangos_mensajes.length > 0,
+            rawRanges: formData.rangos_mensajes
           });
           
           return {
@@ -153,6 +154,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         console.log("FormContext - Successfully loaded forms:", loadedForms.length);
+        console.log("FormContext - Forms with score ranges:", loadedForms.filter(f => f.scoreRanges && f.scoreRanges.length > 0).map(f => ({ id: f.id, title: f.title, scoreRangesCount: f.scoreRanges.length })));
+        
         setForms(loadedForms);
         safeLocalStorageSet('forms', loadedForms);
         setFormsLoaded(true);
@@ -210,6 +213,11 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Enhanced form operations with better error handling
   const getForm = useCallback((id: string) => {
     console.log(`FormContext - getForm called with id: "${id}"`);
+    
+    if (!id) {
+      console.warn("FormContext - getForm called with empty id");
+      return undefined;
+    }
     
     // Try to find by exact ID match first
     let form = forms.find(f => f.id === id);

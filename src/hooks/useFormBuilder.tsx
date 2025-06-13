@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -46,6 +45,7 @@ export const useFormBuilder = (id?: string) => {
   // Enhanced form data sync to prevent unnecessary updates
   const syncFormData = useCallback((sourceForm: Form) => {
     console.log("useFormBuilder - Syncing form data:", {
+      formId: sourceForm.id,
       title: sourceForm.title,
       showTotalScore: sourceForm.showTotalScore,
       scoreRangesCount: sourceForm.scoreRanges?.length || 0
@@ -63,7 +63,7 @@ export const useFormBuilder = (id?: string) => {
       const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
       
       if (hasChanged) {
-        console.log("useFormBuilder - Form data updated");
+        console.log("useFormBuilder - Form data updated with score ranges:", newData.scoreRanges?.length || 0);
         return newData;
       }
       
@@ -73,7 +73,7 @@ export const useFormBuilder = (id?: string) => {
     setForm(sourceForm);
   }, []);
 
-  // Enhanced initialization with better error handling
+  // Enhanced initialization with better error handling and retry logic
   useEffect(() => {
     const initializeFormData = async () => {
       console.log("useFormBuilder - Initializing for formId:", formId);
@@ -82,19 +82,20 @@ export const useFormBuilder = (id?: string) => {
         setIsLoading(true);
         
         try {
-          // Wait a bit for forms to load if they haven't loaded yet
+          // Wait for forms to load with better retry logic
           let retryCount = 0;
           let existingForm = getForm(formId);
           
-          while (!existingForm && retryCount < 5) {
-            console.log(`useFormBuilder - Form not found, retrying... (attempt ${retryCount + 1})`);
-            await new Promise(resolve => setTimeout(resolve, 200));
+          while (!existingForm && retryCount < 10) {
+            console.log(`useFormBuilder - Form "${formId}" not found, retrying... (attempt ${retryCount + 1})`);
+            await new Promise(resolve => setTimeout(resolve, 300));
             existingForm = getForm(formId);
             retryCount++;
           }
           
           if (existingForm) {
             console.log("useFormBuilder - Found form:", {
+              id: existingForm.id,
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
               scoreRangesCount: existingForm.scoreRanges?.length || 0
@@ -102,7 +103,9 @@ export const useFormBuilder = (id?: string) => {
             
             syncFormData(existingForm);
           } else {
-            console.log("useFormBuilder - Form not found after retries");
+            console.log("useFormBuilder - Form not found after retries. Available forms:", 
+              forms.map(f => ({ id: f.id, title: f.title }))
+            );
             toast({
               title: 'Form not found',
               description: 'The form you are trying to edit does not exist.',
@@ -147,7 +150,7 @@ export const useFormBuilder = (id?: string) => {
     };
 
     initializeFormData();
-  }, [formId, getForm, navigate, syncFormData]);
+  }, [formId, getForm, navigate, syncFormData, forms]);
 
   // Listen for form changes and resync when needed
   useEffect(() => {
