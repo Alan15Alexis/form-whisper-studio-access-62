@@ -67,6 +67,46 @@ const safeLocalStorageSet = (key: string, value: any) => {
   }
 };
 
+// Helper function to load score ranges for a specific form from Supabase
+const loadFormScoreRanges = async (formId: string) => {
+  try {
+    console.log("FormContext - Loading score ranges for formId:", formId);
+    
+    if (!formId) {
+      console.log("FormContext - No formId provided");
+      return [];
+    }
+    
+    const numericFormId = parseInt(formId);
+    if (!isNaN(numericFormId)) {
+      const { data: formData, error } = await supabase
+        .from('formulario_construccion')
+        .select('id, titulo, rangos_mensajes, configuracion')
+        .eq('id', numericFormId)
+        .single();
+      
+      if (!error && formData) {
+        console.log("FormContext - Found form:", formData.titulo);
+        
+        // Get score ranges from rangos_mensajes column first, then fallback
+        if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes) && formData.rangos_mensajes.length > 0) {
+          console.log("FormContext - Found score ranges in rangos_mensajes:", formData.rangos_mensajes);
+          return formData.rangos_mensajes;
+        } else if (formData.configuracion?.scoreRanges && Array.isArray(formData.configuracion.scoreRanges)) {
+          console.log("FormContext - Found score ranges in configuracion:", formData.configuracion.scoreRanges);
+          return formData.configuracion.scoreRanges;
+        }
+      }
+    }
+    
+    console.log("FormContext - No score ranges found for form:", formId);
+    return [];
+  } catch (error) {
+    console.error("FormContext - Error loading score ranges:", error);
+    return [];
+  }
+};
+
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [forms, setForms] = useState(getInitialForms());
@@ -81,7 +121,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: formsData, error } = await supabase
           .from('formulario_construccion')
           .select('*')
-          .order('created_at', { ascending: false }); // Order by creation date
+          .order('created_at', { ascending: false });
         
         if (error) {
           console.error("Error loading forms from Supabase:", error);
@@ -91,22 +131,20 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (formsData && formsData.length > 0) {
           console.log("Loading forms from Supabase:", formsData.length);
           
-          // Convert Supabase data format to our form format
           const loadedForms = formsData.map(formData => {
             console.log(`Processing form "${formData.titulo}" with configuration:`, formData.configuracion);
             console.log(`Form "${formData.titulo}" rangos_mensajes:`, formData.rangos_mensajes);
             
-            // Extract configuration safely with proper fallbacks
             const config = formData.configuracion || {};
             const showTotalScore = Boolean(config.showTotalScore);
             
-            // Get score ranges from new column first, then fallback to old location
+            // Get score ranges with proper priority
             let scoreRanges = [];
             if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
-              scoreRanges = formData.rangos_mensajes;
+              scoreRanges = [...formData.rangos_mensajes]; // Create a copy
               console.log(`Using score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
             } else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
-              scoreRanges = config.scoreRanges;
+              scoreRanges = [...config.scoreRanges]; // Create a copy
               console.log(`Using fallback score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
             }
             
@@ -115,17 +153,16 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges'
             });
             
-            // Process fields and apply score ranges if needed
             const processedFields = formData.preguntas?.map(field => {
               if (field.hasNumericValues && scoreRanges.length > 0 && showTotalScore) {
                 console.log(`Applying score ranges to field ${field.id || field.label}`);
-                return { ...field, scoreRanges: scoreRanges };
+                return { ...field, scoreRanges: [...scoreRanges] }; // Create a copy
               }
               return field;
             }) || [];
             
             const convertedForm = {
-              id: formData.id.toString(), // Convert bigint to string for consistency
+              id: formData.id.toString(),
               title: formData.titulo || 'Untitled Form',
               description: formData.descripcion || '',
               fields: processedFields,
@@ -133,7 +170,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               allowedUsers: formData.acceso || [],
               createdAt: formData.created_at,
               updatedAt: formData.created_at,
-              accessLink: uuidv4(), // Generate new access link
+              accessLink: uuidv4(),
               ownerId: formData.administrador || 'unknown',
               formColor: config.formColor || '#3b82f6',
               allowViewOwnResponses: Boolean(config.allowViewOwnResponses),
@@ -142,9 +179,9 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               showTotalScore: showTotalScore,
               scoreConfig: {
                 enabled: showTotalScore,
-                ranges: scoreRanges
+                ranges: [...scoreRanges] // Create a copy
               },
-              scoreRanges: scoreRanges
+              scoreRanges: [...scoreRanges] // Create a copy
             };
             
             console.log(`Final converted form "${convertedForm.title}":`, {
@@ -156,7 +193,6 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return convertedForm;
           });
           
-          // Replace local forms with loaded forms to ensure database consistency
           console.log("Setting loaded forms:", loadedForms.length);
           setForms(loadedForms);
         }
@@ -187,6 +223,38 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Create form operations
   const getForm = getFormOperation(forms);
+
+  // Enhanced getForm that can reload score ranges from database
+  const getFormWithFreshScoreRanges = async (formId: string) => {
+    const form = getForm(formId);
+    if (!form) return undefined;
+    
+    // Load fresh score ranges from database
+    const freshScoreRanges = await loadFormScoreRanges(formId);
+    
+    if (freshScoreRanges.length > 0) {
+      console.log("FormContext - Updating form with fresh score ranges:", freshScoreRanges);
+      
+      // Update the form with fresh score ranges
+      const updatedForm = {
+        ...form,
+        scoreRanges: [...freshScoreRanges],
+        scoreConfig: {
+          ...form.scoreConfig,
+          ranges: [...freshScoreRanges]
+        }
+      };
+      
+      // Update the forms array
+      setForms(prevForms => 
+        prevForms.map(f => f.id === formId ? updatedForm : f)
+      );
+      
+      return updatedForm;
+    }
+    
+    return form;
+  };
 
   const createForm = (formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
@@ -285,6 +353,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateForm,
     deleteForm,
     getForm,
+    getFormWithFreshScoreRanges, // Add the new enhanced getter
     submitFormResponse,
     getFormResponses,
     addAllowedUser,
@@ -292,7 +361,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isUserAllowed,
     generateAccessLink,
     validateAccessToken,
-    setForms
+    setForms,
+    loadFormScoreRanges // Expose the helper function
   };
 
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;

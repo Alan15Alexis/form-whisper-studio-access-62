@@ -12,7 +12,7 @@ export function useFormScoring() {
         return [];
       }
       
-      // Strategy 1: Try direct numeric ID match first (most reliable)
+      // Enhanced strategy: Try direct numeric ID match first (most reliable)
       const numericFormId = parseInt(formId);
       if (!isNaN(numericFormId)) {
         console.log("useFormScoring - Trying numeric ID match:", numericFormId);
@@ -26,27 +26,27 @@ export function useFormScoring() {
         if (!directError && directMatch) {
           console.log("useFormScoring - Found form by direct ID match:", directMatch.titulo);
           
-          // Only return ranges if they exist specifically for this form
+          // Priority 1: rangos_mensajes column (new dedicated column)
           if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes) && directMatch.rangos_mensajes.length > 0) {
             console.log("useFormScoring - Found score ranges in rangos_mensajes:", directMatch.rangos_mensajes);
-            return directMatch.rangos_mensajes;
+            return [...directMatch.rangos_mensajes]; // Return a copy
           }
           
-          // Fallback to configuracion only if rangos_mensajes is empty
+          // Priority 2: configuracion.scoreRanges (fallback for older data)
           if (!directMatch.rangos_mensajes && directMatch.configuracion?.scoreRanges && Array.isArray(directMatch.configuracion.scoreRanges) && directMatch.configuracion.scoreRanges.length > 0) {
-            console.log("useFormScoring - Found score ranges in configuracion:", directMatch.configuracion.scoreRanges);
-            return directMatch.configuracion.scoreRanges;
+            console.log("useFormScoring - Found score ranges in configuracion (fallback):", directMatch.configuracion.scoreRanges);
+            return [...directMatch.configuracion.scoreRanges]; // Return a copy
           }
           
           console.log("useFormScoring - Form found but no score ranges configured for this specific form");
           return [];
         } else {
-          console.log("useFormScoring - No form found with numeric ID:", numericFormId);
+          console.log("useFormScoring - No form found with numeric ID:", numericFormId, "Error:", directError?.message);
           return [];
         }
       }
       
-      // For UUID formIds, don't search through other forms - this prevents showing wrong ranges
+      // For UUID formIds, don't search through other forms to avoid showing wrong ranges
       console.log("useFormScoring - UUID formId provided, not searching other forms to avoid showing wrong ranges");
       return [];
       
@@ -121,7 +121,7 @@ export function useFormScoring() {
     
     let scoreRanges: ScoreRange[] = [];
     
-    // First try to get score ranges from database if formId is provided
+    // Enhanced: First try to get score ranges from database if formId is provided
     if (formId) {
       try {
         scoreRanges = await fetchScoreRangesFromDB(formId);
@@ -138,7 +138,7 @@ export function useFormScoring() {
       );
       
       if (fieldWithRanges?.scoreRanges) {
-        scoreRanges = fieldWithRanges.scoreRanges;
+        scoreRanges = [...fieldWithRanges.scoreRanges]; // Create a copy
         console.log("Using field score ranges:", scoreRanges.length);
       }
     }

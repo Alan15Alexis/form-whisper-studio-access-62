@@ -91,38 +91,45 @@ const FormSettings = ({
 
   const hasFieldsWithNumericValues = formFields.some(field => field.hasNumericValues);
 
-  // Local state for score ranges management - initialize directly from props
-  const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>(scoreRanges);
-  // State for database score ranges (independent of scoring toggle)
+  // Local state for score ranges management - better initialization and synchronization
+  const [localScoreRanges, setLocalScoreRanges] = useState<ScoreRange[]>([]);
   const [dbScoreRanges, setDbScoreRanges] = useState<ScoreRange[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState<boolean>(false);
+  const [lastSyncedRanges, setLastSyncedRanges] = useState<string>(''); // Track last synced state
 
-  console.log("FormSettings - Component Rendered with standardized props:", {
+  console.log("FormSettings - Component Rendered with props:", {
     showTotalScore,
-    scoreRanges,
+    scoreRanges: scoreRanges?.length || 0,
     formId,
-    hasFieldsWithNumericValues
+    hasFieldsWithNumericValues,
+    localScoreRangesCount: localScoreRanges.length
   });
 
-  // Sync local state when props change
+  // Enhanced synchronization with props - prevent infinite loops
   useEffect(() => {
-    console.log("FormSettings - Syncing local score ranges with prop:", scoreRanges);
-    setLocalScoreRanges([...scoreRanges]);
-  }, [scoreRanges]);
+    const currentRangesStr = JSON.stringify(scoreRanges || []);
+    
+    // Only update if the ranges actually changed
+    if (currentRangesStr !== lastSyncedRanges) {
+      console.log("FormSettings - Syncing local score ranges with props:", scoreRanges);
+      const rangesToSet = Array.isArray(scoreRanges) ? [...scoreRanges] : [];
+      setLocalScoreRanges(rangesToSet);
+      setLastSyncedRanges(currentRangesStr);
+    }
+  }, [scoreRanges, lastSyncedRanges]);
 
-  // Enhanced fetch function with stricter form-specific filtering
-  const loadDbScoreRanges = async () => {
+  // Enhanced fetch function with better error handling and form-specific filtering
+  const loadDbScoreRanges = async (forceRefresh = false) => {
     if (!formId) {
       console.log("FormSettings - No formId provided, skipping DB load");
       setDbScoreRanges([]);
       return;
     }
 
-    console.log("FormSettings - Loading score ranges from DB for formId:", formId);
+    console.log("FormSettings - Loading score ranges from DB for formId:", formId, "forceRefresh:", forceRefresh);
     setIsLoadingDb(true);
     
     try {
-      // First try direct numeric ID match
       const numericFormId = parseInt(formId);
       let dbRanges: ScoreRange[] = [];
       
@@ -138,52 +145,68 @@ const FormSettings = ({
         if (!directError && directMatch) {
           console.log("FormSettings - Found form by direct ID match:", directMatch.titulo);
           
-          // Only use ranges if they exist in rangos_mensajes for this specific form
+          // Prioritize rangos_mensajes column
           if (directMatch.rangos_mensajes && Array.isArray(directMatch.rangos_mensajes) && directMatch.rangos_mensajes.length > 0) {
-            dbRanges = directMatch.rangos_mensajes;
+            dbRanges = [...directMatch.rangos_mensajes]; // Create a copy
             console.log("FormSettings - Found score ranges in rangos_mensajes:", dbRanges);
+          } else if (directMatch.configuracion?.scoreRanges && Array.isArray(directMatch.configuracion.scoreRanges) && directMatch.configuracion.scoreRanges.length > 0) {
+            dbRanges = [...directMatch.configuracion.scoreRanges]; // Create a copy
+            console.log("FormSettings - Found score ranges in configuracion (fallback):", dbRanges);
           } else {
             console.log("FormSettings - No score ranges found for this specific form");
           }
         } else {
-          console.log("FormSettings - No form found with numeric ID:", numericFormId);
+          console.log("FormSettings - No form found with numeric ID:", numericFormId, directError?.message);
         }
-      }
-
-      // If no direct match found and it's a UUID, don't show ranges from other forms
-      if (dbRanges.length === 0 && isNaN(numericFormId)) {
-        console.log("FormSettings - UUID formId with no direct match, not showing ranges from other forms");
+      } else {
+        console.log("FormSettings - UUID formId provided, not showing ranges from other forms");
       }
 
       setDbScoreRanges(dbRanges);
       
       if (dbRanges.length > 0) {
-        toast({
-          title: "Rangos cargados",
-          description: `Se encontraron ${dbRanges.length} rango${dbRanges.length !== 1 ? 's' : ''} específicos para este formulario`
-        });
+        console.log("FormSettings - Successfully loaded", dbRanges.length, "score ranges");
+        
+        if (forceRefresh) {
+          toast({
+            title: "Rangos actualizados",
+            description: `Se cargaron ${dbRanges.length} rango${dbRanges.length !== 1 ? 's' : ''} desde la base de datos`
+          });
+        }
       } else {
         console.log("FormSettings - No score ranges found for this specific form");
+        
+        if (forceRefresh) {
+          toast({
+            title: "Sin rangos",
+            description: "No se encontraron rangos de puntuación para este formulario en la base de datos",
+            variant: "default"
+          });
+        }
       }
       
     } catch (error) {
       console.error("FormSettings - Error loading score ranges from DB:", error);
       setDbScoreRanges([]);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los rangos desde la base de datos",
-        variant: "destructive"
-      });
+      
+      if (forceRefresh) {
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los rangos desde la base de datos",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoadingDb(false);
     }
   };
 
+  // Load database ranges on mount and when formId changes
   useEffect(() => {
     loadDbScoreRanges();
   }, [formId]);
 
-  // Score range management functions
+  // Score range management functions with better synchronization
   const addScoreRange = () => {
     console.log("FormSettings - Adding new score range");
     let newRanges;
@@ -203,11 +226,16 @@ const FormSettings = ({
         message: `Mensaje para puntuación ${newMin}-${newMax}`
       }];
     }
+    
     console.log("FormSettings - New score ranges:", newRanges);
     setLocalScoreRanges(newRanges);
+    
+    // Update synced state
+    setLastSyncedRanges(JSON.stringify(newRanges));
 
     // Immediately save to parent
     onSaveScoreRanges(newRanges);
+    
     toast({
       title: "Rango añadido",
       description: `Se añadió un nuevo rango de puntuación`
@@ -216,17 +244,23 @@ const FormSettings = ({
 
   const updateScoreRange = (index: number, field: keyof ScoreRange, value: string | number) => {
     console.log(`FormSettings - Updating score range at index ${index}, field ${String(field)} to value ${value}`);
+    
     if (!localScoreRanges[index]) {
       console.error(`FormSettings - Score range at index ${index} does not exist`);
       return;
     }
+    
     const updatedRanges = [...localScoreRanges];
     updatedRanges[index] = {
       ...updatedRanges[index],
       [field]: typeof value === 'string' ? value : Number(value)
     };
+    
     console.log("FormSettings - Updated score ranges:", updatedRanges);
     setLocalScoreRanges(updatedRanges);
+    
+    // Update synced state
+    setLastSyncedRanges(JSON.stringify(updatedRanges));
 
     // Immediately save to parent
     onSaveScoreRanges(updatedRanges);
@@ -235,11 +269,16 @@ const FormSettings = ({
   const removeScoreRange = (index: number) => {
     console.log(`FormSettings - Removing score range at index ${index}`);
     const updatedRanges = localScoreRanges.filter((_, i) => i !== index);
+    
     console.log("FormSettings - Updated score ranges after removal:", updatedRanges);
     setLocalScoreRanges(updatedRanges);
+    
+    // Update synced state
+    setLastSyncedRanges(JSON.stringify(updatedRanges));
 
     // Immediately save to parent
     onSaveScoreRanges(updatedRanges);
+    
     toast({
       title: "Rango eliminado",
       description: "El rango de puntuación ha sido eliminado"
@@ -266,7 +305,8 @@ const FormSettings = ({
     localScoreRangesCount: localScoreRanges.length,
     dbScoreRangesCount: dbScoreRanges.length,
     isLoadingDb,
-    hasFieldsWithNumericValues
+    hasFieldsWithNumericValues,
+    lastSyncedRanges: lastSyncedRanges.length
   });
 
   return (
@@ -322,7 +362,7 @@ const FormSettings = ({
         </div>
       </Card>
 
-      {/* Scoring Card */}
+      {/* Enhanced Scoring Card */}
       <Card className="p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium mb-4">Puntuación y Resultados</h3>
         <div className="space-y-6">
@@ -356,7 +396,7 @@ const FormSettings = ({
             </div>
           )}
           
-          {/* Score Ranges Configuration */}
+          {/* Enhanced Score Ranges Configuration */}
           {showTotalScore && (
             <div className="space-y-4 p-3 bg-primary/5 border rounded-md">
               <div className="flex items-center justify-between">
@@ -450,18 +490,18 @@ const FormSettings = ({
         </div>
       </Card>
 
-      {/* Database Score Ranges Card - Only show if there are actual ranges for this form */}
+      {/* Enhanced Database Score Ranges Card */}
       {dbScoreRanges.length > 0 && (
         <Card className="p-6 shadow-sm border border-blue-100 bg-blue-50/20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <Database className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-medium text-blue-900">Rangos de puntuación configurados</h3>
+              <h3 className="text-lg font-medium text-blue-900">Rangos de puntuación guardados</h3>
             </div>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={loadDbScoreRanges} 
+              onClick={() => loadDbScoreRanges(true)} 
               disabled={isLoadingDb || !formId} 
               className="flex items-center space-x-1"
             >
@@ -486,10 +526,10 @@ const FormSettings = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-blue-800">
-                    ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''}
+                    ✅ {dbScoreRanges.length} rango{dbScoreRanges.length !== 1 ? 's' : ''} guardado{dbScoreRanges.length !== 1 ? 's' : ''}
                   </p>
                   <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    Activo
+                    Guardado en BD
                   </span>
                 </div>
                 

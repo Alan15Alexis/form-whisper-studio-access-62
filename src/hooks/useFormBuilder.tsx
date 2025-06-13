@@ -1,5 +1,3 @@
-
-// Update import for toast
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -15,7 +13,14 @@ export const useFormBuilder = (id?: string) => {
   const params = useParams<{ id: string }>();
   const formId = id || params.id;
   const navigate = useNavigate();
-  const { forms, createForm, updateForm, getForm } = useForm();
+  const { 
+    forms, 
+    createForm, 
+    updateForm, 
+    getForm, 
+    getFormWithFreshScoreRanges,
+    loadFormScoreRanges 
+  } = useForm();
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,70 +44,127 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
+  // Load fresh score ranges specifically for the current form
+  const refreshFormScoreRanges = async (currentFormId: string) => {
+    if (!currentFormId || !loadFormScoreRanges) return [];
+    
+    console.log("useFormBuilder - Refreshing score ranges for form:", currentFormId);
+    try {
+      const freshRanges = await loadFormScoreRanges(currentFormId);
+      console.log("useFormBuilder - Fresh score ranges loaded:", freshRanges);
+      return freshRanges;
+    } catch (error) {
+      console.error("useFormBuilder - Error refreshing score ranges:", error);
+      return [];
+    }
+  };
+
   // Initialize form data from existing form or defaults
   useEffect(() => {
-    console.log("useFormBuilder - Initializing form data for formId:", formId);
-    
-    if (formId) {
-      setIsLoading(true);
-      const existingForm = getForm(formId);
+    const initializeFormData = async () => {
+      console.log("useFormBuilder - Initializing form data for formId:", formId);
       
-      if (existingForm) {
-        console.log("useFormBuilder - Found existing form:", {
-          title: existingForm.title,
-          showTotalScore: existingForm.showTotalScore,
-          scoreRanges: existingForm.scoreRanges?.length || 0,
-          rawData: existingForm
-        });
+      if (formId) {
+        setIsLoading(true);
         
-        // Ensure we properly preserve the scoring data
-        const formWithScoring = {
-          ...existingForm,
-          showTotalScore: Boolean(existingForm.showTotalScore),
-          scoreRanges: Array.isArray(existingForm.scoreRanges) ? existingForm.scoreRanges : []
+        try {
+          // Try to get form with fresh score ranges if available
+          let existingForm;
+          if (getFormWithFreshScoreRanges) {
+            console.log("useFormBuilder - Getting form with fresh score ranges");
+            existingForm = await getFormWithFreshScoreRanges(formId);
+          } else {
+            console.log("useFormBuilder - Getting form normally");
+            existingForm = getForm(formId);
+          }
+          
+          if (existingForm) {
+            console.log("useFormBuilder - Found existing form:", {
+              title: existingForm.title,
+              showTotalScore: existingForm.showTotalScore,
+              scoreRanges: existingForm.scoreRanges?.length || 0,
+              rawData: existingForm
+            });
+            
+            // Also try to refresh score ranges from database
+            let finalScoreRanges = existingForm.scoreRanges || [];
+            
+            try {
+              const freshRanges = await refreshFormScoreRanges(formId);
+              if (freshRanges.length > 0) {
+                console.log("useFormBuilder - Using fresh score ranges from database:", freshRanges);
+                finalScoreRanges = freshRanges;
+              }
+            } catch (error) {
+              console.warn("useFormBuilder - Could not load fresh ranges, using existing:", error);
+            }
+            
+            const formWithFreshRanges = {
+              ...existingForm,
+              showTotalScore: Boolean(existingForm.showTotalScore),
+              scoreRanges: Array.isArray(finalScoreRanges) ? [...finalScoreRanges] : [],
+              scoreConfig: {
+                ...existingForm.scoreConfig,
+                enabled: Boolean(existingForm.showTotalScore),
+                ranges: Array.isArray(finalScoreRanges) ? [...finalScoreRanges] : []
+              }
+            };
+            
+            console.log("useFormBuilder - Final form with fresh ranges:", {
+              showTotalScore: formWithFreshRanges.showTotalScore,
+              scoreRanges: formWithFreshRanges.scoreRanges.length,
+              scoreConfigRanges: formWithFreshRanges.scoreConfig?.ranges?.length || 0
+            });
+            
+            setForm(formWithFreshRanges);
+            setFormData(formWithFreshRanges);
+          } else {
+            console.log("useFormBuilder - Form not found, redirecting to forms list");
+            toast({
+              title: 'Form not found',
+              description: 'The form you are trying to edit does not exist.',
+              variant: 'destructive',
+            });
+            navigate('/dashboard-admin');
+          }
+        } catch (error) {
+          console.error("useFormBuilder - Error initializing form:", error);
+          toast({
+            title: 'Error loading form',
+            description: 'There was an error loading the form data.',
+            variant: 'destructive',
+          });
+          navigate('/dashboard-admin');
+        }
+        
+        setIsLoading(false);
+      } else {
+        console.log("useFormBuilder - Initializing new form");
+        const newFormData = {
+          id: '',
+          title: '',
+          description: '',
+          fields: [],
+          isPrivate: false,
+          allowedUsers: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          accessLink: '',
+          ownerId: '',
+          formColor: '#3b82f6',
+          allowViewOwnResponses: false,
+          allowEditOwnResponses: false,
+          showTotalScore: false,
+          scoreRanges: []
         };
         
-        console.log("useFormBuilder - Processed form with scoring:", {
-          showTotalScore: formWithScoring.showTotalScore,
-          scoreRanges: formWithScoring.scoreRanges
-        });
-        
-        setForm(formWithScoring);
-        setFormData(formWithScoring);
-      } else {
-        console.log("useFormBuilder - Form not found, redirecting to forms list");
-        toast({
-          title: 'Form not found',
-          description: 'The form you are trying to edit does not exist.',
-          variant: 'destructive',
-        });
-        navigate('/dashboard-admin');
+        setFormData(newFormData);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    } else {
-      console.log("useFormBuilder - Initializing new form");
-      const newFormData = {
-        id: '',
-        title: '',
-        description: '',
-        fields: [],
-        isPrivate: false,
-        allowedUsers: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        accessLink: '',
-        ownerId: '',
-        formColor: '#3b82f6',
-        allowViewOwnResponses: false,
-        allowEditOwnResponses: false,
-        showTotalScore: false,
-        scoreRanges: []
-      };
-      
-      setFormData(newFormData);
-      setIsLoading(false);
-    }
-  }, [formId, getForm, navigate]);
+    };
+
+    initializeFormData();
+  }, [formId, getForm, getFormWithFreshScoreRanges, navigate, loadFormScoreRanges]);
 
   const isEditMode = Boolean(formId);
 
@@ -125,12 +187,17 @@ export const useFormBuilder = (id?: string) => {
       const updated = { 
         ...prev, 
         showTotalScore: enabled,
-        // Clear score ranges when disabling scoring
-        scoreRanges: enabled ? prev.scoreRanges : []
+        scoreRanges: enabled ? prev.scoreRanges : [],
+        scoreConfig: {
+          ...prev.scoreConfig,
+          enabled: enabled,
+          ranges: enabled ? prev.scoreRanges : []
+        }
       };
       console.log("useFormBuilder - Updated formData:", {
         showTotalScore: updated.showTotalScore,
-        scoreRanges: updated.scoreRanges
+        scoreRanges: updated.scoreRanges,
+        scoreConfigRanges: updated.scoreConfig?.ranges?.length || 0
       });
       return updated;
     });
@@ -140,8 +207,18 @@ export const useFormBuilder = (id?: string) => {
     console.log("useFormBuilder - handleSaveScoreRanges called with:", ranges);
     
     setFormData(prev => {
-      const updated = { ...prev, scoreRanges: ranges };
-      console.log("useFormBuilder - Updated formData scoreRanges to:", updated.scoreRanges);
+      const updated = { 
+        ...prev, 
+        scoreRanges: [...ranges],
+        scoreConfig: {
+          ...prev.scoreConfig,
+          ranges: [...ranges]
+        }
+      };
+      console.log("useFormBuilder - Updated formData scoreRanges to:", {
+        scoreRanges: updated.scoreRanges,
+        scoreConfigRanges: updated.scoreConfig?.ranges?.length || 0
+      });
       return updated;
     });
   };
@@ -282,7 +359,8 @@ export const useFormBuilder = (id?: string) => {
     console.log("useFormBuilder - handleSubmit called");
     console.log("useFormBuilder - Current formData:", {
       showTotalScore: formData.showTotalScore,
-      scoreRanges: formData.scoreRanges
+      scoreRanges: formData.scoreRanges,
+      scoreConfigRanges: formData.scoreConfig?.ranges?.length || 0
     });
     
     setIsSaving(true);
@@ -386,6 +464,7 @@ export const useFormBuilder = (id?: string) => {
     },
     handleSubmit,
     handleCreateForm,
-    handleUpdateForm
+    handleUpdateForm,
+    refreshFormScoreRanges // Expose the refresh function
   };
 };
