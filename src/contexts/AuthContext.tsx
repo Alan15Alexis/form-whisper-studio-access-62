@@ -1,5 +1,6 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { authenticateAdminUser, authenticateInvitedUser } from '@/integrations/supabase/client';
+import { authenticateAdminUser, authenticateInvitedUser, registerAdminUser } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/toast';
 
 interface User {
