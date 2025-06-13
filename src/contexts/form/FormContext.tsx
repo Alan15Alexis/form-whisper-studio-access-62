@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -74,7 +73,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessTokens, setAccessTokens] = useState(getInitialAccessTokens());
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
 
-  // Load forms from Supabase on initial render with improved score ranges handling
+  // Load forms from Supabase - simplified score ranges handling
   React.useEffect(() => {
     const loadFormsFromSupabase = async () => {
       try {
@@ -86,64 +85,32 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .order('created_at', { ascending: false });
         
         if (error) {
-          console.error("FormContext - Error loading forms from Supabase:", error);
+          console.error("FormContext - Error loading forms:", error);
           return;
         }
         
         if (formsData && formsData.length > 0) {
-          console.log("FormContext - Successfully loaded forms from Supabase:", formsData.length);
+          console.log("FormContext - Loading", formsData.length, "forms from database");
           
           const loadedForms = formsData.map(formData => {
-            console.log(`FormContext - Processing form "${formData.titulo}":`, {
-              id: formData.id,
-              configuration: formData.configuracion,
-              scoreRanges: formData.rangos_mensajes
-            });
-            
             const config = formData.configuracion || {};
+            
+            // Simplified: use showTotalScore from config directly
             const showTotalScore = Boolean(config.showTotalScore);
             
-            // Get score ranges with improved priority and validation
-            let scoreRanges = [];
-            
-            // Priority 1: rangos_mensajes column (new dedicated column)
-            if (formData.rangos_mensajes && Array.isArray(formData.rangos_mensajes)) {
-              const validRanges = formData.rangos_mensajes.filter(range => 
+            // Single source of truth: use rangos_mensajes column only
+            const scoreRanges = Array.isArray(formData.rangos_mensajes) ? 
+              formData.rangos_mensajes.filter(range => 
                 range && 
                 typeof range.min === 'number' && 
                 typeof range.max === 'number' && 
                 typeof range.message === 'string' &&
                 range.min <= range.max
-              );
-              
-              scoreRanges = validRanges;
-              console.log(`FormContext - Using validated score ranges from rangos_mensajes for "${formData.titulo}":`, scoreRanges);
-              
-              if (validRanges.length !== formData.rangos_mensajes.length) {
-                console.warn(`FormContext - Some score ranges were invalid for form "${formData.titulo}"`);
-              }
-            }
-            // Priority 2: Fallback to legacy configuration (for backward compatibility)
-            else if (config.scoreRanges && Array.isArray(config.scoreRanges)) {
-              const validRanges = config.scoreRanges.filter(range => 
-                range && 
-                typeof range.min === 'number' && 
-                typeof range.max === 'number' && 
-                typeof range.message === 'string' &&
-                range.min <= range.max
-              );
-              
-              scoreRanges = validRanges;
-              console.log(`FormContext - Using legacy score ranges from configuracion for "${formData.titulo}":`, scoreRanges);
-            }
+              ) : [];
             
-            console.log(`FormContext - Form "${formData.titulo}" loaded with:`, {
-              showTotalScore,
-              scoreRanges: scoreRanges.length > 0 ? `${scoreRanges.length} ranges` : 'No score ranges',
-              hasNumericFields: config.hasFieldsWithNumericValues
-            });
+            console.log(`FormContext - Form "${formData.titulo}": showTotalScore=${showTotalScore}, scoreRanges=${scoreRanges.length}`);
             
-            const convertedForm = {
+            return {
               id: formData.id.toString(),
               title: formData.titulo || 'Untitled Form',
               description: formData.descripcion || '',
@@ -159,32 +126,21 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
               allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
               httpConfig: config.httpConfig,
               showTotalScore: showTotalScore,
-              enableScoring: showTotalScore,
-              scoreConfig: {
-                enabled: showTotalScore,
-                ranges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy to avoid reference issues
-              },
-              scoreRanges: JSON.parse(JSON.stringify(scoreRanges)) // Deep copy to avoid reference issues
+              scoreRanges: scoreRanges
             };
-            
-            return convertedForm;
           });
           
-          console.log("FormContext - Setting loaded forms:", loadedForms.length);
+          console.log("FormContext - Successfully loaded forms:", loadedForms.length);
           setForms(loadedForms);
-          
-          // Save to local storage for backup
           safeLocalStorageSet('forms', loadedForms);
-        } else {
-          console.log("FormContext - No forms found in Supabase");
         }
       } catch (error) {
-        console.error("FormContext - Error loading forms from Supabase:", error);
+        console.error("FormContext - Error loading forms:", error);
         
-        // Try to recover from local storage if Supabase fails
+        // Fallback to local storage
         const localForms = getInitialForms();
         if (localForms && localForms.length > 0) {
-          console.log("FormContext - Recovered forms from local storage as fallback:", localForms.length);
+          console.log("FormContext - Using local storage fallback");
           setForms(localForms);
         }
       }
@@ -193,7 +149,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadFormsFromSupabase();
   }, []);
   
-  // Persist state to localStorage whenever it changes - with safe storage
+  // Persist state to localStorage whenever it changes
   useMemo(() => {
     safeLocalStorageSet('forms', forms);
   }, [forms]);

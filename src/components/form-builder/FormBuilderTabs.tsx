@@ -6,7 +6,7 @@ import FormFieldsList from "./FormFieldsList";
 import FieldsSidebar from "./FieldsSidebar";
 import FormSettings from "./FormSettings";
 import AccessControl from "../form-builder/AccessControl";
-import ScoreRangesTab from "./ScoreRangesTab";
+import ScoreRangesManager from "./ScoreRangesManager";
 import { Form, FormField, ScoreRange } from "@/types/form";
 
 interface FormBuilderTabsProps {
@@ -30,8 +30,6 @@ interface FormBuilderTabsProps {
   formId?: string;
   allowedUserName?: string;
   setAllowedUserName?: (name: string) => void;
-  externalScoreRanges?: ScoreRange[];
-  isScoringEnabled?: boolean;
 }
 
 const FormBuilderTabs = ({
@@ -54,26 +52,16 @@ const FormBuilderTabs = ({
   addField,
   formId,
   allowedUserName = "",
-  setAllowedUserName = () => {},
-  externalScoreRanges = [],
-  isScoringEnabled = false
+  setAllowedUserName = () => {}
 }: FormBuilderTabsProps) => {
-  // Improved showTotalScore handling - explicitly handle undefined/null from database
+  // Simplified data handling - use database values directly
   const showTotalScore = formData.showTotalScore === true;
   const scoreRanges = Array.isArray(formData.scoreRanges) ? formData.scoreRanges : [];
-  
-  // Check if fields have numeric values configured
-  const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues === true);
 
-  console.log("FormBuilderTabs - Rendering with improved data handling:", {
+  console.log("FormBuilderTabs - Simplified rendering:", {
     title: formData.title,
-    showTotalScore: {
-      raw: formData.showTotalScore,
-      processed: showTotalScore
-    },
-    scoreRanges: scoreRanges.length > 0 ? scoreRanges : 'No score ranges',
-    hasFieldsWithNumericValues,
-    formId
+    showTotalScore,
+    scoreRangesCount: scoreRanges.length
   });
 
   return (
@@ -126,12 +114,12 @@ const FormBuilderTabs = ({
       </TabsContent>
       
       <TabsContent value="ranges">
-        <ScoreRangesTab
+        <ScoreRangesManager
           formFields={formData.fields || []}
           showTotalScore={showTotalScore}
-          onToggleFormScoring={onToggleFormScoring}
-          onSaveScoreRanges={onSaveScoreRanges}
           scoreRanges={scoreRanges}
+          onToggleScoring={onToggleFormScoring}
+          onSaveScoreRanges={onSaveScoreRanges}
         />
       </TabsContent>
       

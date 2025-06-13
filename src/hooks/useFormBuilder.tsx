@@ -42,10 +42,10 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
-  // Initialize form data from existing form or defaults
+  // Initialize form data - simplified approach
   useEffect(() => {
     const initializeFormData = async () => {
-      console.log("useFormBuilder - Initializing form data for formId:", formId);
+      console.log("useFormBuilder - Initializing for formId:", formId);
       
       if (formId) {
         setIsLoading(true);
@@ -54,37 +54,17 @@ export const useFormBuilder = (id?: string) => {
           const existingForm = getForm(formId);
           
           if (existingForm) {
-            console.log("useFormBuilder - Found existing form with score data:", {
+            console.log("useFormBuilder - Found form:", {
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
-              scoreRanges: existingForm.scoreRanges?.length || 0
+              scoreRangesCount: existingForm.scoreRanges?.length || 0
             });
             
-            // Ensure scoreRanges are properly set - only use real data from database
-            const databaseScoreRanges = Array.isArray(existingForm.scoreRanges) ? existingForm.scoreRanges : [];
-            
-            // Improved showTotalScore handling - explicitly convert to boolean
-            const showTotalScore = existingForm.showTotalScore === true;
-            
-            // Check if any fields have numeric values configured
-            const hasFieldsWithNumericValues = (existingForm.fields || []).some(field => field.hasNumericValues === true);
-            
-            const standardizedForm = {
-              ...existingForm,
-              showTotalScore: showTotalScore,
-              scoreRanges: databaseScoreRanges
-            };
-            
-            console.log("useFormBuilder - Standardized form data:", {
-              showTotalScore: standardizedForm.showTotalScore,
-              scoreRanges: standardizedForm.scoreRanges.length,
-              hasFieldsWithNumericValues
-            });
-            
-            setForm(standardizedForm);
-            setFormData(standardizedForm);
+            // Use form data directly from database
+            setForm(existingForm);
+            setFormData(existingForm);
           } else {
-            console.log("useFormBuilder - Form not found, redirecting to forms list");
+            console.log("useFormBuilder - Form not found");
             toast({
               title: 'Form not found',
               description: 'The form you are trying to edit does not exist.',
@@ -93,7 +73,7 @@ export const useFormBuilder = (id?: string) => {
             navigate('/dashboard-admin');
           }
         } catch (error) {
-          console.error("useFormBuilder - Error initializing form:", error);
+          console.error("useFormBuilder - Error:", error);
           toast({
             title: 'Error loading form',
             description: 'There was an error loading the form data.',
@@ -145,74 +125,38 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => ({ ...prev, isPrivate }));
   };
 
+  // Simplified scoring toggle
   const handleToggleFormScoring = (enabled: boolean) => {
-    console.log("useFormBuilder - handleToggleFormScoring called with:", enabled);
+    console.log("useFormBuilder - Toggle scoring:", enabled);
     
-    // Validate that fields have numeric values if enabling scoring
     if (enabled) {
       const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues === true);
       
       if (!hasFieldsWithNumericValues) {
-        console.warn("useFormBuilder - Cannot enable scoring: no fields with numeric values");
         toast({
           title: 'No se puede habilitar puntuación',
-          description: 'Primero configura valores numéricos en al menos un campo.',
+          description: 'Configura valores numéricos en al menos un campo primero.',
           variant: 'destructive',
         });
         return;
       }
     }
     
-    setFormData(prev => {
-      const updated = { 
-        ...prev, 
-        showTotalScore: enabled,
-        // When disabling scoring, clear score ranges
-        scoreRanges: enabled ? prev.scoreRanges : []
-      };
-      
-      console.log("useFormBuilder - Updated formData after toggle:", {
-        showTotalScore: updated.showTotalScore,
-        scoreRanges: updated.scoreRanges.length
-      });
-      
-      return updated;
-    });
+    setFormData(prev => ({ 
+      ...prev, 
+      showTotalScore: enabled,
+      scoreRanges: enabled ? prev.scoreRanges : []
+    }));
   };
 
+  // Simplified score ranges save
   const handleSaveScoreRanges = (ranges: any[]) => {
-    console.log("useFormBuilder - handleSaveScoreRanges called with:", ranges);
+    console.log("useFormBuilder - Save score ranges:", ranges.length);
     
-    // Validate ranges before saving
-    const validRanges = ranges.filter(range => 
-      range && 
-      typeof range.min === 'number' && 
-      typeof range.max === 'number' && 
-      typeof range.message === 'string' &&
-      range.min <= range.max
-    );
-    
-    if (validRanges.length !== ranges.length) {
-      console.warn("useFormBuilder - Some invalid ranges were filtered out");
-      toast({
-        title: 'Advertencia',
-        description: 'Algunos rangos tenían datos inválidos y fueron omitidos.',
-        variant: 'destructive',
-      });
-    }
-    
-    setFormData(prev => {
-      const updated = { 
-        ...prev, 
-        scoreRanges: [...validRanges]
-      };
-      
-      console.log("useFormBuilder - Updated formData with new score ranges:", {
-        scoreRanges: updated.scoreRanges.length
-      });
-      
-      return updated;
-    });
+    setFormData(prev => ({ 
+      ...prev, 
+      scoreRanges: [...ranges]
+    }));
   };
 
   const updateField = (id: string, updatedField: FormField) => {
@@ -224,18 +168,17 @@ export const useFormBuilder = (id?: string) => {
         ),
       };
       
-      // Check if numeric field configuration changed and update scoring availability
+      // Check if scoring should be disabled
       const hasFieldsWithNumericValues = updatedFormData.fields.some(field => field.hasNumericValues === true);
       
-      // If no fields have numeric values anymore, disable scoring
       if (!hasFieldsWithNumericValues && updatedFormData.showTotalScore) {
-        console.log("useFormBuilder - Disabling scoring: no fields with numeric values remaining");
+        console.log("useFormBuilder - Disabling scoring: no numeric fields");
         updatedFormData.showTotalScore = false;
         updatedFormData.scoreRanges = [];
         
         toast({
           title: 'Puntuación deshabilitada',
-          description: 'Se deshabilitó la puntuación porque ningún campo tiene valores numéricos.',
+          description: 'Se deshabilitó porque ningún campo tiene valores numéricos.',
         });
       }
       
@@ -367,13 +310,9 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const handleSubmit = async () => {
-    console.log("useFormBuilder - handleSubmit called");
-    console.log("useFormBuilder - Current formData before submit:", {
-      showTotalScore: formData.showTotalScore,
-      scoreRanges: formData.scoreRanges.length
-    });
+    console.log("useFormBuilder - handleSubmit");
     
-    // Validate scoring configuration before saving
+    // Validate scoring configuration
     if (formData.showTotalScore) {
       const hasFieldsWithNumericValues = (formData.fields || []).some(field => field.hasNumericValues === true);
       
@@ -408,8 +347,6 @@ export const useFormBuilder = (id?: string) => {
       const newForm = await createForm(formData);
       console.log("Form created successfully:", newForm);
       
-      // Navigate to the admin dashboard instead of trying to edit the new form
-      // This avoids the 404 issue since the form ID might not be immediately available
       navigate('/dashboard-admin');
       
       toast({
@@ -431,10 +368,7 @@ export const useFormBuilder = (id?: string) => {
   const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
     try {
       setIsSaving(true);
-      console.log("useFormBuilder - Updating form with data:", {
-        showTotalScore: formData.showTotalScore,
-        scoreRanges: formData.scoreRanges?.length || 0
-      });
+      console.log("useFormBuilder - Updating form with scoreRanges:", formData.scoreRanges?.length || 0);
       
       await updateForm(id, formData);
       toast({
