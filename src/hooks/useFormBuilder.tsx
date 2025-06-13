@@ -76,7 +76,7 @@ export const useFormBuilder = (id?: string) => {
           description: 'The form you are trying to edit does not exist.',
           variant: 'destructive',
         });
-        navigate('/forms');
+        navigate('/dashboard-admin');
       }
       setIsLoading(false);
     } else {
@@ -301,17 +301,24 @@ export const useFormBuilder = (id?: string) => {
   const handleCreateForm = async (formData: Partial<Form>) => {
     try {
       setIsSaving(true);
+      console.log("Creating form with data:", formData);
+      
       const newForm = await createForm(formData);
-      navigate(`/form/${newForm.id}`);
+      console.log("Form created successfully:", newForm);
+      
+      // Navigate to the admin dashboard instead of trying to edit the new form
+      // This avoids the 404 issue since the form ID might not be immediately available
+      navigate('/dashboard-admin');
+      
       toast({
-        title: 'Form created',
-        description: `"${newForm.title}" has been created successfully`,
+        title: 'Formulario creado',
+        description: `"${newForm.title}" ha sido creado exitosamente`,
       });
     } catch (error) {
       console.error("Error creating form:", error);
       toast({
-        title: 'Error creating form',
-        description: 'Something went wrong while creating the form.',
+        title: 'Error al crear formulario',
+        description: 'Algo salió mal al crear el formulario.',
         variant: 'destructive',
       });
     } finally {
@@ -329,14 +336,14 @@ export const useFormBuilder = (id?: string) => {
       
       await updateForm(id, formData);
       toast({
-        title: 'Form updated',
-        description: `"${formData.title}" has been updated successfully`,
+        title: 'Formulario actualizado',
+        description: `"${formData.title}" ha sido actualizado exitosamente`,
       });
     } catch (error) {
       console.error("Error updating form:", error);
       toast({
-        title: 'Error updating form',
-        description: 'Something went wrong while updating the form.',
+        title: 'Error al actualizar formulario',
+        description: 'Algo salió mal al actualizar el formulario.',
         variant: 'destructive',
       });
     } finally {

@@ -36,6 +36,8 @@ export const createFormOperation = (
   currentUserEmail: string | undefined,
 ) => {
   return async (formData: Partial<Form>): Promise<Form> => {
+    console.log("Creating form with data:", formData);
+    
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -88,13 +90,6 @@ export const createFormOperation = (
       scoreRanges: scoreRanges // Also set direct scoreRanges for backward compatibility
     };
 
-    setForms(prevForms => [...prevForms, newForm]);
-    setAccessTokens(prev => ({...prev, [id]: accessToken}));
-    
-    if (newForm.isPrivate && newForm.allowedUsers.length > 0) {
-      setAllowedUsers(prev => ({...prev, [id]: newForm.allowedUsers}));
-    }
-    
     // Check if any field has numeric values
     const fieldsWithValues = formData.fields?.some(field => field.hasNumericValues) || false;
     
@@ -134,14 +129,28 @@ export const createFormOperation = (
         console.log("Form created in Supabase:", data);
         console.log("Form created with showTotalScore:", newForm.showTotalScore);
         console.log("Form created with score ranges in rangos_mensajes:", JSON.stringify(scoreRanges));
+        
+        // Update the form ID with the database ID for better synchronization
+        if (data && data[0]) {
+          newForm.id = data[0].id.toString();
+          console.log("Updated form ID to database ID:", newForm.id);
+        }
       }
     } catch (error) {
       console.error("Error saving form to Supabase:", error);
     }
 
+    // Add to local state
+    setForms(prevForms => [...prevForms, newForm]);
+    setAccessTokens(prev => ({...prev, [newForm.id]: accessToken}));
+    
+    if (newForm.isPrivate && newForm.allowedUsers.length > 0) {
+      setAllowedUsers(prev => ({...prev, [newForm.id]: newForm.allowedUsers}));
+    }
+
     toast({
-      title: 'Form created',
-      description: `"${newForm.title}" has been created successfully`,
+      title: 'Formulario creado',
+      description: `"${newForm.title}" ha sido creado exitosamente`,
       variant: 'default',
     });
     

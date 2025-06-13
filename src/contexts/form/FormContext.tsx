@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -79,7 +80,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data: formsData, error } = await supabase
           .from('formulario_construccion')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false }); // Order by creation date
         
         if (error) {
           console.error("Error loading forms from Supabase:", error);
@@ -87,6 +89,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (formsData && formsData.length > 0) {
+          console.log("Loading forms from Supabase:", formsData.length);
+          
           // Convert Supabase data format to our form format
           const loadedForms = formsData.map(formData => {
             console.log(`Processing form "${formData.titulo}" with configuration:`, formData.configuracion);
@@ -144,21 +148,17 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             
             console.log(`Final converted form "${convertedForm.title}":`, {
+              id: convertedForm.id,
               showTotalScore: convertedForm.showTotalScore,
-              scoreRanges: convertedForm.scoreRanges
+              scoreRanges: convertedForm.scoreRanges.length
             });
             
             return convertedForm;
           });
           
-          // Merge with existing forms from localStorage
-          setForms(prevForms => {
-            // Filter out forms that are already in Supabase to avoid duplicates
-            const localOnlyForms = prevForms.filter(localForm => 
-              !loadedForms.some(supabaseForm => supabaseForm.title === localForm.title)
-            );
-            return [...localOnlyForms, ...loadedForms];
-          });
+          // Replace local forms with loaded forms to ensure database consistency
+          console.log("Setting loaded forms:", loadedForms.length);
+          setForms(loadedForms);
         }
       } catch (error) {
         console.error("Error loading forms from Supabase:", error);
