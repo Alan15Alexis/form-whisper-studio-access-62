@@ -227,6 +227,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const updateForm = (id: string, formData: any) => {
+    console.log("FormContext - updateForm called with scoreRanges:", formData.scoreRanges?.length || 0);
     return updateFormOperation(
       forms,
       setForms,

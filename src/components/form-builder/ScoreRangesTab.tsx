@@ -50,7 +50,7 @@ const ScoreRangesTab = ({
     const incomingRangesJson = JSON.stringify(incomingRanges);
     
     if (currentRangesJson !== incomingRangesJson) {
-      console.log("ScoreRangesTab - Score ranges changed, updating local state");
+      console.log("ScoreRangesTab - Score ranges changed, updating local state from", localScoreRanges.length, "to", incomingRanges.length);
       setLocalScoreRanges(JSON.parse(JSON.stringify(incomingRanges))); // Deep copy
       setHasUnsavedChanges(false);
     }

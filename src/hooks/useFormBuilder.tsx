@@ -137,7 +137,7 @@ export const useFormBuilder = (id?: string) => {
     };
 
     initializeFormData();
-  }, [formId, getForm, navigate]);
+  }, [formId, getForm, navigate, forms]); // Add forms dependency to react to changes
 
   const isEditMode = Boolean(formId);
 
