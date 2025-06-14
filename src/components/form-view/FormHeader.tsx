@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FormHeaderProps {
   currentQuestion: number;
@@ -10,8 +11,21 @@ interface FormHeaderProps {
 }
 
 const FormHeader = ({ currentQuestion, totalQuestions, onBackClick }: FormHeaderProps) => {
+  const { currentUser, isAuthenticated } = useAuth();
+
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Determine the correct route based on user authentication and role
+    let redirectPath = '/';
+    
+    if (isAuthenticated && currentUser?.role === 'admin') {
+      redirectPath = '/dashboard-admin';
+    } else if (isAuthenticated && currentUser?.role === 'user') {
+      redirectPath = '/assigned-forms';
+    }
+    
+    // Use onBackClick with the correct path
     onBackClick();
   };
 

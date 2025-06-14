@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "@/contexts/form";
@@ -233,6 +232,17 @@ const FormView = () => {
   const totalQuestions = form.fields.length;
   const currentField = form.fields[currentQuestionIndex];
 
+  // Improved back navigation logic
+  const handleBackNavigation = () => {
+    if (isAuthenticated && currentUser?.role === 'admin') {
+      navigate('/dashboard-admin');
+    } else if (isAuthenticated && currentUser?.role === 'user') {
+      navigate('/assigned-forms');
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
@@ -240,7 +250,7 @@ const FormView = () => {
           <FormHeader 
             currentQuestion={currentQuestionIndex}
             totalQuestions={totalQuestions}
-            onBackClick={() => navigate('/')}
+            onBackClick={handleBackNavigation}
           />
           
           <div className="mb-8">
