@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -61,25 +62,61 @@ const DashboardAdmin = () => {
           console.log("Number of forms found:", data.length);
           
           // Transform Supabase data to match our Form interface
-          const transformedForms: Form[] = data.map(item => ({
-            id: uuidv4(), // Generate a unique ID for the client
-            title: item.titulo || 'Sin título',
-            description: item.descripcion || '',
-            fields: item.preguntas || [],
-            isPrivate: item.configuracion?.isPrivate || false,
-            allowedUsers: item.acceso || [],
-            createdAt: item.created_at || new Date().toISOString(),
-            updatedAt: item.created_at || new Date().toISOString(),
-            accessLink: uuidv4(), // Generate a unique access link
-            ownerId: currentUser?.id ? String(currentUser.id) : 'unknown', // Ensure ownerId is always a string
-            enableScoring: item.configuracion?.enableScoring || false,
-            formColor: item.configuracion?.formColor || undefined,
-            allowViewOwnResponses: item.configuracion?.allowViewOwnResponses || false,
-            allowEditOwnResponses: item.configuracion?.allowEditOwnResponses || false,
-            httpConfig: item.configuracion?.httpConfig || undefined,
-          }));
+          const transformedForms: Form[] = data.map(item => {
+            const config = item.configuracion || {};
+            
+            // Process score ranges from rangos_mensajes
+            let scoreRanges = [];
+            if (item.rangos_mensajes && Array.isArray(item.rangos_mensajes)) {
+              scoreRanges = item.rangos_mensajes.filter(range => 
+                range && 
+                typeof range.min === 'number' && 
+                typeof range.max === 'number' && 
+                typeof range.message === 'string' &&
+                range.min <= range.max
+              );
+              console.log(`Form "${item.titulo}" has ${scoreRanges.length} valid score ranges from database`);
+            }
+            
+            // Process showTotalScore from configuration
+            const showTotalScore = Boolean(config.showTotalScore);
+            
+            console.log(`DashboardAdmin - Processing form "${item.titulo}":`, {
+              hasRangosMensajes: !!item.rangos_mensajes,
+              rangosMensajesLength: Array.isArray(item.rangos_mensajes) ? item.rangos_mensajes.length : 0,
+              scoreRangesLength: scoreRanges.length,
+              showTotalScore,
+              configShowTotalScore: config.showTotalScore
+            });
+            
+            return {
+              id: uuidv4(), // Generate a unique ID for the client
+              title: item.titulo || 'Sin título',
+              description: item.descripcion || '',
+              fields: item.preguntas || [],
+              isPrivate: config.isPrivate || false,
+              allowedUsers: item.acceso || [],
+              createdAt: item.created_at || new Date().toISOString(),
+              updatedAt: item.created_at || new Date().toISOString(),
+              accessLink: uuidv4(), // Generate a unique access link
+              ownerId: currentUser?.id ? String(currentUser.id) : 'unknown', // Ensure ownerId is always a string
+              enableScoring: config.enableScoring || false,
+              showTotalScore: showTotalScore,
+              scoreRanges: scoreRanges,
+              formColor: config.formColor || '#3b82f6',
+              allowViewOwnResponses: config.allowViewOwnResponses || false,
+              allowEditOwnResponses: config.allowEditOwnResponses || false,
+              httpConfig: config.httpConfig || undefined,
+            };
+          });
           
-          console.log("Transformed forms:", transformedForms);
+          console.log("Transformed forms with score ranges:", transformedForms.map(f => ({
+            title: f.title,
+            showTotalScore: f.showTotalScore,
+            scoreRangesCount: f.scoreRanges?.length || 0,
+            scoreRanges: f.scoreRanges
+          })));
+          
           // Update forms in context
           setForms(transformedForms);
         }
