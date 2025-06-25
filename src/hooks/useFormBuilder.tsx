@@ -29,6 +29,7 @@ export const useFormBuilder = (id?: string) => {
     fields: [],
     isPrivate: false,
     allowedUsers: [],
+    collaborators: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     accessLink: '',
@@ -133,6 +134,7 @@ export const useFormBuilder = (id?: string) => {
           fields: [],
           isPrivate: false,
           allowedUsers: [],
+          collaborators: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           accessLink: '',
@@ -357,6 +359,10 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => ({ ...prev, httpConfig: config }));
   };
 
+  const handleCollaboratorsChange = useCallback((collaborators: string[]) => {
+    setFormData(prev => ({ ...prev, collaborators }));
+  }, []);
+
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
 
@@ -473,6 +479,7 @@ export const useFormBuilder = (id?: string) => {
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
     handleHttpConfigChange,
+    handleCollaboratorsChange,
     handleSubmit,
     handleCreateForm,
     handleUpdateForm

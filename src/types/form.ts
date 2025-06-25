@@ -1,4 +1,3 @@
-
 export type FormFieldType = 
   // Essential fields
   | 'text' 
@@ -95,26 +94,34 @@ export interface ScoreConfig {
 export interface Form {
   id: string;
   title: string;
-  description?: string;
+  description: string;
   fields: FormField[];
-  isPrivate: boolean;
-  allowedUsers: string[];
+  isPrivate?: boolean;
+  allowedUsers?: string[];
+  collaborators?: string[];
   createdAt: string;
   updatedAt: string;
   accessLink: string;
   ownerId: string;
-  showTotalScore?: boolean;
   enableScoring?: boolean;
-  scoreConfig?: ScoreConfig; 
-  scoreRanges?: ScoreRange[]; 
-  welcomeMessage?: {
-    text: string;
-    imageUrl?: string;
-  };
+  showTotalScore?: boolean;
+  formColor?: string;
   allowViewOwnResponses?: boolean;
   allowEditOwnResponses?: boolean;
-  formColor?: string;
   httpConfig?: HttpConfig;
+  scoreRanges?: Array<{
+    min: number;
+    max: number;
+    message: string;
+  }>;
+  scoreConfig?: {
+    enabled: boolean;
+    ranges: Array<{
+      min: number;
+      max: number;
+      message: string;
+    }>;
+  };
 }
 
 export interface FormResponse {

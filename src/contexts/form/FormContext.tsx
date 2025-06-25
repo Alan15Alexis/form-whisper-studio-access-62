@@ -182,6 +182,12 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log(`FormContext - Form "${formData.titulo}" has no rangos_mensajes in database`);
           }
           
+          // Process collaborators from database
+          let collaborators = [];
+          if (formData.colaboradores && Array.isArray(formData.colaboradores)) {
+            collaborators = formData.colaboradores;
+          }
+          
           const finalForm = {
             id: formData.id.toString(),
             title: formData.titulo || 'Untitled Form',
@@ -189,6 +195,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fields: formData.preguntas || [],
             isPrivate: Boolean(config.isPrivate),
             allowedUsers: formData.acceso || [],
+            collaborators: collaborators,
             createdAt: formData.created_at,
             updatedAt: formData.created_at,
             accessLink: uuidv4(),

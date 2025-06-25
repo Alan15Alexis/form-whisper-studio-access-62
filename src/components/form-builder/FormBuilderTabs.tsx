@@ -1,35 +1,34 @@
 
-import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Form } from "@/types/form";
 import FormBasicInfo from "./FormBasicInfo";
 import FormFieldsList from "./FormFieldsList";
-import FieldsSidebar from "./FieldsSidebar";
 import FormSettings from "./FormSettings";
-import AccessControl from "../form-builder/AccessControl";
+import AccessControl from "./AccessControl";
 import ScoreRangesTab from "./ScoreRangesTab";
-import { Form, FormField, ScoreRange } from "@/types/form";
 
 interface FormBuilderTabsProps {
-  formData: Partial<Form>;
+  formData: Form;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
   onToggleFormScoring: (enabled: boolean) => void;
-  onSaveScoreRanges: (ranges: ScoreRange[]) => void;
-  updateField: (id: string, updatedField: FormField) => void;
+  onSaveScoreRanges: (ranges: any[]) => void;
+  updateField: (id: string, field: any) => void;
   removeField: (id: string) => void;
   allowedUserEmail: string;
   setAllowedUserEmail: (email: string) => void;
   addAllowedUser: () => void;
   removeAllowedUser: (email: string) => void;
-  onAllowViewOwnResponsesChange?: (allow: boolean) => void;
-  onAllowEditOwnResponsesChange?: (allow: boolean) => void;
-  onFormColorChange?: (color: string) => void;
-  onHttpConfigChange?: (config: any) => void;
+  onAllowViewOwnResponsesChange: (allow: boolean) => void;
+  onAllowEditOwnResponsesChange: (allow: boolean) => void;
+  onFormColorChange: (color: string) => void;
+  onHttpConfigChange: (config: any) => void;
   addField: (fieldType: string) => void;
   formId?: string;
-  allowedUserName?: string;
-  setAllowedUserName?: (name: string) => void;
+  allowedUserName: string;
+  setAllowedUserName: (name: string) => void;
+  onCollaboratorsChange?: (collaborators: string[]) => void;
 }
 
 const FormBuilderTabs = ({
@@ -51,63 +50,41 @@ const FormBuilderTabs = ({
   onHttpConfigChange,
   addField,
   formId,
-  allowedUserName = "",
-  setAllowedUserName = () => {}
+  allowedUserName,
+  setAllowedUserName,
+  onCollaboratorsChange
 }: FormBuilderTabsProps) => {
-  // Enhanced data handling with validation and debugging
-  const showTotalScore = formData.showTotalScore === true;
-  const scoreRanges = Array.isArray(formData.scoreRanges) ? 
-    formData.scoreRanges.filter(range => 
-      range && 
-      typeof range.min === 'number' && 
-      typeof range.max === 'number' && 
-      typeof range.message === 'string' &&
-      range.min <= range.max
-    ) : [];
-
-  console.log("FormBuilderTabs - Using ScoreRangesTab:", {
-    title: formData.title,
-    showTotalScore,
-    scoreRangesCount: scoreRanges.length,
-    formDataKeys: Object.keys(formData),
-    formDataId: formData.id
-  });
-
   return (
-    <Tabs defaultValue="fields" className="w-full mt-6">
-      <TabsList className="mb-8">
+    <Tabs defaultValue="basic" className="w-full">
+      <TabsList className="grid w-full grid-cols-5">
+        <TabsTrigger value="basic">Básico</TabsTrigger>
         <TabsTrigger value="fields">Campos</TabsTrigger>
         <TabsTrigger value="settings">Configuración</TabsTrigger>
-        <TabsTrigger value="ranges">Rangos</TabsTrigger>
-        {formData.isPrivate && <TabsTrigger value="access">Control de Acceso</TabsTrigger>}
+        <TabsTrigger value="access">Acceso</TabsTrigger>
+        <TabsTrigger value="scoring">Puntuación</TabsTrigger>
       </TabsList>
       
-      <TabsContent value="fields" className="space-y-6">
-        <FormBasicInfo 
-          formData={formData}
+      <TabsContent value="basic" className="mt-6">
+        <FormBasicInfo
+          title={formData.title || ''}
+          description={formData.description || ''}
           onTitleChange={onTitleChange}
           onDescriptionChange={onDescriptionChange}
         />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-9">
-            <FormFieldsList 
-              formData={formData}
-              updateField={updateField}
-              removeField={removeField}
-              formShowTotalScore={showTotalScore}
-              onToggleFormScoring={onToggleFormScoring}
-            />
-          </div>
-          <div className="lg:col-span-3">
-            <FieldsSidebar onAddField={addField} />
-          </div>
-        </div>
       </TabsContent>
       
-      <TabsContent value="settings">
-        <FormSettings 
-          isPrivate={!!formData.isPrivate} 
+      <TabsContent value="fields" className="mt-6">
+        <FormFieldsList
+          fields={formData.fields || []}
+          updateField={updateField}
+          removeField={removeField}
+          addField={addField}
+        />
+      </TabsContent>
+      
+      <TabsContent value="settings" className="mt-6">
+        <FormSettings
+          isPrivate={formData.isPrivate || false}
           onPrivateChange={onPrivateChange}
           allowViewOwnResponses={formData.allowViewOwnResponses}
           onAllowViewOwnResponsesChange={onAllowViewOwnResponsesChange}
@@ -117,34 +94,33 @@ const FormBuilderTabs = ({
           onFormColorChange={onFormColorChange}
           httpConfig={formData.httpConfig}
           onHttpConfigChange={onHttpConfigChange}
-          formFields={formData.fields || []}
+          formFields={formData.fields}
           formId={formId}
+          collaborators={formData.collaborators || []}
+          onCollaboratorsChange={onCollaboratorsChange}
         />
       </TabsContent>
       
-      <TabsContent value="ranges">
+      <TabsContent value="access" className="mt-6">
+        <AccessControl
+          isPrivate={formData.isPrivate || false}
+          allowedUsers={formData.allowedUsers || []}
+          allowedUserEmail={allowedUserEmail}
+          allowedUserName={allowedUserName}
+          setAllowedUserEmail={setAllowedUserEmail}
+          setAllowedUserName={setAllowedUserName}
+          addAllowedUser={addAllowedUser}
+          removeAllowedUser={removeAllowedUser}
+        />
+      </TabsContent>
+      
+      <TabsContent value="scoring" className="mt-6">
         <ScoreRangesTab
-          formFields={formData.fields || []}
-          showTotalScore={showTotalScore}
-          scoreRanges={scoreRanges}
+          formData={formData}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
         />
       </TabsContent>
-      
-      {formData.isPrivate && (
-        <TabsContent value="access">
-          <AccessControl
-            allowedUsers={formData.allowedUsers || []}
-            allowedUserEmail={allowedUserEmail}
-            onAllowedUserEmailChange={setAllowedUserEmail}
-            onAddAllowedUser={addAllowedUser}
-            onRemoveAllowedUser={removeAllowedUser}
-            allowedUserName={allowedUserName}
-            onAllowedUserNameChange={setAllowedUserName}
-          />
-        </TabsContent>
-      )}
     </Tabs>
   );
 };

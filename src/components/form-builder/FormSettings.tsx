@@ -4,9 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { X, Plus, Users } from "lucide-react";
 import { HttpConfig } from "@/types/form";
 import HttpConfigSettings from "./HttpConfigSettings";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/toast";
 
 const FORM_COLORS = [{
   name: "Azul",
@@ -44,6 +50,8 @@ interface FormSettingsProps {
   onHttpConfigChange?: (config: HttpConfig) => void;
   formFields?: any[];
   formId?: string;
+  collaborators?: string[];
+  onCollaboratorsChange?: (collaborators: string[]) => void;
 }
 
 const FormSettings = ({
@@ -58,10 +66,15 @@ const FormSettings = ({
   httpConfig,
   onHttpConfigChange,
   formFields = [],
-  formId = ""
+  formId = "",
+  collaborators = [],
+  onCollaboratorsChange
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
+  const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
+  const [isAddingCollaborator, setIsAddingCollaborator] = useState(false);
+  const [availableAdmins, setAvailableAdmins] = useState<Array<{id: number, nombre: string, correo: string}>>([]);
 
   const defaultHttpConfig: HttpConfig = {
     enabled: false,
@@ -71,6 +84,116 @@ const FormSettings = ({
     body: `{
   "id_del_elemento": "respuesta"
 }`
+  };
+
+  // Load available administrators
+  useEffect(() => {
+    const loadAvailableAdmins = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('usuario_administrador')
+          .select('id, nombre, correo')
+          .neq('correo', currentUser?.email); // Exclude current user
+
+        if (error) {
+          console.error('Error loading administrators:', error);
+          return;
+        }
+
+        setAvailableAdmins(data || []);
+      } catch (error) {
+        console.error('Error loading administrators:', error);
+      }
+    };
+
+    if (isAdmin) {
+      loadAvailableAdmins();
+    }
+  }, [currentUser?.email, isAdmin]);
+
+  const handleAddCollaborator = async () => {
+    if (!newCollaboratorEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor, introduce un correo electrónico",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const email = newCollaboratorEmail.toLowerCase().trim();
+
+    // Check if email is already a collaborator
+    if (collaborators.includes(email)) {
+      toast({
+        title: "Colaborador ya añadido",
+        description: "Este administrador ya es colaborador de este formulario",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if email is the form owner
+    if (email === currentUser?.email) {
+      toast({
+        title: "Error",
+        description: "No puedes añadirte a ti mismo como colaborador",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingCollaborator(true);
+
+    try {
+      // Verify the email belongs to an administrator
+      const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email);
+      
+      if (!admin) {
+        toast({
+          title: "Administrador no encontrado",
+          description: "El correo electrónico no pertenece a un administrador registrado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add to collaborators list
+      const updatedCollaborators = [...collaborators, email];
+      onCollaboratorsChange?.(updatedCollaborators);
+
+      setNewCollaboratorEmail("");
+      
+      toast({
+        title: "Colaborador añadido",
+        description: `${admin.nombre} ha sido añadido como colaborador`,
+      });
+    } catch (error) {
+      console.error('Error adding collaborator:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo añadir el colaborador",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingCollaborator(false);
+    }
+  };
+
+  const handleRemoveCollaborator = (email: string) => {
+    const updatedCollaborators = collaborators.filter(collab => collab !== email);
+    onCollaboratorsChange?.(updatedCollaborators);
+    
+    const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email);
+    toast({
+      title: "Colaborador eliminado",
+      description: `${admin?.nombre || email} ha sido eliminado como colaborador`,
+    });
+  };
+
+  const getAdminName = (email: string) => {
+    const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email.toLowerCase());
+    return admin?.nombre || email;
   };
 
   return (
@@ -125,6 +248,78 @@ const FormSettings = ({
           </div>
         </div>
       </Card>
+
+      {/* Collaborators Card - Only show for admins */}
+      {isAdmin && (
+        <Card className="p-6 shadow-sm border border-gray-100">
+          <CardHeader className="px-0 pt-0">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium">
+              <Users className="h-5 w-5" />
+              Colaboradores
+            </CardTitle>
+            <p className="text-sm text-gray-500">
+              Permite que otros administradores puedan editar este formulario
+            </p>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <div className="space-y-4">
+              {/* Add new collaborator */}
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Correo del administrador..."
+                  value={newCollaboratorEmail}
+                  onChange={(e) => setNewCollaboratorEmail(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddCollaborator();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleAddCollaborator}
+                  disabled={isAddingCollaborator}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Añadir
+                </Button>
+              </div>
+
+              {/* List of current collaborators */}
+              {collaborators.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Colaboradores actuales:</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {collaborators.map((email) => (
+                      <Badge 
+                        key={email} 
+                        variant="secondary" 
+                        className="flex items-center gap-1 px-3 py-1"
+                      >
+                        <span>{getAdminName(email)}</span>
+                        <button
+                          onClick={() => handleRemoveCollaborator(email)}
+                          className="ml-1 hover:text-red-600 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {collaborators.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  No hay colaboradores asignados a este formulario
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Access to Responses Card */}
       <Card className="p-6 shadow-sm border border-gray-100">

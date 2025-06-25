@@ -31,7 +31,8 @@ const FormBuilder = () => {
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
-    handleHttpConfigChange
+    handleHttpConfigChange,
+    handleCollaboratorsChange
   } = useFormBuilder(id);
 
   // Add a safety check to ensure formData is not undefined before rendering
@@ -121,6 +122,7 @@ const FormBuilder = () => {
             formId={id}
             allowedUserName={allowedUserName}
             setAllowedUserName={setAllowedUserName}
+            onCollaboratorsChange={handleCollaboratorsChange}
           />
         </DragDropContext>
       </div>
