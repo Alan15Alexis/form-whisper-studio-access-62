@@ -72,7 +72,7 @@ const FormSettings = ({
 }: FormSettingsProps) => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
-  const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
+  const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
   const [isAddingCollaborator, setIsAddingCollaborator] = useState(false);
   const [availableAdmins, setAvailableAdmins] = useState<Array<{id: number, nombre: string, correo: string}>>([]);
 
@@ -112,16 +112,27 @@ const FormSettings = ({
   }, [currentUser?.email, isAdmin]);
 
   const handleAddCollaborator = async () => {
-    if (!newCollaboratorEmail.trim()) {
+    if (!selectedCollaboratorId) {
       toast({
         title: "Error",
-        description: "Por favor, introduce un correo electrónico",
+        description: "Por favor, selecciona un administrador",
         variant: "destructive",
       });
       return;
     }
 
-    const email = newCollaboratorEmail.toLowerCase().trim();
+    const selectedAdmin = availableAdmins.find(admin => admin.id.toString() === selectedCollaboratorId);
+    
+    if (!selectedAdmin) {
+      toast({
+        title: "Error",
+        description: "Administrador no encontrado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const email = selectedAdmin.correo.toLowerCase().trim();
 
     // Check if email is already a collaborator
     if (collaborators.includes(email)) {
@@ -146,27 +157,15 @@ const FormSettings = ({
     setIsAddingCollaborator(true);
 
     try {
-      // Verify the email belongs to an administrator
-      const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email);
-      
-      if (!admin) {
-        toast({
-          title: "Administrador no encontrado",
-          description: "El correo electrónico no pertenece a un administrador registrado",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Add to collaborators list
       const updatedCollaborators = [...collaborators, email];
       onCollaboratorsChange?.(updatedCollaborators);
 
-      setNewCollaboratorEmail("");
+      setSelectedCollaboratorId("");
       
       toast({
         title: "Colaborador añadido",
-        description: `${admin.nombre} ha sido añadido como colaborador`,
+        description: `${selectedAdmin.nombre} ha sido añadido como colaborador`,
       });
     } catch (error) {
       console.error('Error adding collaborator:', error);
@@ -195,6 +194,12 @@ const FormSettings = ({
     const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email.toLowerCase());
     return admin?.nombre || email;
   };
+
+  // Filter out already added collaborators from the dropdown
+  const availableCollaborators = availableAdmins.filter(admin => 
+    !collaborators.includes(admin.correo.toLowerCase()) &&
+    admin.correo.toLowerCase() !== currentUser?.email?.toLowerCase()
+  );
 
   return (
     <div className="space-y-8">
@@ -265,21 +270,33 @@ const FormSettings = ({
             <div className="space-y-4">
               {/* Add new collaborator */}
               <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="Correo del administrador..."
-                  value={newCollaboratorEmail}
-                  onChange={(e) => setNewCollaboratorEmail(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddCollaborator();
-                    }
-                  }}
-                  className="flex-1"
-                />
+                <Select
+                  value={selectedCollaboratorId}
+                  onValueChange={setSelectedCollaboratorId}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleccionar administrador..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    {availableCollaborators.length > 0 ? (
+                      availableCollaborators.map((admin) => (
+                        <SelectItem key={admin.id} value={admin.id.toString()}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{admin.nombre}</span>
+                            <span className="text-sm text-gray-500">{admin.correo}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-admins" disabled>
+                        No hay administradores disponibles
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 <Button 
                   onClick={handleAddCollaborator}
-                  disabled={isAddingCollaborator}
+                  disabled={isAddingCollaborator || !selectedCollaboratorId || availableCollaborators.length === 0}
                   size="sm"
                 >
                   <Plus className="h-4 w-4 mr-1" />
