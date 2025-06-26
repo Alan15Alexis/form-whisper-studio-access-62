@@ -50,44 +50,22 @@ const FormBuilder = () => {
     );
   }
 
-  // Clean up malformed data before using it
-  const cleanFormData = {
+  // Clean up data to prevent serialization issues
+  const safeFormData = {
     ...formData,
-    showTotalScore: (() => {
-      if (typeof formData.showTotalScore === 'boolean') {
-        return formData.showTotalScore;
-      }
-      // Check for malformed data using any type
-      const malformedValue = formData.showTotalScore as any;
-      if (malformedValue && typeof malformedValue === 'object' && malformedValue._type === 'undefined') {
-        console.log("FormBuilder - Cleaning malformed showTotalScore:", malformedValue);
-        return false;
-      }
-      return Boolean(formData.showTotalScore);
-    })(),
-    scoreRanges: (() => {
-      if (Array.isArray(formData.scoreRanges)) {
-        return formData.scoreRanges;
-      }
-      // Check for malformed data using any type
-      const malformedValue = formData.scoreRanges as any;
-      if (malformedValue && typeof malformedValue === 'object' && malformedValue._type === 'undefined') {
-        console.log("FormBuilder - Cleaning malformed scoreRanges:", malformedValue);
-        return [];
-      }
-      return [];
-    })()
+    showTotalScore: Boolean(formData.showTotalScore),
+    scoreRanges: Array.isArray(formData.scoreRanges) ? formData.scoreRanges.map(range => ({
+      min: Number(range.min) || 0,
+      max: Number(range.max) || 0,
+      message: String(range.message || '')
+    })) : [],
+    collaborators: Array.isArray(formData.collaborators) ? formData.collaborators : []
   };
 
-  console.log("FormBuilder - Cleaned formData:", {
-    original: {
-      showTotalScore: formData.showTotalScore,
-      scoreRanges: formData.scoreRanges
-    },
-    cleaned: {
-      showTotalScore: cleanFormData.showTotalScore,
-      scoreRanges: cleanFormData.scoreRanges
-    }
+  console.log("FormBuilder - Safe formData:", {
+    showTotalScore: safeFormData.showTotalScore,
+    scoreRangesCount: safeFormData.scoreRanges.length,
+    collaboratorsCount: safeFormData.collaborators.length
   });
 
   return (
@@ -95,14 +73,14 @@ const FormBuilder = () => {
       <div className="container py-8">
         <FormBuilderHeader
           isEditMode={isEditMode}
-          formTitle={cleanFormData.title || ''}
+          formTitle={safeFormData.title || ''}
           isSaving={isSaving}
           onSave={handleSubmit}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <FormBuilderTabs
-            formData={cleanFormData}
+            formData={safeFormData}
             onTitleChange={handleTitleChange}
             onDescriptionChange={handleDescriptionChange}
             onPrivateChange={handlePrivateChange}

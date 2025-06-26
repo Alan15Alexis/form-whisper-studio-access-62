@@ -1,7 +1,66 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { Form } from '@/types/form';
 import { supabase } from '@/integrations/supabase/client';
+
+// Helper function to safely serialize data and prevent circular references
+const safeSerialize = (obj: any): any => {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => safeSerialize(item));
+  }
+  
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        // Skip circular references and malformed objects
+        if (value && typeof value === 'object' && value._type === 'undefined') {
+          continue;
+        }
+        result[key] = safeSerialize(value);
+      }
+    }
+    return result;
+  }
+  
+  return obj;
+};
+
+// Helper function to validate and clean score ranges
+const cleanScoreRanges = (ranges: any): any[] => {
+  if (!Array.isArray(ranges)) {
+    return [];
+  }
+  
+  return ranges
+    .filter(range => range && typeof range === 'object')
+    .map(range => ({
+      min: typeof range.min === 'number' ? range.min : 0,
+      max: typeof range.max === 'number' ? range.max : 0,
+      message: typeof range.message === 'string' ? range.message : ''
+    }))
+    .filter(range => range.min <= range.max); // Only keep valid ranges
+};
+
+// Helper function to validate form ID
+const validateFormId = (id: string): number => {
+  console.log("Validating form ID:", id);
+  
+  // Check if it's already a valid number
+  const numericId = parseInt(id, 10);
+  if (!isNaN(numericId) && numericId > 0) {
+    console.log("Valid numeric ID:", numericId);
+    return numericId;
+  }
+  
+  // If it's a UUID or invalid, throw an error
+  console.error("Invalid form ID format - expected numeric ID but got:", id);
+  throw new Error(`Invalid form ID format: ${id}. Expected a numeric ID.`);
+};
 
 export const createFormOperation = (
   forms: Form[],
@@ -14,36 +73,42 @@ export const createFormOperation = (
   try {
     console.log("Creating form with data:", {
       title: formData.title,
-      collaborators: formData.collaborators
+      collaborators: formData.collaborators,
+      showTotalScore: formData.showTotalScore,
+      scoreRanges: formData.scoreRanges
     });
 
     const newFormId = uuidv4();
+    
+    // Clean and validate the form data
+    const cleanFormData = safeSerialize(formData);
+    const cleanedScoreRanges = cleanScoreRanges(cleanFormData.scoreRanges);
+    
     const newForm: Form = {
       id: newFormId,
-      title: formData.title || 'Untitled Form',
-      description: formData.description || '',
-      fields: formData.fields || [],
-      isPrivate: formData.isPrivate || false,
-      allowedUsers: formData.allowedUsers || [],
-      collaborators: formData.collaborators || [],
+      title: cleanFormData.title || 'Untitled Form',
+      description: cleanFormData.description || '',
+      fields: cleanFormData.fields || [],
+      isPrivate: Boolean(cleanFormData.isPrivate),
+      allowedUsers: Array.isArray(cleanFormData.allowedUsers) ? cleanFormData.allowedUsers : [],
+      collaborators: Array.isArray(cleanFormData.collaborators) ? cleanFormData.collaborators : [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       accessLink: uuidv4(),
       ownerId: userId || userEmail || 'unknown',
-      formColor: formData.formColor || '#3b82f6',
-      allowViewOwnResponses: formData.allowViewOwnResponses || false,
-      allowEditOwnResponses: formData.allowEditOwnResponses || false,
-      httpConfig: formData.httpConfig,
-      showTotalScore: formData.showTotalScore || false,
-      scoreRanges: Array.isArray(formData.scoreRanges) ? formData.scoreRanges : []
+      formColor: cleanFormData.formColor || '#3b82f6',
+      allowViewOwnResponses: Boolean(cleanFormData.allowViewOwnResponses),
+      allowEditOwnResponses: Boolean(cleanFormData.allowEditOwnResponses),
+      httpConfig: cleanFormData.httpConfig,
+      showTotalScore: Boolean(cleanFormData.showTotalScore),
+      scoreRanges: cleanedScoreRanges
     };
 
-    // Clean score ranges to prevent circular references
-    const cleanScoreRanges = newForm.scoreRanges.map(range => ({
-      min: typeof range.min === 'number' ? range.min : 0,
-      max: typeof range.max === 'number' ? range.max : 0,
-      message: typeof range.message === 'string' ? range.message : ''
-    }));
+    console.log("Cleaned form data for creation:", {
+      showTotalScore: newForm.showTotalScore,
+      scoreRangesCount: newForm.scoreRanges.length,
+      collaboratorsCount: newForm.collaborators.length
+    });
 
     // Save to Supabase
     const { data, error } = await supabase
@@ -63,7 +128,7 @@ export const createFormOperation = (
           httpConfig: newForm.httpConfig,
           showTotalScore: newForm.showTotalScore
         },
-        rangos_mensajes: cleanScoreRanges
+        rangos_mensajes: cleanedScoreRanges
       })
       .select()
       .single();
@@ -80,7 +145,7 @@ export const createFormOperation = (
     const updatedForms = [...forms, finalForm];
     setForms(updatedForms);
 
-    console.log("Form created successfully with collaborators:", finalForm.collaborators);
+    console.log("Form created successfully:", finalForm.id);
     return finalForm;
   } catch (error) {
     console.error('Error in createFormOperation:', error);
@@ -94,33 +159,39 @@ export const updateFormOperation = (
   setAllowedUsers: (users: any) => void
 ) => async (id: string, formData: Partial<Form>) => {
   try {
-    console.log("Updating form with collaborators:", {
+    console.log("Updating form:", {
       id,
-      collaborators: formData.collaborators
+      collaborators: formData.collaborators,
+      showTotalScore: formData.showTotalScore,
+      scoreRanges: formData.scoreRanges
     });
+
+    // Validate the form ID
+    const numericId = validateFormId(id);
 
     const formIndex = forms.findIndex(f => f.id === id);
     if (formIndex === -1) {
       throw new Error('Form not found');
     }
 
-    const updatedForm = { ...forms[formIndex], ...formData, updatedAt: new Date().toISOString() };
+    // Clean and validate the form data
+    const cleanFormData = safeSerialize(formData);
+    const cleanedScoreRanges = cleanScoreRanges(cleanFormData.scoreRanges);
 
-    // Clean score ranges to prevent circular references
-    const cleanScoreRanges = Array.isArray(updatedForm.scoreRanges) 
-      ? updatedForm.scoreRanges.map(range => ({
-          min: typeof range.min === 'number' ? range.min : 0,
-          max: typeof range.max === 'number' ? range.max : 0,
-          message: typeof range.message === 'string' ? range.message : ''
-        }))
-      : [];
+    const updatedForm = { 
+      ...forms[formIndex], 
+      ...cleanFormData, 
+      updatedAt: new Date().toISOString(),
+      scoreRanges: cleanedScoreRanges,
+      collaborators: Array.isArray(cleanFormData.collaborators) ? cleanFormData.collaborators : [],
+      showTotalScore: Boolean(cleanFormData.showTotalScore)
+    };
 
-    // Convert string ID to number for database query
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
-      console.error('Invalid form ID format:', id);
-      throw new Error('Invalid form ID format');
-    }
+    console.log("Cleaned form data for update:", {
+      showTotalScore: updatedForm.showTotalScore,
+      scoreRangesCount: updatedForm.scoreRanges.length,
+      collaboratorsCount: updatedForm.collaborators.length
+    });
 
     // Update in Supabase
     const { error } = await supabase
@@ -139,7 +210,7 @@ export const updateFormOperation = (
           httpConfig: updatedForm.httpConfig,
           showTotalScore: updatedForm.showTotalScore
         },
-        rangos_mensajes: cleanScoreRanges
+        rangos_mensajes: cleanedScoreRanges
       })
       .eq('id', numericId);
 
@@ -153,7 +224,7 @@ export const updateFormOperation = (
     updatedForms[formIndex] = updatedForm;
     setForms(updatedForms);
 
-    console.log("Form updated successfully with collaborators:", updatedForm.collaborators);
+    console.log("Form updated successfully:", id);
     return updatedForm;
   } catch (error) {
     console.error('Error in updateFormOperation:', error);
@@ -170,12 +241,8 @@ export const deleteFormOperation = (
   responses: any[]
 ) => async (id: string) => {
   try {
-    // Convert string ID to number for database query
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
-      console.error('Invalid form ID format for deletion:', id);
-      throw new Error('Invalid form ID format');
-    }
+    // Validate the form ID
+    const numericId = validateFormId(id);
 
     // Delete from Supabase
     const { error } = await supabase

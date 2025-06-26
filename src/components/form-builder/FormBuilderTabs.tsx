@@ -56,12 +56,12 @@ const FormBuilderTabs = ({
 }: FormBuilderTabsProps) => {
   return (
     <Tabs defaultValue="basic" className="w-full">
-      <TabsList className="grid w-full grid-cols-5">
-        <TabsTrigger value="basic">Básico</TabsTrigger>
-        <TabsTrigger value="fields">Campos</TabsTrigger>
-        <TabsTrigger value="settings">Configuración</TabsTrigger>
-        <TabsTrigger value="access">Acceso</TabsTrigger>
-        <TabsTrigger value="scoring">Puntuación</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsTrigger value="basic" className="text-sm">Básico</TabsTrigger>
+        <TabsTrigger value="fields" className="text-sm">Campos</TabsTrigger>
+        <TabsTrigger value="settings" className="text-sm">Configuración</TabsTrigger>
+        <TabsTrigger value="access" className="text-sm">Acceso</TabsTrigger>
+        <TabsTrigger value="scoring" className="text-sm">Puntuación</TabsTrigger>
       </TabsList>
       
       <TabsContent value="basic" className="mt-6">
