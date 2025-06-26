@@ -66,8 +66,7 @@ const FormBuilderTabs = ({
       
       <TabsContent value="basic" className="mt-6">
         <FormBasicInfo
-          title={formData.title || ''}
-          description={formData.description || ''}
+          formData={formData}
           onTitleChange={onTitleChange}
           onDescriptionChange={onDescriptionChange}
         />
@@ -75,10 +74,11 @@ const FormBuilderTabs = ({
       
       <TabsContent value="fields" className="mt-6">
         <FormFieldsList
-          fields={formData.fields || []}
+          formData={formData}
           updateField={updateField}
           removeField={removeField}
-          addField={addField}
+          onToggleFormScoring={onToggleFormScoring}
+          formShowTotalScore={formData.showTotalScore}
         />
       </TabsContent>
       
@@ -103,22 +103,23 @@ const FormBuilderTabs = ({
       
       <TabsContent value="access" className="mt-6">
         <AccessControl
-          isPrivate={formData.isPrivate || false}
           allowedUsers={formData.allowedUsers || []}
           allowedUserEmail={allowedUserEmail}
           allowedUserName={allowedUserName}
-          setAllowedUserEmail={setAllowedUserEmail}
-          setAllowedUserName={setAllowedUserName}
-          addAllowedUser={addAllowedUser}
-          removeAllowedUser={removeAllowedUser}
+          onAllowedUserEmailChange={setAllowedUserEmail}
+          onAllowedUserNameChange={setAllowedUserName}
+          onAddAllowedUser={addAllowedUser}
+          onRemoveAllowedUser={removeAllowedUser}
         />
       </TabsContent>
       
       <TabsContent value="scoring" className="mt-6">
         <ScoreRangesTab
-          formData={formData}
+          formFields={formData.fields || []}
+          showTotalScore={formData.showTotalScore || false}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
+          scoreRanges={formData.scoreRanges || []}
         />
       </TabsContent>
     </Tabs>
