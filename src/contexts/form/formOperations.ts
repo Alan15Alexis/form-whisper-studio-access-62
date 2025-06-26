@@ -35,18 +35,25 @@ export const createFormOperation = (
       allowEditOwnResponses: formData.allowEditOwnResponses || false,
       httpConfig: formData.httpConfig,
       showTotalScore: formData.showTotalScore || false,
-      scoreRanges: formData.scoreRanges || []
+      scoreRanges: Array.isArray(formData.scoreRanges) ? formData.scoreRanges : []
     };
 
+    // Clean score ranges to prevent circular references
+    const cleanScoreRanges = newForm.scoreRanges.map(range => ({
+      min: typeof range.min === 'number' ? range.min : 0,
+      max: typeof range.max === 'number' ? range.max : 0,
+      message: typeof range.message === 'string' ? range.message : ''
+    }));
+
     // Save to Supabase
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('formulario_construccion')
       .insert({
         titulo: newForm.title,
         descripcion: newForm.description,
         preguntas: newForm.fields,
         acceso: newForm.allowedUsers,
-        colaboradores: newForm.collaborators, // Save collaborators to database
+        colaboradores: newForm.collaborators,
         administrador: newForm.ownerId,
         configuracion: {
           isPrivate: newForm.isPrivate,
@@ -56,20 +63,25 @@ export const createFormOperation = (
           httpConfig: newForm.httpConfig,
           showTotalScore: newForm.showTotalScore
         },
-        rangos_mensajes: newForm.scoreRanges
-      });
+        rangos_mensajes: cleanScoreRanges
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error('Error creating form in Supabase:', error);
       throw error;
     }
 
+    // Update the form ID with the database ID
+    const finalForm = { ...newForm, id: data.id.toString() };
+
     // Update local state
-    const updatedForms = [...forms, newForm];
+    const updatedForms = [...forms, finalForm];
     setForms(updatedForms);
 
-    console.log("Form created successfully with collaborators:", newForm.collaborators);
-    return newForm;
+    console.log("Form created successfully with collaborators:", finalForm.collaborators);
+    return finalForm;
   } catch (error) {
     console.error('Error in createFormOperation:', error);
     throw error;
@@ -94,6 +106,22 @@ export const updateFormOperation = (
 
     const updatedForm = { ...forms[formIndex], ...formData, updatedAt: new Date().toISOString() };
 
+    // Clean score ranges to prevent circular references
+    const cleanScoreRanges = Array.isArray(updatedForm.scoreRanges) 
+      ? updatedForm.scoreRanges.map(range => ({
+          min: typeof range.min === 'number' ? range.min : 0,
+          max: typeof range.max === 'number' ? range.max : 0,
+          message: typeof range.message === 'string' ? range.message : ''
+        }))
+      : [];
+
+    // Convert string ID to number for database query
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      console.error('Invalid form ID format:', id);
+      throw new Error('Invalid form ID format');
+    }
+
     // Update in Supabase
     const { error } = await supabase
       .from('formulario_construccion')
@@ -102,7 +130,7 @@ export const updateFormOperation = (
         descripcion: updatedForm.description,
         preguntas: updatedForm.fields,
         acceso: updatedForm.allowedUsers,
-        colaboradores: updatedForm.collaborators, // Update collaborators in database
+        colaboradores: updatedForm.collaborators,
         configuracion: {
           isPrivate: updatedForm.isPrivate,
           formColor: updatedForm.formColor,
@@ -111,9 +139,9 @@ export const updateFormOperation = (
           httpConfig: updatedForm.httpConfig,
           showTotalScore: updatedForm.showTotalScore
         },
-        rangos_mensajes: updatedForm.scoreRanges
+        rangos_mensajes: cleanScoreRanges
       })
-      .eq('id', parseInt(id));
+      .eq('id', numericId);
 
     if (error) {
       console.error('Error updating form in Supabase:', error);
@@ -142,11 +170,18 @@ export const deleteFormOperation = (
   responses: any[]
 ) => async (id: string) => {
   try {
+    // Convert string ID to number for database query
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      console.error('Invalid form ID format for deletion:', id);
+      throw new Error('Invalid form ID format');
+    }
+
     // Delete from Supabase
     const { error } = await supabase
       .from('formulario_construccion')
       .delete()
-      .eq('id', parseInt(id));
+      .eq('id', numericId);
 
     if (error) {
       console.error('Error deleting form from Supabase:', error);

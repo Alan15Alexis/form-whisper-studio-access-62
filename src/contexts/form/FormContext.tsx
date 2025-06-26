@@ -66,6 +66,25 @@ const safeLocalStorageSet = (key: string, value: any) => {
   }
 };
 
+// Helper function to clean score ranges and prevent circular references
+const cleanScoreRanges = (ranges: any): any[] => {
+  if (!Array.isArray(ranges)) {
+    return [];
+  }
+  
+  return ranges.map(range => {
+    if (!range || typeof range !== 'object') {
+      return null;
+    }
+    
+    return {
+      min: typeof range.min === 'number' ? range.min : 0,
+      max: typeof range.max === 'number' ? range.max : 0,
+      message: typeof range.message === 'string' ? range.message : ''
+    };
+  }).filter(range => range !== null);
+};
+
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [forms, setForms] = useState(getInitialForms());
@@ -97,17 +116,6 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (formsData && formsData.length > 0) {
         console.log("FormContext - Processing", formsData.length, "forms from database");
         
-        // Log raw data from database to see what we're working with
-        console.log("FormContext - Raw database data:", formsData.map(form => ({
-          id: form.id,
-          titulo: form.titulo,
-          rawRangosMensajes: form.rangos_mensajes,
-          rangosMensajesType: typeof form.rangos_mensajes,
-          rangosMensajesLength: Array.isArray(form.rangos_mensajes) ? form.rangos_mensajes.length : 'not array',
-          configuracion: form.configuracion,
-          configShowTotalScore: form.configuracion?.showTotalScore
-        })));
-        
         const loadedForms = formsData.map(formData => {
           const config = formData.configuracion || {};
           
@@ -115,77 +123,20 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const showTotalScore = Boolean(config.showTotalScore || formData.showTotalScore);
           
           // Enhanced score ranges processing with extensive validation and logging
-          let scoreRanges = [];
+          const scoreRanges = cleanScoreRanges(formData.rangos_mensajes);
           
           console.log(`FormContext - Processing form "${formData.titulo}" (ID: ${formData.id}):`, {
             hasRangosMensajes: !!formData.rangos_mensajes,
-            rangosMensajesType: typeof formData.rangos_mensajes,
-            isArray: Array.isArray(formData.rangos_mensajes),
-            rawValue: formData.rangos_mensajes,
-            stringified: JSON.stringify(formData.rangos_mensajes)
+            scoreRangesCount: scoreRanges.length,
+            showTotalScore: showTotalScore
           });
-          
-          if (formData.rangos_mensajes) {
-            if (Array.isArray(formData.rangos_mensajes)) {
-              console.log(`FormContext - Form "${formData.titulo}" has ${formData.rangos_mensajes.length} ranges in database`);
-              
-              scoreRanges = formData.rangos_mensajes.map((range, index) => {
-                console.log(`FormContext - Processing range ${index} for form "${formData.titulo}":`, {
-                  originalRange: range,
-                  hasMin: 'min' in range,
-                  hasMax: 'max' in range,
-                  hasMessage: 'message' in range,
-                  minType: typeof range.min,
-                  maxType: typeof range.max,
-                  messageType: typeof range.message,
-                  minValue: range.min,
-                  maxValue: range.max,
-                  message: range.message
-                });
-                
-                const isValid = range && 
-                  typeof range.min === 'number' && 
-                  typeof range.max === 'number' && 
-                  typeof range.message === 'string' &&
-                  range.min <= range.max;
-                
-                if (!isValid) {
-                  console.warn(`FormContext - Invalid range found in form "${formData.titulo}" at index ${index}:`, {
-                    range,
-                    reasons: {
-                      noRange: !range,
-                      invalidMin: typeof range?.min !== 'number',
-                      invalidMax: typeof range?.max !== 'number',
-                      invalidMessage: typeof range?.message !== 'string',
-                      minGreaterThanMax: range?.min > range?.max
-                    }
-                  });
-                  return null;
-                }
-                
-                console.log(`FormContext - Valid range processed for form "${formData.titulo}":`, range);
-                return range;
-              }).filter(range => range !== null);
-              
-              console.log(`FormContext - Form "${formData.titulo}" final score ranges:`, {
-                originalCount: formData.rangos_mensajes.length,
-                validCount: scoreRanges.length,
-                filteredRanges: scoreRanges
-              });
-            } else {
-              console.warn(`FormContext - Form "${formData.titulo}" has non-array rangos_mensajes:`, {
-                type: typeof formData.rangos_mensajes,
-                value: formData.rangos_mensajes
-              });
-            }
-          } else {
-            console.log(`FormContext - Form "${formData.titulo}" has no rangos_mensajes in database`);
-          }
           
           // Process collaborators from database
           let collaborators = [];
           if (formData.colaboradores && Array.isArray(formData.colaboradores)) {
-            collaborators = formData.colaboradores;
+            collaborators = formData.colaboradores.filter(email => 
+              typeof email === 'string' && email.trim().length > 0
+            );
           }
           
           const finalForm = {
@@ -212,27 +163,13 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: finalForm.id,
             showTotalScore: finalForm.showTotalScore,
             scoreRangesCount: finalForm.scoreRanges.length,
-            scoreRanges: finalForm.scoreRanges
+            collaboratorsCount: finalForm.collaborators.length
           });
           
           return finalForm;
         });
         
         console.log("FormContext - Successfully loaded forms:", loadedForms.length);
-        
-        // Enhanced logging for forms with score ranges
-        const formsWithRanges = loadedForms.filter(f => f.scoreRanges && f.scoreRanges.length > 0);
-        console.log("FormContext - Forms with score ranges:", {
-          totalForms: loadedForms.length,
-          formsWithRanges: formsWithRanges.length,
-          details: formsWithRanges.map(f => ({ 
-            id: f.id, 
-            title: f.title, 
-            scoreRangesCount: f.scoreRanges.length,
-            showTotalScore: f.showTotalScore,
-            ranges: f.scoreRanges 
-          }))
-        });
         
         setForms(loadedForms);
         safeLocalStorageSet('forms', loadedForms);
@@ -313,15 +250,15 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: form.title,
         showTotalScore: form.showTotalScore,
         scoreRangesCount: form.scoreRanges?.length || 0,
-        scoreRanges: form.scoreRanges,
-        hasValidRanges: form.scoreRanges && form.scoreRanges.length > 0
+        collaboratorsCount: form.collaborators?.length || 0
       });
     } else {
       console.warn(`FormContext - getForm(${id}) not found. Available forms:`, 
         forms.map(f => ({ 
           id: f.id, 
           title: f.title, 
-          scoreRangesCount: f.scoreRanges?.length || 0 
+          scoreRangesCount: f.scoreRanges?.length || 0,
+          collaboratorsCount: f.collaborators?.length || 0
         }))
       );
     }
@@ -346,7 +283,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("FormContext - updateForm called with:", {
       id,
       showTotalScore: formData.showTotalScore,
-      scoreRangesCount: formData.scoreRanges?.length || 0
+      scoreRangesCount: formData.scoreRanges?.length || 0,
+      collaboratorsCount: formData.collaborators?.length || 0
     });
     
     const result = await updateFormOperation(
