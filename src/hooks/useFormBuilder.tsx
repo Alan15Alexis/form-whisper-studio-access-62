@@ -1,9 +1,11 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
 import { Form, FormField } from '@/types/form';
 import { toast } from '@/hooks/toast';
 import { addInvitedUser } from '@/integrations/supabase/client';
+import { useDragAndDrop } from './form-builder/useDragAndDrop';
 
 interface UseFormBuilderParams {
   id?: string;
@@ -43,13 +45,37 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
+  // Add drag and drop functionality
+  const { handleDragEnd } = useDragAndDrop({
+    formData,
+    setFormData,
+    addField: (fieldType: string) => {
+      const newField: FormField = {
+        id: crypto.randomUUID(),
+        type: fieldType as any,
+        label: '',
+        required: false,
+        options: fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox' ? [
+          { id: crypto.randomUUID(), label: 'Option 1', value: 'option_1' },
+          { id: crypto.randomUUID(), label: 'Option 2', value: 'option_2' }
+        ] : undefined
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        fields: [...(prev.fields || []), newField],
+      }));
+    }
+  });
+
   // Enhanced form data sync to prevent unnecessary updates
   const syncFormData = useCallback((sourceForm: Form) => {
     console.log("useFormBuilder - Syncing form data:", {
       formId: sourceForm.id,
       title: sourceForm.title,
       showTotalScore: sourceForm.showTotalScore,
-      scoreRangesCount: sourceForm.scoreRanges?.length || 0
+      scoreRangesCount: sourceForm.scoreRanges?.length || 0,
+      collaborators: sourceForm.collaborators || []
     });
     
     setFormData(prevData => {
@@ -60,11 +86,16 @@ export const useFormBuilder = (id?: string) => {
         newData.scoreRanges = [];
       }
       
+      // Ensure collaborators is always an array
+      if (!Array.isArray(newData.collaborators)) {
+        newData.collaborators = [];
+      }
+      
       // Only update if data has actually changed
       const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
       
       if (hasChanged) {
-        console.log("useFormBuilder - Form data updated with score ranges:", newData.scoreRanges?.length || 0);
+        console.log("useFormBuilder - Form data updated with collaborators:", newData.collaborators?.length || 0);
         return newData;
       }
       
@@ -99,7 +130,8 @@ export const useFormBuilder = (id?: string) => {
               id: existingForm.id,
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
-              scoreRangesCount: existingForm.scoreRanges?.length || 0
+              scoreRangesCount: existingForm.scoreRanges?.length || 0,
+              collaborators: existingForm.collaborators || []
             });
             
             syncFormData(existingForm);
@@ -360,24 +392,12 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const handleCollaboratorsChange = useCallback((collaborators: string[]) => {
+    console.log("useFormBuilder - handleCollaboratorsChange:", collaborators);
     setFormData(prev => ({ ...prev, collaborators }));
   }, []);
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
-
-    const reorderedFields = Array.from(formData.fields || []);
-    const [movedField] = reorderedFields.splice(result.source.index, 1);
-    reorderedFields.splice(result.destination.index, 0, movedField);
-
-    setFormData(prev => ({
-      ...prev,
-      fields: reorderedFields,
-    }));
-  };
-
   const handleSubmit = useCallback(async () => {
-    console.log("useFormBuilder - handleSubmit with scoreRanges:", formData.scoreRanges?.length || 0);
+    console.log("useFormBuilder - handleSubmit with collaborators:", formData.collaborators?.length || 0);
     
     // Validate scoring configuration
     if (formData.showTotalScore) {
@@ -409,7 +429,7 @@ export const useFormBuilder = (id?: string) => {
   const handleCreateForm = async (formData: Partial<Form>) => {
     try {
       setIsSaving(true);
-      console.log("Creating form with data:", formData);
+      console.log("Creating form with collaborators:", formData.collaborators);
       
       const newForm = await createForm(formData);
       console.log("Form created successfully:", newForm);
@@ -435,7 +455,7 @@ export const useFormBuilder = (id?: string) => {
   const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
     try {
       setIsSaving(true);
-      console.log("useFormBuilder - Updating form with scoreRanges:", formData.scoreRanges?.length || 0);
+      console.log("useFormBuilder - Updating form with collaborators:", formData.collaborators?.length || 0);
       
       await updateForm(id, formData);
       toast({
