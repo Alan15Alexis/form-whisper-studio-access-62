@@ -28,7 +28,7 @@ const FormFieldsList = ({
     <div className="flex gap-6">
       {/* Sidebar with draggable field types */}
       <div className="w-80 flex-shrink-0">
-        <FieldsSidebar />
+        <FieldsSidebar onAddField={addField || (() => {})} />
       </div>
       
       {/* Main form fields area */}
