@@ -80,18 +80,21 @@ export type Database = {
       }
       super_administrador: {
         Row: {
+          contrasena: string | null
           correo: string | null
           created_at: string
           id: number
           nombre: string | null
         }
         Insert: {
+          contrasena?: string | null
           correo?: string | null
           created_at?: string
           id?: number
           nombre?: string | null
         }
         Update: {
+          contrasena?: string | null
           correo?: string | null
           created_at?: string
           id?: number

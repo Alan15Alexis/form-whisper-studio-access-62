@@ -30,9 +30,11 @@ const LoginAdmin = () => {
         .from('super_administrador')
         .select('*')
         .eq('correo', email)
+        .eq('contrasena', password)
         .single();
       
       if (error || !data) {
+        console.log('Super admin authentication failed:', error);
         setError("Credenciales de super administrador inválidas");
         setIsLoading(false);
         return;
