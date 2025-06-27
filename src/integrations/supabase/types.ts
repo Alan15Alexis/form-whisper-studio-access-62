@@ -103,18 +103,24 @@ export type Database = {
         Row: {
           contrasena: string | null
           correo: string | null
+          estatus: string | null
+          estatus_aprobacion: string
           id: number
           nombre: string | null
         }
         Insert: {
           contrasena?: string | null
           correo?: string | null
+          estatus?: string | null
+          estatus_aprobacion?: string
           id?: number
           nombre?: string | null
         }
         Update: {
           contrasena?: string | null
           correo?: string | null
+          estatus?: string | null
+          estatus_aprobacion?: string
           id?: number
           nombre?: string | null
         }

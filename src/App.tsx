@@ -9,6 +9,7 @@ import { FormProvider } from "./contexts/form";
 // Pages
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import LoginAdmin from "./pages/LoginAdmin";
 import Register from "./pages/Register";
 import AssignedForms from "./pages/AssignedForms";
 import FormBuilder from "./pages/FormBuilder";
@@ -20,6 +21,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import PublicRoute from "./components/PublicRoute";
 import DashboardAdmin from "./pages/DashboardAdmin";
 import Dashboard from "./pages/Dashboard";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -33,9 +35,11 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/loginAdmin" element={<LoginAdmin />} />
                 <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard-admin" element={<PrivateRoute role="admin"><DashboardAdmin /></PrivateRoute>} />
+                <Route path="/super-admin-dashboard" element={<SuperAdminDashboard />} />
                 <Route path="/assigned-forms" element={<PrivateRoute><AssignedForms /></PrivateRoute>} />
                 <Route path="/forms/new" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />
                 <Route path="/forms/:id/edit" element={<PrivateRoute role="admin"><FormBuilder /></PrivateRoute>} />

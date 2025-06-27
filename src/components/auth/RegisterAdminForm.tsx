@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, User, Mail, KeyRound, UserPlus } from "lucide-react";
+import { AlertCircle, User, Mail, KeyRound, UserPlus, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,6 +14,7 @@ const RegisterAdminForm = () => {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerError, setRegisterError] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -30,19 +31,21 @@ const RegisterAdminForm = () => {
     }
     
     try {
-      const user = await register({
+      await register({
         email: registerEmail,
         password: registerPassword,
         name: registerName,
-        role: "admin" // Registramos como administrador
+        role: "admin"
       });
       
-      if (user) {
-        // Redirect to admin dashboard
-        navigate("/dashboard-admin");
-      } else {
-        setRegisterError("No se pudo crear la cuenta. Inténtalo nuevamente.");
-      }
+      // Show success message
+      setRegistrationSuccess(true);
+      
+      // Reset form
+      setRegisterName("");
+      setRegisterEmail("");
+      setRegisterPassword("");
+      
     } catch (error) {
       console.error("Registration error:", error);
       setRegisterError("Se produjo un error al registrar la cuenta.");
@@ -50,6 +53,34 @@ const RegisterAdminForm = () => {
       setIsRegistering(false);
     }
   };
+
+  if (registrationSuccess) {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="flex justify-center">
+          <CheckCircle className="h-16 w-16 text-green-500" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-green-700">¡Registro exitoso!</h3>
+          <p className="text-sm text-gray-600 mt-2">
+            Tu cuenta de administrador ha sido registrada y está pendiente de aprobación por el super administrador.
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            Recibirás una notificación cuando tu cuenta sea aprobada.
+          </p>
+        </div>
+        <Button 
+          onClick={() => {
+            setRegistrationSuccess(false);
+            navigate("/login");
+          }}
+          className="w-full bg-[#686df3] hover:bg-[#575ce2]"
+        >
+          Ir a iniciar sesión
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleRegister} className="space-y-4">

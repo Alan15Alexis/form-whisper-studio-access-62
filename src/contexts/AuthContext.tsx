@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { authenticateAdminUser, authenticateInvitedUser, registerAdminUser } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/toast';
@@ -7,7 +6,7 @@ interface User {
   id: string | number;
   email: string;
   name?: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'super_admin';
 }
 
 interface AuthContextType {
@@ -67,7 +66,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // If password is provided, try admin authentication first
       if (credentials.password && credentials.password.trim() !== '') {
-        user = await authenticateAdminUser(credentials.email, credentials.password);
+        const authResult = await authenticateAdminUser(credentials.email, credentials.password);
+        
+        // Handle approval status error
+        if (authResult && typeof authResult === 'object' && 'error' in authResult) {
+          toast({
+            title: "Acceso denegado",
+            description: authResult.error,
+            variant: "destructive",
+          });
+          return null;
+        }
+        
+        user = authResult;
       }
       
       // If no user found and no password (or password failed), try invited user
@@ -134,17 +145,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const adminData = await registerAdminUser(userData.name, userData.email, userData.password);
         
         if (adminData) {
-          const user: User = {
-            id: adminData.id,
-            email: adminData.correo,
-            name: adminData.nombre,
-            role: 'admin'
-          };
+          // Show registration success message but don't log them in automatically
+          toast({
+            title: "Registro exitoso",
+            description: "Tu cuenta ha sido registrada y está pendiente de aprobación por el super administrador",
+          });
           
-          setCurrentUser(user);
-          setIsAuthenticated(true);
-          localStorage.setItem('currentUser', JSON.stringify(user));
-          return user;
+          return null; // Don't return user to prevent auto-login
         }
       }
       

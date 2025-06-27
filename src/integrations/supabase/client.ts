@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://tsajriavcmbwgnlsonmq.supabase.co';
@@ -32,10 +31,20 @@ export const authenticateAdminUser = async (email: string, password: string) => 
     }
     
     if (data) {
+      // Check approval status
+      if (data.estatus_aprobacion !== 'aprobado') {
+        console.log('Admin authentication blocked - not approved:', data.estatus_aprobacion);
+        return {
+          error: 'Tu cuenta de administrador está pendiente de aprobación o ha sido rechazada. Contacta al super administrador.',
+          status: data.estatus_aprobacion
+        };
+      }
+
       console.log('Admin authenticated successfully:', {
         id: data.id,
         nombre: data.nombre,
         correo: data.correo,
+        estatus_aprobacion: data.estatus_aprobacion
       });
       
       // Return user object in format expected by the app
