@@ -24,6 +24,51 @@ const validateFormId = (id: string): boolean => {
   return false;
 };
 
+// Helper function to convert form ID to database-compatible format
+const convertFormIdForDatabase = (id: string): number => {
+  console.log('Converting form ID for database:', id);
+  
+  // If it's already numeric, convert to number
+  if (/^\d+$/.test(id)) {
+    const numericId = parseInt(id, 10);
+    console.log('Converted numeric ID:', numericId);
+    return numericId;
+  }
+  
+  // If it's a UUID, we need to find the corresponding numeric ID from the database
+  // For now, we'll throw an error as this should be handled at a higher level
+  throw new Error(`Cannot convert UUID ${id} to numeric ID without database lookup`);
+};
+
+// Helper function to get numeric ID from UUID by querying the database
+const getNumericIdFromUuid = async (uuidId: string): Promise<number | null> => {
+  console.log('Looking up numeric ID for UUID:', uuidId);
+  
+  try {
+    // First try to find by matching the UUID in some way
+    // Since we don't have a UUID column, we'll search by form properties
+    // This is a temporary solution - ideally we'd add a UUID column to the database
+    
+    const { data: forms, error } = await supabase
+      .from('formulario_construccion')
+      .select('id, titulo, descripcion, created_at')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error querying forms:', error);
+      return null;
+    }
+    
+    // For now, return null to indicate we couldn't find a match
+    // In a real implementation, we'd need to add a UUID column to the database
+    console.warn('UUID to numeric ID conversion not implemented - requires database schema update');
+    return null;
+  } catch (error) {
+    console.error('Error in UUID lookup:', error);
+    return null;
+  }
+};
+
 export const createFormOperation = (
   forms: Form[],
   setForms: React.Dispatch<React.SetStateAction<Form[]>>,
@@ -118,15 +163,36 @@ export const updateFormOperation = (
 ) => {
   return async (id: string, formData: Partial<Form>): Promise<Form | null> => {
     try {
-      console.log("Updating form:", { id, ...formData });
+      console.log("Updating form:", { id, collaborators: formData.collaborators });
       
       // Validate form ID format
       if (!validateFormId(id)) {
         throw new Error(`Invalid form ID format: ${id}. Expected a numeric ID or UUID.`);
       }
 
-      // Convert string ID to number for Supabase query
-      const numericId = /^\d+$/.test(id) ? parseInt(id, 10) : id;
+      let numericId: number;
+      
+      // Handle ID conversion
+      if (/^\d+$/.test(id)) {
+        // It's already numeric
+        numericId = parseInt(id, 10);
+        console.log('Using numeric ID:', numericId);
+      } else {
+        // It's a UUID - try to find the corresponding numeric ID
+        const foundId = await getNumericIdFromUuid(id);
+        if (foundId === null) {
+          // If we can't find the numeric ID, try to find it by matching form properties
+          const localForm = forms.find(f => f.id === id);
+          if (localForm && /^\d+$/.test(localForm.id)) {
+            numericId = parseInt(localForm.id, 10);
+            console.log('Found numeric ID from local form:', numericId);
+          } else {
+            throw new Error(`Cannot find numeric ID for UUID: ${id}. This may indicate a data inconsistency.`);
+          }
+        } else {
+          numericId = foundId;
+        }
+      }
       
       // Prepare update data for Supabase
       const updateData: any = {};
@@ -136,7 +202,10 @@ export const updateFormOperation = (
       if (formData.fields !== undefined) updateData.preguntas = formData.fields;
       if (formData.allowedUsers !== undefined) updateData.acceso = formData.allowedUsers;
       if (formData.scoreRanges !== undefined) updateData.rangos_mensajes = formData.scoreRanges;
-      if (formData.collaborators !== undefined) updateData.colaboradores = formData.collaborators;
+      if (formData.collaborators !== undefined) {
+        updateData.colaboradores = formData.collaborators;
+        console.log('Updating collaborators in database:', formData.collaborators);
+      }
       
       // Handle configuration updates
       if (formData.isPrivate !== undefined || 
@@ -209,6 +278,11 @@ export const updateFormOperation = (
       if (formData.allowedUsers) {
         setAllowedUsers(prev => ({ ...prev, [id]: formData.allowedUsers || [] }));
       }
+
+      toast({
+        title: 'Formulario actualizado',
+        description: 'Los cambios se han guardado exitosamente',
+      });
 
       return updatedForm;
     } catch (error) {

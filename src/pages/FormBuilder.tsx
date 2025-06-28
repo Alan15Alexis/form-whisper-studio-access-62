@@ -14,6 +14,7 @@ const FormBuilder = () => {
     allowedUserName,
     isSaving,
     isEditMode,
+    isLoading,
     handleTitleChange,
     handleDescriptionChange,
     handlePrivateChange,
@@ -35,14 +36,29 @@ const FormBuilder = () => {
     handleCollaboratorsChange
   } = useFormBuilder(id);
 
+  // Show loading state while form data is being loaded
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-lg text-gray-500">
+              Cargando datos del formulario...
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // Add a safety check to ensure formData is not undefined before rendering
   if (!formData) {
     return (
       <Layout>
         <div className="container py-8">
           <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-gray-500">
-              Loading form data...
+            <div className="text-lg text-red-500">
+              Error: No se pudo cargar el formulario
             </div>
           </div>
         </div>
@@ -63,6 +79,7 @@ const FormBuilder = () => {
   };
 
   console.log("FormBuilder - Safe formData:", {
+    id: safeFormData.id,
     showTotalScore: safeFormData.showTotalScore,
     scoreRangesCount: safeFormData.scoreRanges.length,
     collaboratorsCount: safeFormData.collaborators.length

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -140,8 +139,8 @@ export const useFormBuilder = (id?: string) => {
               forms.map(f => ({ id: f.id, title: f.title }))
             );
             toast({
-              title: 'Form not found',
-              description: 'The form you are trying to edit does not exist.',
+              title: 'Formulario no encontrado',
+              description: 'El formulario que intentas editar no existe o no se pudo cargar.',
               variant: 'destructive',
             });
             navigate('/dashboard-admin');
@@ -149,8 +148,8 @@ export const useFormBuilder = (id?: string) => {
         } catch (error) {
           console.error("useFormBuilder - Error:", error);
           toast({
-            title: 'Error loading form',
-            description: 'There was an error loading the form data.',
+            title: 'Error al cargar formulario',
+            description: 'Hubo un error al cargar los datos del formulario.',
             variant: 'destructive',
           });
           navigate('/dashboard-admin');
@@ -458,17 +457,11 @@ export const useFormBuilder = (id?: string) => {
       console.log("useFormBuilder - Updating form with collaborators:", formData.collaborators?.length || 0);
       
       await updateForm(id, formData);
-      toast({
-        title: 'Formulario actualizado',
-        description: `"${formData.title}" ha sido actualizado exitosamente`,
-      });
+      
+      // Don't show success message here since it's already shown in updateFormOperation
     } catch (error) {
       console.error("Error updating form:", error);
-      toast({
-        title: 'Error al actualizar formulario',
-        description: 'Algo salió mal al actualizar el formulario.',
-        variant: 'destructive',
-      });
+      // Error message is already shown in updateFormOperation
     } finally {
       setIsSaving(false);
     }

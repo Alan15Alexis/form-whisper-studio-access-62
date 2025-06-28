@@ -128,7 +128,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log(`FormContext - Processing form "${formData.titulo}" (ID: ${formData.id}):`, {
             hasRangosMensajes: !!formData.rangos_mensajes,
             scoreRangesCount: scoreRanges.length,
-            showTotalScore: showTotalScore
+            showTotalScore: showTotalScore,
+            collaborators: formData.colaboradores
           });
           
           // Process collaborators from database
@@ -234,16 +235,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return undefined;
     }
     
-    // Try to find by exact ID match first
+    // Try to find by exact ID match first (this handles both numeric and UUID)
     let form = forms.find(f => f.id === id);
-    
-    // If not found by ID, try by title (for backwards compatibility)
-    if (!form) {
-      form = forms.find(f => f.title === id);
-      if (form) {
-        console.warn(`FormContext - Form found by title "${id}" instead of ID`);
-      }
-    }
     
     if (form) {
       console.log(`FormContext - getForm(${id}) found form:`, {
