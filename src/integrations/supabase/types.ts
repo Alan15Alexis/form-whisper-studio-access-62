@@ -106,7 +106,6 @@ export type Database = {
         Row: {
           contrasena: string | null
           correo: string | null
-          estatus: string | null
           estatus_aprobacion: string
           id: number
           nombre: string | null
@@ -114,7 +113,6 @@ export type Database = {
         Insert: {
           contrasena?: string | null
           correo?: string | null
-          estatus?: string | null
           estatus_aprobacion?: string
           id?: number
           nombre?: string | null
@@ -122,7 +120,6 @@ export type Database = {
         Update: {
           contrasena?: string | null
           correo?: string | null
-          estatus?: string | null
           estatus_aprobacion?: string
           id?: number
           nombre?: string | null

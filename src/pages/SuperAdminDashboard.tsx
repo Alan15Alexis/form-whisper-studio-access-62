@@ -15,7 +15,6 @@ interface AdminUser {
   nombre: string;
   correo: string;
   estatus_aprobacion: 'pendiente' | 'aprobado' | 'rechazado';
-  created_at?: string;
 }
 
 const SuperAdminDashboard = () => {
@@ -53,7 +52,7 @@ const SuperAdminDashboard = () => {
         const { data, error } = await supabase
           .from('usuario_administrador')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('id', { ascending: false });
         
         if (error) {
           console.error('Error fetching admin users:', error);
@@ -193,12 +192,10 @@ const SuperAdminDashboard = () => {
           <Mail className="h-4 w-4" />
           <span>{user.correo}</span>
         </div>
-        {user.created_at && (
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Calendar className="h-4 w-4" />
-            <span>Registrado: {new Date(user.created_at).toLocaleDateString()}</span>
-          </div>
-        )}
+        <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <Calendar className="h-4 w-4" />
+          <span>ID: {user.id}</span>
+        </div>
       </CardHeader>
       {user.estatus_aprobacion === 'pendiente' && (
         <CardContent className="pt-0">
