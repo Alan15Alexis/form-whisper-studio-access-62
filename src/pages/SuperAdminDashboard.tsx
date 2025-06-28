@@ -1,12 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, XCircle, Clock, User, Mail, Calendar } from "lucide-react";
+import { CheckCircle, XCircle, Clock, User, Mail, Calendar, LogOut, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/toast";
 
@@ -80,6 +79,16 @@ const SuperAdminDashboard = () => {
     
     fetchAdminUsers();
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userEmail');
+    toast({
+      title: "Sesión cerrada",
+      description: "Has cerrado sesión exitosamente",
+    });
+    navigate('/loginAdmin');
+  };
 
   const handleApproveUser = async (userId: number) => {
     try {
@@ -224,101 +233,145 @@ const SuperAdminDashboard = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </Layout>
+      <div className="min-h-screen bg-background">
+        {/* Header with logout */}
+        <header className="border-b shadow-sm bg-white">
+          <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-8 w-8 text-red-600" />
+              <span className="text-xl font-bold text-red-600">Super Administrador</span>
+            </div>
+            <Button variant="ghost" onClick={handleLogout} className="flex items-center">
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar Sesión
+            </Button>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-6">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </main>
+
+        <footer className="bg-white border-t py-6">
+          <div className="container mx-auto px-4 text-center text-gray-500">
+            <p>© 2025. All rights reserved. | Proudly ⭐️ Powered by <a href="https://beed.studio" className="text-[#686df3] hover:underline">beedStudio</a></p>
+          </div>
+        </footer>
+      </div>
     );
   }
 
   return (
-    <Layout title="Panel Super Administrador">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Panel de Super Administrador</h2>
-        <p className="text-gray-600">Gestiona las solicitudes de registro de administradores</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Header with logout */}
+      <header className="border-b shadow-sm bg-white">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Shield className="h-8 w-8 text-red-600" />
+            <span className="text-xl font-bold text-red-600">Super Administrador</span>
+          </div>
+          <Button variant="ghost" onClick={handleLogout} className="flex items-center">
+            <LogOut className="mr-2 h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pendientes</CardTitle>
-            <div className="text-2xl font-bold text-yellow-600">{pendingUsers.length}</div>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Aprobados</CardTitle>
-            <div className="text-2xl font-bold text-green-600">{approvedUsers.length}</div>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Rechazados</CardTitle>
-            <div className="text-2xl font-bold text-red-600">{rejectedUsers.length}</div>
-          </CardHeader>
-        </Card>
-      </div>
+      <main className="container mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-2">Panel de Super Administrador</h2>
+          <p className="text-gray-600">Gestiona las solicitudes de registro de administradores</p>
+        </div>
 
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="pending">Pendientes ({pendingUsers.length})</TabsTrigger>
-          <TabsTrigger value="approved">Aprobados ({approvedUsers.length})</TabsTrigger>
-          <TabsTrigger value="rejected">Rechazados ({rejectedUsers.length})</TabsTrigger>
-        </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Pendientes</CardTitle>
+              <div className="text-2xl font-bold text-yellow-600">{pendingUsers.length}</div>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Aprobados</CardTitle>
+              <div className="text-2xl font-bold text-green-600">{approvedUsers.length}</div>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Rechazados</CardTitle>
+              <div className="text-2xl font-bold text-red-600">{rejectedUsers.length}</div>
+            </CardHeader>
+          </Card>
+        </div>
 
-        <TabsContent value="pending">
-          {pendingUsers.length > 0 ? (
-            <div>
-              {pendingUsers.map(user => (
-                <UserCard key={user.id} user={user} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No hay solicitudes pendientes</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="pending">Pendientes ({pendingUsers.length})</TabsTrigger>
+            <TabsTrigger value="approved">Aprobados ({approvedUsers.length})</TabsTrigger>
+            <TabsTrigger value="rejected">Rechazados ({rejectedUsers.length})</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="approved">
-          {approvedUsers.length > 0 ? (
-            <div>
-              {approvedUsers.map(user => (
-                <UserCard key={user.id} user={user} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No hay administradores aprobados</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+          <TabsContent value="pending">
+            {pendingUsers.length > 0 ? (
+              <div>
+                {pendingUsers.map(user => (
+                  <UserCard key={user.id} user={user} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No hay solicitudes pendientes</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-        <TabsContent value="rejected">
-          {rejectedUsers.length > 0 ? (
-            <div>
-              {rejectedUsers.map(user => (
-                <UserCard key={user.id} user={user} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <XCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No hay administradores rechazados</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </Layout>
+          <TabsContent value="approved">
+            {approvedUsers.length > 0 ? (
+              <div>
+                {approvedUsers.map(user => (
+                  <UserCard key={user.id} user={user} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No hay administradores aprobados</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="rejected">
+            {rejectedUsers.length > 0 ? (
+              <div>
+                {rejectedUsers.map(user => (
+                  <UserCard key={user.id} user={user} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <XCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No hay administradores rechazados</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      <footer className="bg-white border-t py-6">
+        <div className="container mx-auto px-4 text-center text-gray-500">
+          <p>© 2025. All rights reserved. | Proudly ⭐️ Powered by <a href="https://beed.studio" className="text-[#686df3] hover:underline">beedStudio</a></p>
+        </div>
+      </footer>
+    </div>
   );
 };
 
