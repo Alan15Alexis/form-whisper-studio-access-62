@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -67,14 +68,15 @@ export const useFormBuilder = (id?: string) => {
     }
   });
 
-  // Enhanced form data sync to prevent unnecessary updates
+  // Enhanced form data sync with better collaborators handling
   const syncFormData = useCallback((sourceForm: Form) => {
     console.log("useFormBuilder - Syncing form data:", {
       formId: sourceForm.id,
       title: sourceForm.title,
       showTotalScore: sourceForm.showTotalScore,
       scoreRangesCount: sourceForm.scoreRanges?.length || 0,
-      collaborators: sourceForm.collaborators || []
+      collaborators: sourceForm.collaborators || [],
+      collaboratorsCount: sourceForm.collaborators?.length || 0
     });
     
     setFormData(prevData => {
@@ -85,16 +87,25 @@ export const useFormBuilder = (id?: string) => {
         newData.scoreRanges = [];
       }
       
-      // Ensure collaborators is always an array
+      // Enhanced collaborators handling with validation
       if (!Array.isArray(newData.collaborators)) {
+        console.warn("useFormBuilder - Invalid collaborators data, converting to array:", newData.collaborators);
         newData.collaborators = [];
+      } else {
+        // Filter and validate collaborators
+        newData.collaborators = newData.collaborators.filter(email => 
+          typeof email === 'string' && email.trim().length > 0
+        );
       }
       
-      // Only update if data has actually changed
+      // Only update if data has actually changed (deep comparison for collaborators)
       const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
       
       if (hasChanged) {
-        console.log("useFormBuilder - Form data updated with collaborators:", newData.collaborators?.length || 0);
+        console.log("useFormBuilder - Form data updated with collaborators:", {
+          collaborators: newData.collaborators,
+          collaboratorsCount: newData.collaborators.length
+        });
         return newData;
       }
       
@@ -130,13 +141,14 @@ export const useFormBuilder = (id?: string) => {
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
               scoreRangesCount: existingForm.scoreRanges?.length || 0,
-              collaborators: existingForm.collaborators || []
+              collaborators: existingForm.collaborators || [],
+              collaboratorsCount: existingForm.collaborators?.length || 0
             });
             
             syncFormData(existingForm);
           } else {
             console.log("useFormBuilder - Form not found after retries. Available forms:", 
-              forms.map(f => ({ id: f.id, title: f.title }))
+              forms.map(f => ({ id: f.id, title: f.title, collaboratorsCount: f.collaborators?.length || 0 }))
             );
             toast({
               title: 'Formulario no encontrado',
@@ -390,13 +402,28 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => ({ ...prev, httpConfig: config }));
   };
 
+  // Enhanced collaborators change handler with validation and logging
   const handleCollaboratorsChange = useCallback((collaborators: string[]) => {
-    console.log("useFormBuilder - handleCollaboratorsChange:", collaborators);
-    setFormData(prev => ({ ...prev, collaborators }));
+    console.log("useFormBuilder - handleCollaboratorsChange called with:", collaborators);
+    
+    // Validate and sanitize collaborators array
+    const validCollaborators = Array.isArray(collaborators) 
+      ? collaborators.filter(email => typeof email === 'string' && email.trim().length > 0)
+      : [];
+    
+    console.log("useFormBuilder - Setting valid collaborators:", validCollaborators);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      collaborators: validCollaborators 
+    }));
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    console.log("useFormBuilder - handleSubmit with collaborators:", formData.collaborators?.length || 0);
+    console.log("useFormBuilder - handleSubmit with collaborators:", {
+      collaborators: formData.collaborators,
+      collaboratorsCount: formData.collaborators?.length || 0
+    });
     
     // Validate scoring configuration
     if (formData.showTotalScore) {
@@ -428,10 +455,10 @@ export const useFormBuilder = (id?: string) => {
   const handleCreateForm = async (formData: Partial<Form>) => {
     try {
       setIsSaving(true);
-      console.log("Creating form with collaborators:", formData.collaborators);
+      console.log("useFormBuilder - Creating form with collaborators:", formData.collaborators);
       
       const newForm = await createForm(formData);
-      console.log("Form created successfully:", newForm);
+      console.log("useFormBuilder - Form created successfully:", newForm);
       
       navigate('/dashboard-admin');
       
@@ -440,7 +467,7 @@ export const useFormBuilder = (id?: string) => {
         description: `"${newForm.title}" ha sido creado exitosamente`,
       });
     } catch (error) {
-      console.error("Error creating form:", error);
+      console.error("useFormBuilder - Error creating form:", error);
       toast({
         title: 'Error al crear formulario',
         description: 'Algo salió mal al crear el formulario.',
@@ -454,13 +481,18 @@ export const useFormBuilder = (id?: string) => {
   const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
     try {
       setIsSaving(true);
-      console.log("useFormBuilder - Updating form with collaborators:", formData.collaborators?.length || 0);
+      console.log("useFormBuilder - Updating form with collaborators:", {
+        id,
+        collaborators: formData.collaborators,
+        collaboratorsCount: formData.collaborators?.length || 0
+      });
       
       await updateForm(id, formData);
       
+      console.log("useFormBuilder - Form update completed successfully");
       // Don't show success message here since it's already shown in updateFormOperation
     } catch (error) {
-      console.error("Error updating form:", error);
+      console.error("useFormBuilder - Error updating form:", error);
       // Error message is already shown in updateFormOperation
     } finally {
       setIsSaving(false);

@@ -1,72 +1,80 @@
-
 import { toast } from "@/components/ui/use-toast";
 import { Form } from '@/types/form';
 import { supabase } from '@/integrations/supabase/client';
 
-// Helper function to validate form ID format (accepts both numeric and UUID formats)
+// Enhanced helper function to validate form ID format (accepts both numeric and UUID formats)
 const validateFormId = (id: string): boolean => {
-  console.log('Validating form ID:', id);
+  console.log('validateFormId - Validating form ID:', id);
   
   // Check if it's a numeric ID (legacy format)
   if (/^\d+$/.test(id)) {
-    console.log('Valid numeric ID format');
+    console.log('validateFormId - Valid numeric ID format');
     return true;
   }
   
   // Check if it's a UUID format (new format)
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(id)) {
-    console.log('Valid UUID format');
+    console.log('validateFormId - Valid UUID format');
     return true;
   }
   
-  console.error('Invalid form ID format - expected numeric ID or UUID but got:', id);
+  console.error('validateFormId - Invalid form ID format - expected numeric ID or UUID but got:', id);
   return false;
 };
 
-// Helper function to convert form ID to database-compatible format
-const convertFormIdForDatabase = (id: string): number => {
-  console.log('Converting form ID for database:', id);
+// Enhanced helper function to find numeric ID from any form identifier
+const resolveNumericFormId = async (id: string, forms: Form[]): Promise<number | null> => {
+  console.log('resolveNumericFormId - Resolving ID:', id);
   
   // If it's already numeric, convert to number
   if (/^\d+$/.test(id)) {
     const numericId = parseInt(id, 10);
-    console.log('Converted numeric ID:', numericId);
+    console.log('resolveNumericFormId - Already numeric:', numericId);
     return numericId;
   }
   
-  // If it's a UUID, we need to find the corresponding numeric ID from the database
-  // For now, we'll throw an error as this should be handled at a higher level
-  throw new Error(`Cannot convert UUID ${id} to numeric ID without database lookup`);
-};
-
-// Helper function to get numeric ID from UUID by querying the database
-const getNumericIdFromUuid = async (uuidId: string): Promise<number | null> => {
-  console.log('Looking up numeric ID for UUID:', uuidId);
-  
-  try {
-    // First try to find by matching the UUID in some way
-    // Since we don't have a UUID column, we'll search by form properties
-    // This is a temporary solution - ideally we'd add a UUID column to the database
+  // If it's a UUID, try to find matching form in local state first
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    console.log('resolveNumericFormId - UUID detected, searching in local forms');
     
-    const { data: forms, error } = await supabase
-      .from('formulario_construccion')
-      .select('id, titulo, descripcion, created_at')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error querying forms:', error);
-      return null;
+    // Search in local forms array for a matching form
+    const localForm = forms.find(f => f.id === id);
+    if (localForm) {
+      // Check if the local form has a numeric ID we can use
+      const parts = localForm.id.split('-');
+      if (parts.length === 1 && /^\d+$/.test(parts[0])) {
+        const numericId = parseInt(parts[0], 10);
+        console.log('resolveNumericFormId - Found numeric ID from local form:', numericId);
+        return numericId;
+      }
     }
     
-    // For now, return null to indicate we couldn't find a match
-    // In a real implementation, we'd need to add a UUID column to the database
-    console.warn('UUID to numeric ID conversion not implemented - requires database schema update');
-    return null;
-  } catch (error) {
-    console.error('Error in UUID lookup:', error);
-    return null;
+    // If we can't resolve from local state, search database by other properties
+    console.log('resolveNumericFormId - Searching database for UUID match');
+    try {
+      const { data: forms, error } = await supabase
+        .from('formulario_construccion')
+        .select('id, titulo, administrador, created_at')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('resolveNumericFormId - Database query error:', error);
+        return null;
+      }
+      
+      // For now, we can't directly match UUID to numeric ID without a mapping
+      // This would require database schema changes to add a UUID column
+      console.warn('resolveNumericFormId - Cannot resolve UUID to numeric ID without schema changes');
+      return null;
+    } catch (error) {
+      console.error('resolveNumericFormId - Error querying database:', error);
+      return null;
+    }
   }
+  
+  console.error('resolveNumericFormId - Unrecognized ID format:', id);
+  return null;
 };
 
 export const createFormOperation = (
@@ -79,9 +87,9 @@ export const createFormOperation = (
 ) => {
   return async (formData: Partial<Form>): Promise<Form> => {
     try {
-      console.log("Creating form with data:", formData);
+      console.log("createFormOperation - Creating form with data:", formData);
       
-      // Prepare form data for Supabase
+      // Prepare form data for Supabase with enhanced collaborators handling
       const supabaseData = {
         titulo: formData.title || '',
         descripcion: formData.description || '',
@@ -97,10 +105,10 @@ export const createFormOperation = (
         acceso: formData.allowedUsers || [],
         administrador: userEmail,
         rangos_mensajes: formData.scoreRanges || [],
-        colaboradores: formData.collaborators || []
+        colaboradores: Array.isArray(formData.collaborators) ? formData.collaborators : []
       };
 
-      console.log("Inserting form data to Supabase:", supabaseData);
+      console.log("createFormOperation - Inserting form data to Supabase with collaborators:", supabaseData.colaboradores);
       
       const { data, error } = await supabase
         .from('formulario_construccion')
@@ -109,13 +117,13 @@ export const createFormOperation = (
         .single();
 
       if (error) {
-        console.error("Supabase error:", error);
+        console.error("createFormOperation - Supabase error:", error);
         throw new Error(`Failed to create form: ${error.message}`);
       }
 
-      console.log("Form created in Supabase:", data);
+      console.log("createFormOperation - Form created in Supabase:", data);
 
-      // Convert Supabase data back to Form format
+      // Convert Supabase data back to Form format with proper collaborators handling
       const newForm: Form = {
         id: data.id.toString(),
         title: data.titulo || '',
@@ -123,7 +131,7 @@ export const createFormOperation = (
         fields: data.preguntas || [],
         isPrivate: data.configuracion?.isPrivate || false,
         allowedUsers: data.acceso || [],
-        collaborators: data.colaboradores || [],
+        collaborators: Array.isArray(data.colaboradores) ? data.colaboradores : [],
         createdAt: data.created_at,
         updatedAt: data.created_at,
         accessLink: crypto.randomUUID(),
@@ -135,6 +143,8 @@ export const createFormOperation = (
         scoreRanges: data.rangos_mensajes || []
       };
 
+      console.log("createFormOperation - New form created with collaborators:", newForm.collaborators);
+
       // Update local state
       setForms(prev => [newForm, ...prev]);
 
@@ -145,7 +155,7 @@ export const createFormOperation = (
 
       return newForm;
     } catch (error) {
-      console.error("Error in createFormOperation:", error);
+      console.error("createFormOperation - Error:", error);
       toast({
         title: 'Error al crear formulario',
         description: error instanceof Error ? error.message : 'Error desconocido',
@@ -163,38 +173,37 @@ export const updateFormOperation = (
 ) => {
   return async (id: string, formData: Partial<Form>): Promise<Form | null> => {
     try {
-      console.log("Updating form:", { id, collaborators: formData.collaborators });
+      console.log("updateFormOperation - Updating form:", { id, collaborators: formData.collaborators });
       
-      // Validate form ID format
+      // Enhanced form ID validation
       if (!validateFormId(id)) {
         throw new Error(`Invalid form ID format: ${id}. Expected a numeric ID or UUID.`);
       }
 
-      let numericId: number;
+      // Enhanced numeric ID resolution with fallback mechanisms
+      const numericId = await resolveNumericFormId(id, forms);
       
-      // Handle ID conversion
-      if (/^\d+$/.test(id)) {
-        // It's already numeric
-        numericId = parseInt(id, 10);
-        console.log('Using numeric ID:', numericId);
-      } else {
-        // It's a UUID - try to find the corresponding numeric ID
-        const foundId = await getNumericIdFromUuid(id);
-        if (foundId === null) {
-          // If we can't find the numeric ID, try to find it by matching form properties
-          const localForm = forms.find(f => f.id === id);
-          if (localForm && /^\d+$/.test(localForm.id)) {
-            numericId = parseInt(localForm.id, 10);
-            console.log('Found numeric ID from local form:', numericId);
+      if (numericId === null) {
+        // Final fallback: try to extract from forms array by matching properties
+        const matchingForm = forms.find(f => f.id === id);
+        if (matchingForm) {
+          console.log('updateFormOperation - Found matching form in local state:', matchingForm.title);
+          // Try to extract numeric ID if the local form ID is actually numeric
+          const tryNumeric = parseInt(matchingForm.id, 10);
+          if (!isNaN(tryNumeric)) {
+            console.log('updateFormOperation - Using extracted numeric ID:', tryNumeric);
           } else {
-            throw new Error(`Cannot find numeric ID for UUID: ${id}. This may indicate a data inconsistency.`);
+            throw new Error(`Cannot resolve form ID "${id}" to database format. Form may not exist or there's an ID mapping issue.`);
           }
         } else {
-          numericId = foundId;
+          throw new Error(`Form with ID "${id}" not found in local state and cannot be resolved to database format.`);
         }
       }
       
-      // Prepare update data for Supabase
+      const finalNumericId = numericId || parseInt(id, 10);
+      console.log('updateFormOperation - Using numeric ID for database update:', finalNumericId);
+      
+      // Prepare update data for Supabase with enhanced collaborators handling
       const updateData: any = {};
       
       if (formData.title !== undefined) updateData.titulo = formData.title;
@@ -202,12 +211,15 @@ export const updateFormOperation = (
       if (formData.fields !== undefined) updateData.preguntas = formData.fields;
       if (formData.allowedUsers !== undefined) updateData.acceso = formData.allowedUsers;
       if (formData.scoreRanges !== undefined) updateData.rangos_mensajes = formData.scoreRanges;
+      
+      // Enhanced collaborators handling with detailed logging
       if (formData.collaborators !== undefined) {
-        updateData.colaboradores = formData.collaborators;
-        console.log('Updating collaborators in database:', formData.collaborators);
+        const collaboratorsArray = Array.isArray(formData.collaborators) ? formData.collaborators : [];
+        updateData.colaboradores = collaboratorsArray;
+        console.log('updateFormOperation - Setting collaborators in database:', collaboratorsArray);
       }
       
-      // Handle configuration updates
+      // Handle configuration updates with existing config preservation
       if (formData.isPrivate !== undefined || 
           formData.formColor !== undefined || 
           formData.allowViewOwnResponses !== undefined || 
@@ -215,12 +227,16 @@ export const updateFormOperation = (
           formData.showTotalScore !== undefined ||
           formData.httpConfig !== undefined) {
         
-        // Get current configuration
-        const { data: currentData } = await supabase
+        // Get current configuration to preserve existing settings
+        const { data: currentData, error: fetchError } = await supabase
           .from('formulario_construccion')
           .select('configuracion')
-          .eq('id', numericId)
+          .eq('id', finalNumericId)
           .single();
+        
+        if (fetchError) {
+          console.warn('updateFormOperation - Could not fetch current config:', fetchError);
+        }
         
         const currentConfig = currentData?.configuracion || {};
         
@@ -235,23 +251,23 @@ export const updateFormOperation = (
         };
       }
 
-      console.log("Updating Supabase with data:", updateData);
+      console.log("updateFormOperation - Updating Supabase with data:", updateData);
 
       const { data, error } = await supabase
         .from('formulario_construccion')
         .update(updateData)
-        .eq('id', numericId)
+        .eq('id', finalNumericId)
         .select()
         .single();
 
       if (error) {
-        console.error("Supabase update error:", error);
+        console.error("updateFormOperation - Supabase update error:", error);
         throw new Error(`Failed to update form: ${error.message}`);
       }
 
-      console.log("Form updated in Supabase:", data);
+      console.log("updateFormOperation - Form updated in Supabase:", data);
 
-      // Convert updated data back to Form format
+      // Convert updated data back to Form format with proper collaborators handling
       const updatedForm: Form = {
         id: data.id.toString(),
         title: data.titulo || '',
@@ -259,7 +275,7 @@ export const updateFormOperation = (
         fields: data.preguntas || [],
         isPrivate: data.configuracion?.isPrivate || false,
         allowedUsers: data.acceso || [],
-        collaborators: data.colaboradores || [],
+        collaborators: Array.isArray(data.colaboradores) ? data.colaboradores : [],
         createdAt: data.created_at,
         updatedAt: data.created_at,
         accessLink: crypto.randomUUID(),
@@ -271,7 +287,9 @@ export const updateFormOperation = (
         scoreRanges: data.rangos_mensajes || []
       };
 
-      // Update local state
+      console.log("updateFormOperation - Updated form with collaborators:", updatedForm.collaborators);
+
+      // Update local state with proper ID matching
       setForms(prev => prev.map(form => form.id === id ? updatedForm : form));
 
       // Update allowed users if needed
@@ -286,7 +304,7 @@ export const updateFormOperation = (
 
       return updatedForm;
     } catch (error) {
-      console.error("Error in updateFormOperation:", error);
+      console.error("updateFormOperation - Error:", error);
       toast({
         title: 'Error al actualizar formulario',
         description: error instanceof Error ? error.message : 'Error desconocido',

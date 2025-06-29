@@ -85,6 +85,44 @@ const cleanScoreRanges = (ranges: any): any[] => {
   }).filter(range => range !== null);
 };
 
+// Enhanced helper function to process collaborators data
+const processCollaborators = (collaboratorsData: any): string[] => {
+  console.log('processCollaborators - Processing raw data:', collaboratorsData);
+  
+  if (!collaboratorsData) {
+    console.log('processCollaborators - No collaborators data, returning empty array');
+    return [];
+  }
+  
+  if (Array.isArray(collaboratorsData)) {
+    const processed = collaboratorsData
+      .filter(item => typeof item === 'string' && item.trim().length > 0)
+      .map(item => item.trim().toLowerCase());
+    
+    console.log('processCollaborators - Processed array:', processed);
+    return processed;
+  }
+  
+  if (typeof collaboratorsData === 'string') {
+    try {
+      const parsed = JSON.parse(collaboratorsData);
+      if (Array.isArray(parsed)) {
+        const processed = parsed
+          .filter(item => typeof item === 'string' && item.trim().length > 0)
+          .map(item => item.trim().toLowerCase());
+        
+        console.log('processCollaborators - Processed from JSON string:', processed);
+        return processed;
+      }
+    } catch (error) {
+      console.warn('processCollaborators - Failed to parse JSON string:', error);
+    }
+  }
+  
+  console.log('processCollaborators - Unrecognized format, returning empty array');
+  return [];
+};
+
 export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [forms, setForms] = useState(getInitialForms());
@@ -93,7 +131,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
   const [formsLoaded, setFormsLoaded] = useState(false);
 
-  // Enhanced form loading function with extensive debugging for score ranges
+  // Enhanced form loading function with extensive debugging for collaborators
   const loadFormsFromSupabase = useCallback(async (forceReload = false) => {
     if (formsLoaded && !forceReload) {
       console.log("FormContext - Forms already loaded, skipping reload");
@@ -125,20 +163,17 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Enhanced score ranges processing with extensive validation and logging
           const scoreRanges = cleanScoreRanges(formData.rangos_mensajes);
           
+          // Enhanced collaborators processing with detailed logging
+          const collaborators = processCollaborators(formData.colaboradores);
+          
           console.log(`FormContext - Processing form "${formData.titulo}" (ID: ${formData.id}):`, {
             hasRangosMensajes: !!formData.rangos_mensajes,
             scoreRangesCount: scoreRanges.length,
             showTotalScore: showTotalScore,
-            collaborators: formData.colaboradores
+            rawCollaborators: formData.colaboradores,
+            processedCollaborators: collaborators,
+            collaboratorsCount: collaborators.length
           });
-          
-          // Process collaborators from database
-          let collaborators = [];
-          if (formData.colaboradores && Array.isArray(formData.colaboradores)) {
-            collaborators = formData.colaboradores.filter(email => 
-              typeof email === 'string' && email.trim().length > 0
-            );
-          }
           
           const finalForm = {
             id: formData.id.toString(),
@@ -164,6 +199,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: finalForm.id,
             showTotalScore: finalForm.showTotalScore,
             scoreRangesCount: finalForm.scoreRanges.length,
+            collaborators: finalForm.collaborators,
             collaboratorsCount: finalForm.collaborators.length
           });
           
@@ -243,6 +279,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: form.title,
         showTotalScore: form.showTotalScore,
         scoreRangesCount: form.scoreRanges?.length || 0,
+        collaborators: form.collaborators,
         collaboratorsCount: form.collaborators?.length || 0
       });
     } else {
@@ -251,6 +288,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: f.id, 
           title: f.title, 
           scoreRangesCount: f.scoreRanges?.length || 0,
+          collaborators: f.collaborators,
           collaboratorsCount: f.collaborators?.length || 0
         }))
       );
@@ -262,6 +300,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createForm = useCallback((formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
     const userEmail = currentUser?.email;
+    console.log("FormContext - createForm called with collaborators:", formData.collaborators);
     return createFormOperation(
       forms,
       setForms,
@@ -277,6 +316,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id,
       showTotalScore: formData.showTotalScore,
       scoreRangesCount: formData.scoreRanges?.length || 0,
+      collaborators: formData.collaborators,
       collaboratorsCount: formData.collaborators?.length || 0
     });
     
@@ -288,7 +328,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Force reload from database to ensure consistency
     if (result) {
-      console.log("FormContext - Reloading forms after update");
+      console.log("FormContext - Reloading forms after update to ensure consistency");
       await loadFormsFromSupabase(true);
     }
     
