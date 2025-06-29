@@ -1,13 +1,6 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Mail, KeyRound, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface PublicRouteProps {
   children: JSX.Element;
@@ -41,12 +34,13 @@ const PublicRoute = ({ children }: PublicRouteProps) => {
     );
   }
 
-  // If already authenticated, redirect to the original requested page or dashboard
-  if (isAuthenticated) {
+  // If already authenticated, only redirect if NOT coming from a direct navigation
+  // This allows users to access the login page even when authenticated
+  if (isAuthenticated && !location.state?.forceLogin) {
     return <Navigate to={from} replace />;
   }
 
-  // If not authenticated, render the login page
+  // If not authenticated or forced login, render the login page
   return children;
 };
 

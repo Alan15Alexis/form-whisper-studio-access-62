@@ -95,6 +95,11 @@ const Index = () => {
     }
   };
 
+  const handleAdminLogin = () => {
+    // Navigate to login with state to force showing login page
+    navigate('/login', { state: { forceLogin: true } });
+  };
+
   return <Layout hideNav>
       {/* Custom Header */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
@@ -105,12 +110,10 @@ const Index = () => {
             </a>
           </div>
           <div>
-            <Link to="/login">
-              <Button variant="ghost" className="flex items-center gap-2">
-                <LogIn className="h-5 w-5" />
-                <span className="hidden sm:inline">Admin Login</span>
-              </Button>
-            </Link>
+            <Button variant="ghost" className="flex items-center gap-2" onClick={handleAdminLogin}>
+              <LogIn className="h-5 w-5" />
+              <span className="hidden sm:inline">Admin Login</span>
+            </Button>
           </div>
         </div>
       </div>
