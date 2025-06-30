@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +15,10 @@ interface AssignedFormCardProps {
   form: Form;
   onRemove?: (formId: string) => void;
   isCompleted?: boolean;
+  isCollaborator?: boolean;
 }
 
-const AssignedFormCard = ({ form, onRemove, isCompleted = false }: AssignedFormCardProps) => {
+const AssignedFormCard = ({ form, onRemove, isCompleted = false, isCollaborator = false }: AssignedFormCardProps) => {
   const { getFormResponses } = useForm();
   const navigate = useNavigate();
   const [showResponseDialog, setShowResponseDialog] = useState(false);
