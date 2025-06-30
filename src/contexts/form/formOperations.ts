@@ -23,55 +23,42 @@ const validateFormId = (id: string): boolean => {
   return false;
 };
 
-// Simplified function to get the database ID for form updates
-const getFormDatabaseId = async (formId: string, forms: Form[]): Promise<number | null> => {
+// Simplified and more reliable function to get the database ID for form updates
+const getFormDatabaseId = async (formId: string): Promise<number | null> => {
   console.log('getFormDatabaseId - Looking for form with ID:', formId);
   
-  // If it's already numeric, use it directly
-  if (/^\d+$/.test(formId)) {
-    const numericId = parseInt(formId, 10);
-    console.log('getFormDatabaseId - Using numeric ID directly:', numericId);
-    return numericId;
-  }
-  
-  // If it's a UUID, search in local forms first
-  const localForm = forms.find(f => f.id === formId);
-  if (localForm) {
-    console.log('getFormDatabaseId - Found form in local state:', localForm.title);
-    
-    // Try to extract numeric ID from local form if available
-    if (localForm.id && /^\d+$/.test(localForm.id)) {
-      const numericId = parseInt(localForm.id, 10);
-      console.log('getFormDatabaseId - Extracted numeric ID from local form:', numericId);
+  try {
+    // If it's already numeric, use it directly
+    if (/^\d+$/.test(formId)) {
+      const numericId = parseInt(formId, 10);
+      console.log('getFormDatabaseId - Using numeric ID directly:', numericId);
       return numericId;
     }
     
-    // If local form has UUID, search database by title and creator
-    try {
-      console.log('getFormDatabaseId - Searching database by title and admin:', localForm.title, localForm.ownerId);
-      const { data: dbForm, error } = await supabase
-        .from('formulario_construccion')
-        .select('id')
-        .eq('titulo', localForm.title)
-        .eq('administrador', localForm.ownerId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('getFormDatabaseId - Database search error:', error);
-        return null;
-      }
-      
-      if (dbForm) {
-        console.log('getFormDatabaseId - Found form in database with ID:', dbForm.id);
-        return dbForm.id;
-      }
-    } catch (error) {
-      console.error('getFormDatabaseId - Error searching database:', error);
+    // If it's not numeric, it could be a UUID - try to find it in the database
+    console.log('getFormDatabaseId - Searching database for form ID:', formId);
+    const { data: dbForm, error } = await supabase
+      .from('formulario_construccion')
+      .select('id')
+      .eq('id', formId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('getFormDatabaseId - Database search error:', error);
+      return null;
     }
+    
+    if (dbForm) {
+      console.log('getFormDatabaseId - Found form in database with ID:', dbForm.id);
+      return dbForm.id;
+    }
+    
+    console.error('getFormDatabaseId - Form not found in database:', formId);
+    return null;
+  } catch (error) {
+    console.error('getFormDatabaseId - Error:', error);
+    return null;
   }
-  
-  console.error('getFormDatabaseId - Could not resolve form ID:', formId);
-  return null;
 };
 
 export const createFormOperation = (
@@ -177,8 +164,8 @@ export const updateFormOperation = (
         throw new Error(`Invalid form ID format: ${id}. Expected a numeric ID or UUID.`);
       }
 
-      // Get the database ID for the form
-      const databaseId = await getFormDatabaseId(id, forms);
+      // Get the database ID for the form using the improved function
+      const databaseId = await getFormDatabaseId(id);
       
       if (databaseId === null) {
         throw new Error(`Cannot resolve form ID "${id}" to database format. Form may not exist.`);

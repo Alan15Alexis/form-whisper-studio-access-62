@@ -35,9 +35,9 @@ export const useAssignedForms = () => {
           return;
         }
         
-        console.log(`Fetching forms for user: ${userEmail}`);
+        console.log(`Fetching assigned forms for user: ${userEmail}`);
         
-        // Filter the data client-side instead of using the contains operation
+        // Get all forms from the database
         const { data, error } = await supabase
           .from('formulario_construccion')
           .select('*');
@@ -48,11 +48,35 @@ export const useAssignedForms = () => {
         
         if (data) {
           // Filter the data client-side to find forms assigned to this user
+          // Include both forms where user is in allowedUsers AND forms where user is a collaborator
           const filteredData = data.filter(form => {
-            return Array.isArray(form.acceso) && form.acceso.includes(userEmail);
+            const isAssigned = Array.isArray(form.acceso) && form.acceso.includes(userEmail);
+            
+            // Check if user is a collaborator
+            let isCollaborator = false;
+            if (form.colaboradores) {
+              let collaboratorsList: string[] = [];
+              
+              if (Array.isArray(form.colaboradores)) {
+                collaboratorsList = form.colaboradores;
+              } else if (typeof form.colaboradores === 'string') {
+                try {
+                  const parsed = JSON.parse(form.colaboradores);
+                  if (Array.isArray(parsed)) {
+                    collaboratorsList = parsed;
+                  }
+                } catch (e) {
+                  console.warn('Error parsing collaborators JSON:', e);
+                }
+              }
+              
+              isCollaborator = collaboratorsList.includes(userEmail.toLowerCase());
+            }
+            
+            return isAssigned || isCollaborator;
           });
           
-          console.log(`Found ${filteredData.length} forms for user ${userEmail}`);
+          console.log(`Found ${filteredData.length} forms (assigned + collaborator) for user ${userEmail}`);
           
           // Map Supabase data to our app's Form type
           const mappedForms: Form[] = filteredData.map(form => ({
@@ -62,6 +86,7 @@ export const useAssignedForms = () => {
             fields: form.preguntas || [],
             isPrivate: form.configuracion?.isPrivate || false,
             allowedUsers: form.acceso || [],
+            collaborators: Array.isArray(form.colaboradores) ? form.colaboradores : [],
             createdAt: form.created_at || new Date().toISOString(),
             updatedAt: form.created_at || new Date().toISOString(),
             accessLink: uuidv4(),
@@ -70,6 +95,8 @@ export const useAssignedForms = () => {
             formColor: form.configuracion?.formColor || "#686df3",
             allowViewOwnResponses: form.configuracion?.allowViewOwnResponses || false,
             allowEditOwnResponses: form.configuracion?.allowEditOwnResponses || false,
+            showTotalScore: form.configuracion?.showTotalScore || false,
+            scoreRanges: form.rangos_mensajes || []
           }));
           
           // Update global form state and local state
@@ -149,17 +176,28 @@ export const useAssignedForms = () => {
     }
   };
 
-  // Filter out hidden forms
+  // Filter out hidden forms and separate assigned vs collaborator forms
   const visibleForms = assignedForms.filter(form => !hiddenForms.includes(form.id));
   
+  // Split into assigned forms (where user is in allowedUsers) and collaborator forms
+  const userEmail = currentUser?.email?.toLowerCase();
+  const assignedOnly = visibleForms.filter(form => 
+    form.allowedUsers.map(u => u.toLowerCase()).includes(userEmail || '') && 
+    !form.collaborators.map(c => c.toLowerCase()).includes(userEmail || '')
+  );
+  const collaboratorOnly = visibleForms.filter(form => 
+    form.collaborators.map(c => c.toLowerCase()).includes(userEmail || '')
+  );
+  
   // Split forms into pending and completed based on the user-specific status map
-  const pendingForms = visibleForms.filter(form => !formStatus[form.id]);
-  const completedForms = visibleForms.filter(form => formStatus[form.id]);
+  const pendingForms = assignedOnly.filter(form => !formStatus[form.id]);
+  const completedForms = assignedOnly.filter(form => formStatus[form.id]);
 
   return {
     loading,
     pendingForms,
     completedForms,
+    collaboratorForms: collaboratorOnly,
     formStatus,
     hideForm,
     currentUser

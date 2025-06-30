@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -85,7 +86,7 @@ const cleanScoreRanges = (ranges: any): any[] => {
   }).filter(range => range !== null);
 };
 
-// Enhanced helper function to process collaborators data
+// Enhanced helper function to process collaborators data with better error handling
 const processCollaborators = (collaboratorsData: any): string[] => {
   console.log('processCollaborators - Processing raw data:', collaboratorsData);
   
@@ -96,7 +97,7 @@ const processCollaborators = (collaboratorsData: any): string[] => {
   
   if (Array.isArray(collaboratorsData)) {
     const processed = collaboratorsData
-      .filter(item => typeof item === 'string' && item.trim().length > 0)
+      .filter(item => item && typeof item === 'string' && item.trim().length > 0)
       .map(item => item.trim().toLowerCase());
     
     console.log('processCollaborators - Processed array:', processed);
@@ -104,18 +105,26 @@ const processCollaborators = (collaboratorsData: any): string[] => {
   }
   
   if (typeof collaboratorsData === 'string') {
+    // Handle empty string case
+    if (collaboratorsData.trim() === '') {
+      return [];
+    }
+    
     try {
       const parsed = JSON.parse(collaboratorsData);
       if (Array.isArray(parsed)) {
         const processed = parsed
-          .filter(item => typeof item === 'string' && item.trim().length > 0)
+          .filter(item => item && typeof item === 'string' && item.trim().length > 0)
           .map(item => item.trim().toLowerCase());
         
         console.log('processCollaborators - Processed from JSON string:', processed);
         return processed;
       }
     } catch (error) {
-      console.warn('processCollaborators - Failed to parse JSON string:', error);
+      console.warn('processCollaborators - Failed to parse JSON string, treating as single email:', error);
+      // If it's not valid JSON, treat it as a single email
+      const email = collaboratorsData.trim().toLowerCase();
+      return email ? [email] : [];
     }
   }
   
@@ -131,7 +140,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
   const [formsLoaded, setFormsLoaded] = useState(false);
 
-  // Enhanced form loading function with extensive debugging for collaborators
+  // Enhanced form loading function with better collaborator handling
   const loadFormsFromSupabase = useCallback(async (forceReload = false) => {
     if (formsLoaded && !forceReload) {
       console.log("FormContext - Forms already loaded, skipping reload");
@@ -163,7 +172,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Enhanced score ranges processing with extensive validation and logging
           const scoreRanges = cleanScoreRanges(formData.rangos_mensajes);
           
-          // Enhanced collaborators processing with detailed logging
+          // Enhanced collaborators processing with better error handling
           const collaborators = processCollaborators(formData.colaboradores);
           
           console.log(`FormContext - Processing form "${formData.titulo}" (ID: ${formData.id}):`, {
@@ -297,6 +306,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return form;
   }, [forms]);
 
+  // Enhanced createForm with better collaborator handling
   const createForm = useCallback((formData: any) => {
     const userId = currentUser?.id ? String(currentUser.id) : undefined;
     const userEmail = currentUser?.email;
@@ -311,6 +321,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     )(formData);
   }, [forms, currentUser]);
   
+  // Enhanced updateForm with better collaborator handling and reload
   const updateForm = useCallback(async (id: string, formData: any) => {
     console.log("FormContext - updateForm called with:", {
       id,
