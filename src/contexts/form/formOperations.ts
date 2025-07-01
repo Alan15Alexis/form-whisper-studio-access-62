@@ -73,7 +73,7 @@ export const createFormOperation = (
     try {
       console.log("createFormOperation - Creating form with data:", formData);
       
-      // Prepare form data for Supabase with enhanced collaborators handling
+      // Prepare form data for Supabase with enhanced collaborators handling and creator tracking
       const supabaseData = {
         titulo: formData.title || '',
         descripcion: formData.description || '',
@@ -88,11 +88,12 @@ export const createFormOperation = (
         },
         acceso: formData.allowedUsers || [],
         administrador: userEmail,
+        administrador_creador: userEmail, // Store the creator's email in the new column
         rangos_mensajes: formData.scoreRanges || [],
         colaboradores: Array.isArray(formData.collaborators) ? formData.collaborators : []
       };
 
-      console.log("createFormOperation - Inserting form data to Supabase with collaborators:", supabaseData.colaboradores);
+      console.log("createFormOperation - Inserting form data to Supabase with creator:", supabaseData.administrador_creador);
       
       const { data, error } = await supabase
         .from('formulario_construccion')
@@ -119,7 +120,7 @@ export const createFormOperation = (
         createdAt: data.created_at,
         updatedAt: data.created_at,
         accessLink: crypto.randomUUID(),
-        ownerId: data.administrador || '',
+        ownerId: data.administrador_creador || data.administrador || '',
         formColor: data.configuracion?.formColor || '#3b82f6',
         allowViewOwnResponses: data.configuracion?.allowViewOwnResponses || false,
         allowEditOwnResponses: data.configuracion?.allowEditOwnResponses || false,
@@ -127,7 +128,7 @@ export const createFormOperation = (
         scoreRanges: data.rangos_mensajes || []
       };
 
-      console.log("createFormOperation - New form created with collaborators:", newForm.collaborators);
+      console.log("createFormOperation - New form created with creator:", newForm.ownerId);
 
       // Update local state
       setForms(prev => [newForm, ...prev]);
@@ -265,7 +266,7 @@ export const updateFormOperation = (
         createdAt: data.created_at,
         updatedAt: data.created_at,
         accessLink: crypto.randomUUID(),
-        ownerId: data.administrador || '',
+        ownerId: data.administrador_creador || data.administrador || '',
         formColor: data.configuracion?.formColor || '#3b82f6',
         allowViewOwnResponses: data.configuracion?.allowViewOwnResponses || false,
         allowEditOwnResponses: data.configuracion?.allowEditOwnResponses || false,

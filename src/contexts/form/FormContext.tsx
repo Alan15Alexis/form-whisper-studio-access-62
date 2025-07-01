@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../AuthContext';
@@ -140,7 +139,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allowedUsers, setAllowedUsers] = useState(getInitialAllowedUsers());
   const [formsLoaded, setFormsLoaded] = useState(false);
 
-  // Enhanced form loading function with better collaborator handling
+  // Enhanced form loading function with better collaborator handling and creator tracking
   const loadFormsFromSupabase = useCallback(async (forceReload = false) => {
     if (formsLoaded && !forceReload) {
       console.log("FormContext - Forms already loaded, skipping reload");
@@ -175,13 +174,19 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Enhanced collaborators processing with better error handling
           const collaborators = processCollaborators(formData.colaboradores);
           
+          // Enhanced owner ID processing using the new administrador_creador field
+          const ownerId = formData.administrador_creador || formData.administrador || 'unknown';
+          
           console.log(`FormContext - Processing form "${formData.titulo}" (ID: ${formData.id}):`, {
             hasRangosMensajes: !!formData.rangos_mensajes,
             scoreRangesCount: scoreRanges.length,
             showTotalScore: showTotalScore,
             rawCollaborators: formData.colaboradores,
             processedCollaborators: collaborators,
-            collaboratorsCount: collaborators.length
+            collaboratorsCount: collaborators.length,
+            administrador: formData.administrador,
+            administrador_creador: formData.administrador_creador,
+            ownerId: ownerId
           });
           
           const finalForm = {
@@ -195,7 +200,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             createdAt: formData.created_at,
             updatedAt: formData.created_at,
             accessLink: uuidv4(),
-            ownerId: formData.administrador || 'unknown',
+            ownerId: ownerId,
             formColor: config.formColor || '#3b82f6',
             allowViewOwnResponses: Boolean(config.allowViewOwnResponses),
             allowEditOwnResponses: Boolean(config.allowEditOwnResponses),
@@ -209,7 +214,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
             showTotalScore: finalForm.showTotalScore,
             scoreRangesCount: finalForm.scoreRanges.length,
             collaborators: finalForm.collaborators,
-            collaboratorsCount: finalForm.collaborators.length
+            collaboratorsCount: finalForm.collaborators.length,
+            ownerId: finalForm.ownerId
           });
           
           return finalForm;
@@ -289,7 +295,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         showTotalScore: form.showTotalScore,
         scoreRangesCount: form.scoreRanges?.length || 0,
         collaborators: form.collaborators,
-        collaboratorsCount: form.collaborators?.length || 0
+        collaboratorsCount: form.collaborators?.length || 0,
+        ownerId: form.ownerId
       });
     } else {
       console.warn(`FormContext - getForm(${id}) not found. Available forms:`, 
@@ -298,7 +305,8 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: f.title, 
           scoreRangesCount: f.scoreRanges?.length || 0,
           collaborators: f.collaborators,
-          collaboratorsCount: f.collaborators?.length || 0
+          collaboratorsCount: f.collaborators?.length || 0,
+          ownerId: f.ownerId
         }))
       );
     }

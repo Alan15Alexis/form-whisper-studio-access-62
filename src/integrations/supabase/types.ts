@@ -43,6 +43,7 @@ export type Database = {
         Row: {
           acceso: Json | null
           administrador: string | null
+          administrador_creador: string | null
           colaboradores: Json | null
           configuracion: Json | null
           created_at: string
@@ -55,6 +56,7 @@ export type Database = {
         Insert: {
           acceso?: Json | null
           administrador?: string | null
+          administrador_creador?: string | null
           colaboradores?: Json | null
           configuracion?: Json | null
           created_at?: string
@@ -67,6 +69,7 @@ export type Database = {
         Update: {
           acceso?: Json | null
           administrador?: string | null
+          administrador_creador?: string | null
           colaboradores?: Json | null
           configuracion?: Json | null
           created_at?: string
