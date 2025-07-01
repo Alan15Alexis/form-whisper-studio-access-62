@@ -29,6 +29,7 @@ const CollaboratorsCard = ({
   useEffect(() => {
     const loadAvailableAdmins = async () => {
       try {
+        console.log('CollaboratorsCard - Loading available administrators...');
         const { data, error } = await supabase
           .from('usuario_administrador')
           .select('id, nombre, correo')
@@ -39,6 +40,7 @@ const CollaboratorsCard = ({
           return;
         }
 
+        console.log('CollaboratorsCard - Loaded administrators:', data);
         setAvailableAdmins(data || []);
       } catch (error) {
         console.error('Error loading administrators:', error);
@@ -98,6 +100,9 @@ const CollaboratorsCard = ({
     try {
       // Add to collaborators list
       const updatedCollaborators = [...collaborators, email];
+      console.log('CollaboratorsCard - Adding collaborator:', email);
+      console.log('CollaboratorsCard - Updated collaborators list:', updatedCollaborators);
+      
       onCollaboratorsChange?.(updatedCollaborators);
 
       setSelectedCollaboratorId("");
@@ -120,6 +125,9 @@ const CollaboratorsCard = ({
 
   const handleRemoveCollaborator = (email: string) => {
     const updatedCollaborators = collaborators.filter(collab => collab !== email);
+    console.log('CollaboratorsCard - Removing collaborator:', email);
+    console.log('CollaboratorsCard - Updated collaborators list:', updatedCollaborators);
+    
     onCollaboratorsChange?.(updatedCollaborators);
     
     const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email);
@@ -144,6 +152,13 @@ const CollaboratorsCard = ({
   if (!isAdmin) {
     return null;
   }
+
+  console.log('CollaboratorsCard - Rendering with:', {
+    collaborators,
+    collaboratorsCount: collaborators.length,
+    availableAdmins: availableAdmins.length,
+    availableCollaborators: availableCollaborators.length
+  });
 
   return (
     <Card className="p-6 shadow-sm border border-gray-100">

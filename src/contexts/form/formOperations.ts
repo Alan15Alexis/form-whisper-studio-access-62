@@ -23,34 +23,61 @@ const validateFormId = (id: string): boolean => {
   return false;
 };
 
-// Simplified and more reliable function to get the database ID for form updates
+// Enhanced function to get the database ID for form updates
 const getFormDatabaseId = async (formId: string): Promise<number | null> => {
   console.log('getFormDatabaseId - Looking for form with ID:', formId);
   
   try {
+    // First, try to find the form by searching both string and numeric representations
+    let numericId: number | null = null;
+    
     // If it's already numeric, use it directly
     if (/^\d+$/.test(formId)) {
-      const numericId = parseInt(formId, 10);
+      numericId = parseInt(formId, 10);
       console.log('getFormDatabaseId - Using numeric ID directly:', numericId);
-      return numericId;
+    } else {
+      // If it's not numeric, search the database for any form that matches
+      console.log('getFormDatabaseId - Searching database for form with ID:', formId);
+      const { data: forms, error } = await supabase
+        .from('formulario_construccion')
+        .select('id')
+        .limit(100); // Get a reasonable number of forms to search through
+      
+      if (error) {
+        console.error('getFormDatabaseId - Database search error:', error);
+        return null;
+      }
+      
+      // Try to find a match by converting all IDs to strings and comparing
+      const matchingForm = forms?.find(form => 
+        form.id.toString() === formId || 
+        form.id === parseInt(formId, 10) ||
+        formId.includes(form.id.toString())
+      );
+      
+      if (matchingForm) {
+        numericId = matchingForm.id;
+        console.log('getFormDatabaseId - Found matching form with database ID:', numericId);
+      }
     }
     
-    // If it's not numeric, it could be a UUID - try to find it in the database
-    console.log('getFormDatabaseId - Searching database for form ID:', formId);
-    const { data: dbForm, error } = await supabase
-      .from('formulario_construccion')
-      .select('id')
-      .eq('id', formId)
-      .maybeSingle();
-    
-    if (error) {
-      console.error('getFormDatabaseId - Database search error:', error);
-      return null;
-    }
-    
-    if (dbForm) {
-      console.log('getFormDatabaseId - Found form in database with ID:', dbForm.id);
-      return dbForm.id;
+    if (numericId !== null) {
+      // Verify the form exists
+      const { data: dbForm, error } = await supabase
+        .from('formulario_construccion')
+        .select('id')
+        .eq('id', numericId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('getFormDatabaseId - Verification error:', error);
+        return null;
+      }
+      
+      if (dbForm) {
+        console.log('getFormDatabaseId - Verified form exists with ID:', dbForm.id);
+        return dbForm.id;
+      }
     }
     
     console.error('getFormDatabaseId - Form not found in database:', formId);
@@ -73,6 +100,13 @@ export const createFormOperation = (
     try {
       console.log("createFormOperation - Creating form with data:", formData);
       
+      // Process collaborators to ensure it's an array of strings
+      const collaborators = Array.isArray(formData.collaborators) 
+        ? formData.collaborators.filter(email => email && typeof email === 'string')
+        : [];
+      
+      console.log("createFormOperation - Processed collaborators:", collaborators);
+      
       // Prepare form data for Supabase with enhanced collaborators handling and creator tracking
       const supabaseData = {
         titulo: formData.title || '',
@@ -88,12 +122,12 @@ export const createFormOperation = (
         },
         acceso: formData.allowedUsers || [],
         administrador: userEmail,
-        administrador_creador: userEmail, // Store the creator's email in the new column
+        administrador_creador: userEmail,
         rangos_mensajes: formData.scoreRanges || [],
-        colaboradores: Array.isArray(formData.collaborators) ? formData.collaborators : []
+        colaboradores: collaborators
       };
 
-      console.log("createFormOperation - Inserting form data to Supabase with creator:", supabaseData.administrador_creador);
+      console.log("createFormOperation - Inserting form data to Supabase with collaborators:", collaborators);
       
       const { data, error } = await supabase
         .from('formulario_construccion')
@@ -128,7 +162,7 @@ export const createFormOperation = (
         scoreRanges: data.rangos_mensajes || []
       };
 
-      console.log("createFormOperation - New form created with creator:", newForm.ownerId);
+      console.log("createFormOperation - New form created with collaborators:", newForm.collaborators);
 
       // Update local state
       setForms(prev => [newForm, ...prev]);
@@ -185,7 +219,9 @@ export const updateFormOperation = (
       
       // Enhanced collaborators handling with detailed logging
       if (formData.collaborators !== undefined) {
-        const collaboratorsArray = Array.isArray(formData.collaborators) ? formData.collaborators : [];
+        const collaboratorsArray = Array.isArray(formData.collaborators) 
+          ? formData.collaborators.filter(email => email && typeof email === 'string')
+          : [];
         updateData.colaboradores = collaboratorsArray;
         console.log('updateFormOperation - Setting collaborators in database:', collaboratorsArray);
       }
