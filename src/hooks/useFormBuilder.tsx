@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -6,6 +5,7 @@ import { Form, FormField } from '@/types/form';
 import { toast } from '@/hooks/toast';
 import { addInvitedUser } from '@/integrations/supabase/client';
 import { useDragAndDrop } from './form-builder/useDragAndDrop';
+import { useFormPermissions } from './useFormPermissions';
 
 interface UseFormBuilderParams {
   id?: string;
@@ -21,6 +21,7 @@ export const useFormBuilder = (id?: string) => {
     updateForm, 
     getForm
   } = useForm();
+  const { canEditFormById } = useFormPermissions();
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -136,13 +137,27 @@ export const useFormBuilder = (id?: string) => {
           }
           
           if (existingForm) {
+            // Check if user has permission to edit this form
+            const canEdit = canEditFormById(formId);
+            
+            if (!canEdit) {
+              toast({
+                title: 'Sin permisos de edición',
+                description: 'No tienes permisos para editar este formulario.',
+                variant: 'destructive',
+              });
+              navigate('/dashboard-admin');
+              return;
+            }
+            
             console.log("useFormBuilder - Found form:", {
               id: existingForm.id,
               title: existingForm.title,
               showTotalScore: existingForm.showTotalScore,
               scoreRangesCount: existingForm.scoreRanges?.length || 0,
               collaborators: existingForm.collaborators || [],
-              collaboratorsCount: existingForm.collaborators?.length || 0
+              collaboratorsCount: existingForm.collaborators?.length || 0,
+              canEdit: canEdit
             });
             
             syncFormData(existingForm);
@@ -195,7 +210,7 @@ export const useFormBuilder = (id?: string) => {
     };
 
     initializeFormData();
-  }, [formId, getForm, navigate, syncFormData, forms]);
+  }, [formId, getForm, navigate, syncFormData, forms, canEditFormById]);
 
   // Listen for form changes and resync when needed
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/toast";
 import { Form } from '@/types/form';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -103,7 +103,7 @@ export const removeAllowedUserOperation = (
   };
 };
 
-// Fix: Updated to accept either a user with email only or a user with both id and email
+// Updated to include collaboration permissions
 export const isUserAllowedOperation = (
   forms: Form[],
   allowedUsers: Record<string, string[]>,
@@ -112,17 +112,41 @@ export const isUserAllowedOperation = (
   return (formId: string): boolean => {
     const form = forms.find(form => form.id === formId);
     
-    // If form doesn't exist or is not private, user is not allowed
+    // If form doesn't exist, user is not allowed
     if (!form) return false;
     
     // If form is public, user is allowed
     if (!form.isPrivate) return true;
     
     // If user is the owner, they are allowed
-    if (currentUser?.id && currentUser.id === form.ownerId) return true;
+    if (currentUser?.email && currentUser.email === form.ownerId) return true;
+    
+    // If user is a collaborator, they are allowed
+    if (currentUser?.email && form.collaborators?.includes(currentUser.email.toLowerCase())) return true;
     
     // Otherwise, check if they're in the allowed users list
     return currentUser?.email ? (allowedUsers[formId] || []).includes(currentUser.email) : false;
+  };
+};
+
+// New function to check if user can edit the form (owner or collaborator)
+export const canUserEditFormOperation = (
+  forms: Form[],
+  currentUser: { id?: string, email: string } | null | undefined
+) => {
+  return (formId: string): boolean => {
+    const form = forms.find(form => form.id === formId);
+    
+    // If form doesn't exist, user cannot edit
+    if (!form) return false;
+    
+    // If user is the owner, they can edit
+    if (currentUser?.email && currentUser.email === form.ownerId) return true;
+    
+    // If user is a collaborator, they can edit
+    if (currentUser?.email && form.collaborators?.includes(currentUser.email.toLowerCase())) return true;
+    
+    return false;
   };
 };
 

@@ -1,4 +1,3 @@
-
 import { Form, FormResponse, HttpConfig } from '@/types/form';
 
 export interface FormContextType {
@@ -11,9 +10,10 @@ export interface FormContextType {
   getForm: (id: string) => Form | undefined;
   submitFormResponse: (formId: string, data: Record<string, any>, formFromLocation?: any, scoreData?: any) => Promise<FormResponse>;
   getFormResponses: (formId: string) => FormResponse[];
-  addAllowedUser: (formId: string, email: string) => void;
-  removeAllowedUser: (formId: string, email: string) => void;
+  addAllowedUser: (formId: string, email: string) => Promise<boolean>;
+  removeAllowedUser: (formId: string, email: string) => Promise<boolean>;
   isUserAllowed: (formId: string, email?: string) => boolean;
+  canUserEditForm: (formId: string) => boolean;
   generateAccessLink: (formId: string) => string;
   validateAccessToken: (formId: string, token: string) => boolean;
   setForms: React.Dispatch<React.SetStateAction<Form[]>>;

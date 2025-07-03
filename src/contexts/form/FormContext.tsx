@@ -23,6 +23,7 @@ import {
   addAllowedUserOperation,
   removeAllowedUserOperation,
   isUserAllowedOperation,
+  canUserEditFormOperation,
   generateAccessLinkOperation,
   validateAccessTokenOperation
 } from './accessOperations';
@@ -409,6 +410,18 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return operation(formId);
   };
 
+  // New function to check if user can edit the form
+  const canUserEditForm = (formId: string): boolean => {
+    const operation = canUserEditFormOperation(
+      forms,
+      currentUser ? {
+        id: String(currentUser.id),
+        email: currentUser.email
+      } : null
+    );
+    return operation(formId);
+  };
+
   // Make generateAccessLink return a string directly, not a Promise
   const generateAccessLink = (formId: string): string => {
     const operation = generateAccessLinkOperation(
@@ -435,6 +448,7 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addAllowedUser,
     removeAllowedUser,
     isUserAllowed,
+    canUserEditForm,
     generateAccessLink,
     validateAccessToken,
     setForms
