@@ -79,6 +79,7 @@ const FormBuilderTabs = ({
           removeField={removeField}
           onToggleFormScoring={onToggleFormScoring}
           formShowTotalScore={formData.showTotalScore}
+          addField={addField}
         />
       </TabsContent>
       

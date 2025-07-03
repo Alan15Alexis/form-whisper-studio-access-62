@@ -11,7 +11,7 @@ interface FormFieldsListProps {
   removeField: (id: string) => void;
   onToggleFormScoring?: (enabled: boolean) => void;
   formShowTotalScore?: boolean;
-  addField?: (fieldType: string) => void;
+  addField: (fieldType: string) => void; // Make this required
 }
 
 const FormFieldsList = ({ 
@@ -28,7 +28,7 @@ const FormFieldsList = ({
     <div className="flex gap-6">
       {/* Sidebar with draggable field types */}
       <div className="w-80 flex-shrink-0">
-        <FieldsSidebar onAddField={addField || (() => {})} />
+        <FieldsSidebar onAddField={addField} />
       </div>
       
       {/* Main form fields area */}
