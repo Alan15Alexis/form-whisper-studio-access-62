@@ -46,27 +46,41 @@ export const useFormBuilder = (id?: string) => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
-  // Add drag and drop functionality
+  // Centralized addField function that works for both click and drag & drop
+  const addField = useCallback((fieldType: string) => {
+    console.log("useFormBuilder - addField called with type:", fieldType);
+    
+    const newField: FormField = {
+      id: crypto.randomUUID(),
+      type: fieldType as any,
+      label: '',
+      required: false,
+      options: fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox' ? [
+        { id: crypto.randomUUID(), label: 'Opción 1', value: 'option_1' },
+        { id: crypto.randomUUID(), label: 'Opción 2', value: 'option_2' }
+      ] : fieldType === 'yesno' ? [
+        { id: 'yes', label: 'Sí', value: 'yes' },
+        { id: 'no', label: 'No', value: 'no' }
+      ] : undefined
+    };
+
+    console.log("useFormBuilder - Adding new field:", newField);
+
+    setFormData(prev => {
+      const updatedData = {
+        ...prev,
+        fields: [...(prev.fields || []), newField],
+      };
+      console.log("useFormBuilder - Updated form data with new field. Total fields:", updatedData.fields.length);
+      return updatedData;
+    });
+  }, []);
+
+  // Add drag and drop functionality with the centralized addField
   const { handleDragEnd } = useDragAndDrop({
     formData,
     setFormData,
-    addField: (fieldType: string) => {
-      const newField: FormField = {
-        id: crypto.randomUUID(),
-        type: fieldType as any,
-        label: '',
-        required: false,
-        options: fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox' ? [
-          { id: crypto.randomUUID(), label: 'Option 1', value: 'option_1' },
-          { id: crypto.randomUUID(), label: 'Option 2', value: 'option_2' }
-        ] : undefined
-      };
-
-      setFormData(prev => ({
-        ...prev,
-        fields: [...(prev.fields || []), newField],
-      }));
-    }
+    addField // Use the same addField function
   });
 
   // Enhanced form data sync with better collaborators handling
@@ -311,24 +325,6 @@ export const useFormBuilder = (id?: string) => {
     setFormData(prev => ({
       ...prev,
       fields: (prev.fields || []).filter(field => field.id !== id),
-    }));
-  };
-
-  const addField = (fieldType: string) => {
-    const newField: FormField = {
-      id: crypto.randomUUID(),
-      type: fieldType as any,
-      label: '',
-      required: false,
-      options: fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox' ? [
-        { id: crypto.randomUUID(), label: 'Option 1', value: 'option_1' },
-        { id: crypto.randomUUID(), label: 'Option 2', value: 'option_2' }
-      ] : undefined
-    };
-
-    setFormData(prev => ({
-      ...prev,
-      fields: [...(prev.fields || []), newField],
     }));
   };
 

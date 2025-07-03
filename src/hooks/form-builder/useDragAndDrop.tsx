@@ -1,11 +1,10 @@
 
 import { FormField } from "@/types/form";
-import { v4 as uuidv4 } from 'uuid';
 
 interface DragDropContextProps {
   formData: { fields?: FormField[] };
   setFormData: (data: any) => void;
-  addField?: (type: string) => void;
+  addField: (type: string) => void; // Use the centralized addField function
 }
 
 export function useDragAndDrop({ formData, setFormData, addField }: DragDropContextProps) {
@@ -18,10 +17,10 @@ export function useDragAndDrop({ formData, setFormData, addField }: DragDropCont
       // Extract the field type from the dragged item's ID
       const draggedFieldType = result.draggableId.replace('field-', '');
       
-      // Call the addField function to add the new field to the form
-      if (addField) {
-        addField(draggedFieldType);
-      }
+      console.log("useDragAndDrop - Adding field via drag:", draggedFieldType);
+      
+      // Use the centralized addField function
+      addField(draggedFieldType);
       
       return;
     }
