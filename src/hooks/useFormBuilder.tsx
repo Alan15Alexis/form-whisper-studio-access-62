@@ -6,6 +6,7 @@ import { toast } from '@/hooks/toast';
 import { addInvitedUser } from '@/integrations/supabase/client';
 import { useDragAndDrop } from './form-builder/useDragAndDrop';
 import { useFormPermissions } from './useFormPermissions';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UseFormBuilderParams {
   id?: string;
@@ -22,6 +23,7 @@ export const useFormBuilder = (id?: string) => {
     getForm
   } = useForm();
   const { canEditFormById } = useFormPermissions();
+  const { currentUser } = useAuth();
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,7 +50,25 @@ export const useFormBuilder = (id?: string) => {
 
   // Centralized addField function that works for both click and drag & drop
   const addField = useCallback((fieldType: string) => {
-    console.log("useFormBuilder - addField called with type:", fieldType);
+    console.log("useFormBuilder - addField called:", {
+      fieldType,
+      formId: formData.id,
+      currentUserEmail: currentUser?.email,
+      formOwnerId: formData.ownerId,
+      collaborators: formData.collaborators
+    });
+
+    // Check permissions before adding field
+    const canEdit = canEditFormById(formData.id || '');
+    if (!canEdit) {
+      console.warn("useFormBuilder - Field addition blocked: insufficient permissions");
+      toast({
+        title: 'Sin permisos',
+        description: 'No tienes permisos para añadir campos a este formulario.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     const newField: FormField = {
       id: crypto.randomUUID(),
@@ -64,7 +84,13 @@ export const useFormBuilder = (id?: string) => {
       ] : undefined
     };
 
-    console.log("useFormBuilder - Adding new field:", newField);
+    console.log("useFormBuilder - Adding new field:", {
+      newField: {
+        id: newField.id,
+        type: newField.type,
+        label: newField.label
+      }
+    });
 
     setFormData(prev => {
       const updatedData = {
@@ -72,9 +98,15 @@ export const useFormBuilder = (id?: string) => {
         fields: [...(prev.fields || []), newField],
       };
       console.log("useFormBuilder - Updated form data with new field. Total fields:", updatedData.fields.length);
+      
+      toast({
+        title: 'Campo añadido',
+        description: `Se añadió un campo de tipo "${fieldType}" al formulario.`,
+      });
+      
       return updatedData;
     });
-  }, []);
+  }, [formData.id, formData.ownerId, formData.collaborators, currentUser?.email, canEditFormById]);
 
   // Add drag and drop functionality with the centralized addField
   const { handleDragEnd } = useDragAndDrop({
@@ -415,20 +447,28 @@ export const useFormBuilder = (id?: string) => {
 
   // Enhanced collaborators change handler with validation and logging
   const handleCollaboratorsChange = useCallback((collaborators: string[]) => {
-    console.log("useFormBuilder - handleCollaboratorsChange called with:", collaborators);
+    console.log("useFormBuilder - handleCollaboratorsChange called:", {
+      newCollaborators: collaborators,
+      previousCount: formData.collaborators?.length || 0,
+      newCount: collaborators.length
+    });
     
     // Validate and sanitize collaborators array
     const validCollaborators = Array.isArray(collaborators) 
       ? collaborators.filter(email => typeof email === 'string' && email.trim().length > 0)
       : [];
     
-    console.log("useFormBuilder - Setting valid collaborators:", validCollaborators);
+    console.log("useFormBuilder - Setting valid collaborators:", {
+      originalInput: collaborators,
+      validatedOutput: validCollaborators,
+      removedCount: collaborators.length - validCollaborators.length
+    });
     
     setFormData(prev => ({ 
       ...prev, 
       collaborators: validCollaborators 
     }));
-  }, []);
+  }, [formData.collaborators]);
 
   const handleSubmit = useCallback(async () => {
     console.log("useFormBuilder - handleSubmit with collaborators:", {

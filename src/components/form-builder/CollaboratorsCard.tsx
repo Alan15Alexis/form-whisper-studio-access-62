@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { X, Plus, Users } from "lucide-react";
+import { X, Plus, Users, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/toast";
@@ -25,6 +25,13 @@ const CollaboratorsCard = ({
   const [isAddingCollaborator, setIsAddingCollaborator] = useState(false);
   const [availableAdmins, setAvailableAdmins] = useState<Array<{id: number, nombre: string, correo: string}>>([]);
 
+  console.log('CollaboratorsCard - Current state:', {
+    collaborators,
+    collaboratorsCount: collaborators.length,
+    currentUserEmail: currentUser?.email,
+    isAdmin
+  });
+
   // Load available administrators
   useEffect(() => {
     const loadAvailableAdmins = async () => {
@@ -33,17 +40,18 @@ const CollaboratorsCard = ({
         const { data, error } = await supabase
           .from('usuario_administrador')
           .select('id, nombre, correo')
+          .eq('estatus_aprobacion', 'aprobado')
           .neq('correo', currentUser?.email); // Exclude current user
 
         if (error) {
-          console.error('Error loading administrators:', error);
+          console.error('CollaboratorsCard - Error loading administrators:', error);
           return;
         }
 
         console.log('CollaboratorsCard - Loaded administrators:', data);
         setAvailableAdmins(data || []);
       } catch (error) {
-        console.error('Error loading administrators:', error);
+        console.error('CollaboratorsCard - Error loading administrators:', error);
       }
     };
 
@@ -100,19 +108,23 @@ const CollaboratorsCard = ({
     try {
       // Add to collaborators list
       const updatedCollaborators = [...collaborators, email];
-      console.log('CollaboratorsCard - Adding collaborator:', email);
-      console.log('CollaboratorsCard - Updated collaborators list:', updatedCollaborators);
+      console.log('CollaboratorsCard - Adding collaborator:', {
+        newCollaborator: email,
+        adminName: selectedAdmin.nombre,
+        updatedCollaborators,
+        totalCount: updatedCollaborators.length
+      });
       
       onCollaboratorsChange?.(updatedCollaborators);
 
       setSelectedCollaboratorId("");
       
       toast({
-        title: "Colaborador añadido",
-        description: `${selectedAdmin.nombre} ha sido añadido como colaborador`,
+        title: "Colaborador añadido exitosamente",
+        description: `${selectedAdmin.nombre} ahora puede editar este formulario`,
       });
     } catch (error) {
-      console.error('Error adding collaborator:', error);
+      console.error('CollaboratorsCard - Error adding collaborator:', error);
       toast({
         title: "Error",
         description: "No se pudo añadir el colaborador",
@@ -125,15 +137,18 @@ const CollaboratorsCard = ({
 
   const handleRemoveCollaborator = (email: string) => {
     const updatedCollaborators = collaborators.filter(collab => collab !== email);
-    console.log('CollaboratorsCard - Removing collaborator:', email);
-    console.log('CollaboratorsCard - Updated collaborators list:', updatedCollaborators);
+    console.log('CollaboratorsCard - Removing collaborator:', {
+      removedCollaborator: email,
+      updatedCollaborators,
+      totalCount: updatedCollaborators.length
+    });
     
     onCollaboratorsChange?.(updatedCollaborators);
     
     const admin = availableAdmins.find(admin => admin.correo.toLowerCase() === email);
     toast({
       title: "Colaborador eliminado",
-      description: `${admin?.nombre || email} ha sido eliminado como colaborador`,
+      description: `${admin?.nombre || email} ya no puede editar este formulario`,
     });
   };
 
@@ -153,13 +168,6 @@ const CollaboratorsCard = ({
     return null;
   }
 
-  console.log('CollaboratorsCard - Rendering with:', {
-    collaborators,
-    collaboratorsCount: collaborators.length,
-    availableAdmins: availableAdmins.length,
-    availableCollaborators: availableCollaborators.length
-  });
-
   return (
     <Card className="p-6 shadow-sm border border-gray-100">
       <CardHeader className="px-0 pt-0">
@@ -168,7 +176,7 @@ const CollaboratorsCard = ({
           Colaboradores
         </CardTitle>
         <p className="text-sm text-gray-500">
-          Permite que otros administradores puedan editar este formulario
+          Los colaboradores pueden editar este formulario y añadir campos
         </p>
       </CardHeader>
       <CardContent className="px-0 pb-0">
@@ -205,14 +213,16 @@ const CollaboratorsCard = ({
               size="sm"
             >
               <Plus className="h-4 w-4 mr-1" />
-              Añadir
+              {isAddingCollaborator ? 'Añadiendo...' : 'Añadir'}
             </Button>
           </div>
 
           {/* List of current collaborators */}
           {collaborators.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Colaboradores actuales:</Label>
+              <Label className="text-sm font-medium">
+                Colaboradores actuales ({collaborators.length}):
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {collaborators.map((email) => (
                   <Badge 
@@ -224,6 +234,7 @@ const CollaboratorsCard = ({
                     <button
                       onClick={() => handleRemoveCollaborator(email)}
                       className="ml-1 hover:text-red-600 transition-colors"
+                      title="Eliminar colaborador"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -234,9 +245,13 @@ const CollaboratorsCard = ({
           )}
 
           {collaborators.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No hay colaboradores asignados a este formulario
-            </p>
+            <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-800">Sin colaboradores</p>
+                <p className="text-yellow-700">Solo tú puedes editar este formulario actualmente</p>
+              </div>
+            </div>
           )}
         </div>
       </CardContent>

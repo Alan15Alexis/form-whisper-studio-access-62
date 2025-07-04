@@ -5,37 +5,88 @@ import { Form } from "@/types/form";
 
 export const useFormPermissions = () => {
   const { currentUser } = useAuth();
-  const { canUserEditForm } = useForm();
+  const { canUserEditForm, getForm } = useForm();
 
   const canEditForm = (form: Form | undefined): boolean => {
-    if (!form || !currentUser?.email) return false;
+    if (!form || !currentUser?.email) {
+      console.log("useFormPermissions - Cannot edit: no form or user", {
+        hasForm: !!form,
+        hasUser: !!currentUser?.email,
+        userEmail: currentUser?.email
+      });
+      return false;
+    }
     
-    // User is the owner
-    if (form.ownerId === currentUser.email) return true;
+    const userEmail = currentUser.email.toLowerCase();
+    const isOwner = form.ownerId === userEmail;
+    const isCollaborator = form.collaborators?.includes(userEmail) || false;
     
-    // User is a collaborator
-    if (form.collaborators?.includes(currentUser.email.toLowerCase())) return true;
+    console.log("useFormPermissions - Permission check:", {
+      formId: form.id,
+      formTitle: form.title,
+      userEmail,
+      formOwnerId: form.ownerId,
+      formCollaborators: form.collaborators,
+      isOwner,
+      isCollaborator,
+      canEdit: isOwner || isCollaborator
+    });
     
-    return false;
+    return isOwner || isCollaborator;
   };
 
   const canEditFormById = (formId: string): boolean => {
-    return canUserEditForm(formId);
+    const form = getForm(formId);
+    if (!form) {
+      console.log("useFormPermissions - Form not found for ID:", formId);
+      return false;
+    }
+    
+    const canEdit = canEditForm(form);
+    console.log("useFormPermissions - canEditFormById result:", {
+      formId,
+      canEdit,
+      reason: canEdit ? "Has permission" : "No permission"
+    });
+    
+    return canEdit;
   };
 
   const getUserRole = (form: Form | undefined): 'owner' | 'collaborator' | 'viewer' | null => {
     if (!form || !currentUser?.email) return null;
     
-    if (form.ownerId === currentUser.email) return 'owner';
-    if (form.collaborators?.includes(currentUser.email.toLowerCase())) return 'collaborator';
+    const userEmail = currentUser.email.toLowerCase();
+    
+    if (form.ownerId === userEmail) return 'owner';
+    if (form.collaborators?.includes(userEmail)) return 'collaborator';
     
     return 'viewer';
+  };
+
+  const getPermissionSummary = (formId: string) => {
+    const form = getForm(formId);
+    const role = getUserRole(form);
+    const canEdit = canEditForm(form);
+    
+    return {
+      form,
+      role,
+      canEdit,
+      userEmail: currentUser?.email,
+      isAuthenticated: !!currentUser,
+      debugInfo: {
+        formOwner: form?.ownerId,
+        collaborators: form?.collaborators || [],
+        collaboratorCount: form?.collaborators?.length || 0
+      }
+    };
   };
 
   return {
     canEditForm,
     canEditFormById,
     getUserRole,
+    getPermissionSummary,
     currentUser
   };
 };
