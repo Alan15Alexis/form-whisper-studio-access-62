@@ -1,147 +1,153 @@
 
-import { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { FormField, FormFieldOption, FormFieldType } from "@/types/form";
+import { useCallback } from 'react';
+import { FormField } from '@/types/form';
+import { toast } from '@/hooks/toast';
+import { useFormPermissions } from '@/hooks/useFormPermissions';
 
-export function useFormFields() {
-  const addField = (type: string, fields: FormField[] = []) => {
-    let options;
-    
-    if (type === 'welcome') {
-      return [...fields, {
-        id: uuidv4(),
-        type: 'welcome' as FormFieldType,
-        label: 'Mensaje de Bienvenida',
-        required: true,
-        welcomeMessage: {
-          text: 'Bienvenido a nuestro formulario',
-          imageUrl: ''
-        }
-      }];
-    }
-    
-    // Opciones para campos de selección
-    if (type === 'select' || type === 'radio' || type === 'checkbox') {
-      options = [
-        { id: uuidv4(), label: 'Opción 1', value: 'option_1' },
-        { id: uuidv4(), label: 'Opción 2', value: 'option_2' }
-      ];
-    } else if (type === 'yesno') {
-      options = [
-        { id: 'yes', label: 'Sí', value: 'yes' },
-        { id: 'no', label: 'No', value: 'no' }
-      ];
-    } else if (type === 'image-select') {
-      options = [
-        { id: uuidv4(), label: 'Imagen 1', value: 'https://via.placeholder.com/150' },
-        { id: uuidv4(), label: 'Imagen 2', value: 'https://via.placeholder.com/150' }
-      ];
-    } else if (type === 'matrix') {
-      options = [
-        { 
-          id: uuidv4(), 
-          label: 'Fila 1', 
-          value: 'row_1',
-          columns: ['Muy mal', 'Mal', 'Neutral', 'Bien', 'Muy bien'] 
-        },
-        { 
-          id: uuidv4(), 
-          label: 'Fila 2', 
-          value: 'row_2',
-          columns: ['Muy mal', 'Mal', 'Neutral', 'Bien', 'Muy bien'] 
-        }
-      ];
-    } else if (type === 'opinion-scale') {
-      options = [
-        { id: uuidv4(), label: '1', value: '1' },
-        { id: uuidv4(), label: '2', value: '2' },
-        { id: uuidv4(), label: '3', value: '3' },
-        { id: uuidv4(), label: '4', value: '4' },
-        { id: uuidv4(), label: '5', value: '5' }
-      ];
-    } else if (type === 'star-rating') {
-      options = [
-        { id: uuidv4(), label: '1 estrella', value: '1' },
-        { id: uuidv4(), label: '2 estrellas', value: '2' },
-        { id: uuidv4(), label: '3 estrellas', value: '3' },
-        { id: uuidv4(), label: '4 estrellas', value: '4' },
-        { id: uuidv4(), label: '5 estrellas', value: '5' }
-      ];
-    } else if (type === 'ranking') {
-      options = [
-        { id: uuidv4(), label: 'Elemento 1', value: 'item_1' },
-        { id: uuidv4(), label: 'Elemento 2', value: 'item_2' },
-        { id: uuidv4(), label: 'Elemento 3', value: 'item_3' }
-      ];
-    }
-    
-    // Generamos una etiqueta por defecto basada en el tipo
-    let defaultLabel = '';
-    switch(type) {
-      case 'text': defaultLabel = 'Texto corto'; break;
-      case 'textarea': defaultLabel = 'Texto largo'; break;
-      case 'select': defaultLabel = 'Selección desplegable'; break;
-      case 'radio': defaultLabel = 'Selección individual'; break;
-      case 'checkbox': defaultLabel = 'Selección múltiple'; break;
-      case 'email': defaultLabel = 'Correo electrónico'; break;
-      case 'number': defaultLabel = 'Número'; break;
-      case 'date': defaultLabel = 'Fecha'; break;
-      case 'time': defaultLabel = 'Hora'; break;
-      case 'yesno': defaultLabel = 'Sí / No'; break;
-      case 'image-select': defaultLabel = 'Selección de imagen'; break;
-      case 'fullname': defaultLabel = 'Nombre completo'; break;
-      case 'address': defaultLabel = 'Dirección'; break;
-      case 'phone': defaultLabel = 'Teléfono'; break;
-      case 'image-upload': defaultLabel = 'Subir imagen'; break;
-      case 'file-upload': defaultLabel = 'Subir archivo'; break;
-      case 'drawing': defaultLabel = 'Dibujo'; break;
-      case 'matrix': defaultLabel = 'Matriz de selección'; break;
-      case 'opinion-scale': defaultLabel = 'Escala de opinión'; break;
-      case 'star-rating': defaultLabel = 'Calificación de estrellas'; break;
-      case 'ranking': defaultLabel = 'Clasificación'; break;
-      case 'timer': defaultLabel = 'Temporizador'; break;
-      case 'terms': defaultLabel = 'Términos y condiciones'; break;
-      case 'signature': defaultLabel = 'Firma'; break;
-      default: defaultLabel = `Campo ${type}`;
+interface UseFormFieldsProps {
+  formData: any;
+  updateFormData: (updater: (prev: any) => any) => void;
+}
+
+export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) => {
+  const { canEditFormById } = useFormPermissions();
+
+  const addField = useCallback((fieldType: string) => {
+    console.log("useFormFields - addField called:", {
+      fieldType,
+      formId: formData.id,
+      currentFieldsCount: formData.fields?.length || 0
+    });
+
+    // Check permissions before adding field
+    const canEdit = formData.id ? canEditFormById(formData.id) : true;
+    if (!canEdit) {
+      console.warn("useFormFields - Field addition blocked: insufficient permissions");
+      toast({
+        title: 'Sin permisos',
+        description: 'No tienes permisos para añadir campos a este formulario.',
+        variant: 'destructive',
+      });
+      return;
     }
     
     const newField: FormField = {
-      id: uuidv4(),
-      type: type as FormFieldType,
-      label: defaultLabel,
-      placeholder: "",
+      id: crypto.randomUUID(),
+      type: fieldType as any,
+      label: getDefaultLabel(fieldType),
       required: false,
-      options,
-      hasNumericValues: false,
+      options: getDefaultOptions(fieldType)
     };
-    
-    return [...fields, newField];
-  };
 
-  const updateField = (id: string, updatedField: FormField, fields: FormField[]) => {
-    if (!fields) return fields;
-    
-    // Ensure all options have valid non-empty values
-    if (updatedField.options) {
-      updatedField.options = updatedField.options.map(option => ({
-        ...option,
-        value: option.value && option.value.trim() !== '' ? option.value : `option_${option.id}`
-      }));
-    }
-    
-    return fields.map(field => 
-      field.id === id ? updatedField : field
-    );
-  };
+    console.log("useFormFields - Adding new field:", {
+      newField: {
+        id: newField.id,
+        type: newField.type,
+        label: newField.label
+      }
+    });
 
-  const removeField = (id: string, fields: FormField[]) => {
-    if (!fields) return fields;
-    return fields.filter(field => field.id !== id);
-  };
+    updateFormData(prev => {
+      const updatedData = {
+        ...prev,
+        fields: [...(prev.fields || []), newField],
+      };
+      
+      console.log("useFormFields - Updated form data with new field. Total fields:", updatedData.fields.length);
+      
+      // Show success toast
+      toast({
+        title: 'Campo añadido',
+        description: `Se añadió un campo de tipo "${fieldType}" al formulario.`,
+      });
+      
+      return updatedData;
+    });
+  }, [formData.id, updateFormData, canEditFormById]);
+
+  const updateField = useCallback((id: string, updatedField: FormField) => {
+    updateFormData(prev => {
+      const updatedFormData = {
+        ...prev,
+        fields: (prev.fields || []).map(field =>
+          field.id === id ? updatedField : field
+        ),
+      };
+      
+      // Check if scoring should be disabled
+      const hasFieldsWithNumericValues = updatedFormData.fields.some(field => field.hasNumericValues === true);
+      
+      if (!hasFieldsWithNumericValues && updatedFormData.showTotalScore) {
+        console.log("useFormFields - Disabling scoring: no numeric fields");
+        updatedFormData.showTotalScore = false;
+        updatedFormData.scoreRanges = [];
+        
+        toast({
+          title: 'Puntuación deshabilitada',
+          description: 'Se deshabilitó porque ningún campo tiene valores numéricos.',
+        });
+      }
+      
+      return updatedFormData;
+    });
+  }, [updateFormData]);
+
+  const removeField = useCallback((id: string) => {
+    updateFormData(prev => ({
+      ...prev,
+      fields: (prev.fields || []).filter(field => field.id !== id),
+    }));
+  }, [updateFormData]);
 
   return {
     addField,
     updateField,
-    removeField,
+    removeField
   };
+};
+
+function getDefaultLabel(fieldType: string): string {
+  const labels: Record<string, string> = {
+    'text': 'Texto corto',
+    'textarea': 'Texto largo',
+    'select': 'Selección desplegable',
+    'radio': 'Selección individual',
+    'checkbox': 'Selección múltiple',
+    'email': 'Correo electrónico',
+    'number': 'Número',
+    'date': 'Fecha',
+    'time': 'Hora',
+    'yesno': 'Sí / No',
+    'image-select': 'Selección de imagen',
+    'fullname': 'Nombre completo',
+    'address': 'Dirección',
+    'phone': 'Teléfono',
+    'image-upload': 'Subir imagen',
+    'file-upload': 'Subir archivo',
+    'drawing': 'Dibujo',
+    'matrix': 'Matriz de selección',
+    'opinion-scale': 'Escala de opinión',
+    'star-rating': 'Calificación de estrellas',
+    'ranking': 'Clasificación',
+    'timer': 'Temporizador',
+    'terms': 'Términos y condiciones',
+    'signature': 'Firma'
+  };
+  
+  return labels[fieldType] || `Campo ${fieldType}`;
+}
+
+function getDefaultOptions(fieldType: string) {
+  if (fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox') {
+    return [
+      { id: crypto.randomUUID(), label: 'Opción 1', value: 'option_1' },
+      { id: crypto.randomUUID(), label: 'Opción 2', value: 'option_2' }
+    ];
+  } else if (fieldType === 'yesno') {
+    return [
+      { id: 'yes', label: 'Sí', value: 'yes' },
+      { id: 'no', label: 'No', value: 'no' }
+    ];
+  }
+  return undefined;
 }

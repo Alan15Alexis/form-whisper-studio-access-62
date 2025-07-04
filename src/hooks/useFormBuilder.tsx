@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
-import { Form, FormField } from '@/types/form';
+import { Form } from '@/types/form';
 import { toast } from '@/hooks/toast';
 import { addInvitedUser } from '@/integrations/supabase/client';
 import { useDragAndDrop } from './form-builder/useDragAndDrop';
 import { useFormPermissions } from './useFormPermissions';
-import { useAuth } from '@/contexts/AuthContext';
+import { useFormState } from './form-builder/useFormState';
+import { useFormFields } from './form-builder/useFormFields';
+import { useFormOperations } from './form-builder/useFormOperations';
 
 interface UseFormBuilderParams {
   id?: string;
@@ -16,151 +19,41 @@ export const useFormBuilder = (id?: string) => {
   const params = useParams<{ id: string }>();
   const formId = id || params.id;
   const navigate = useNavigate();
-  const { 
-    forms, 
-    createForm, 
-    updateForm, 
-    getForm
-  } = useForm();
+  const { getForm } = useForm();
   const { canEditFormById } = useFormPermissions();
-  const { currentUser } = useAuth();
-  const [form, setForm] = useState<Form | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<Form>({
-    id: '',
-    title: '',
-    description: '',
-    fields: [],
-    isPrivate: false,
-    allowedUsers: [],
-    collaborators: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    accessLink: '',
-    ownerId: '',
-    formColor: '#3b82f6',
-    allowViewOwnResponses: false,
-    allowEditOwnResponses: false,
-    showTotalScore: false,
-    scoreRanges: []
+  
+  // Use focused state management
+  const {
+    form,
+    isLoading,
+    setIsLoading,
+    isSaving,
+    setIsSaving,
+    formData,
+    updateFormData,
+    syncFormData,
+    allowedUserEmail,
+    setAllowedUserEmail,
+    allowedUserName,
+    setAllowedUserName,
+    createInitialFormData
+  } = useFormState();
+
+  // Use focused field management
+  const { addField, updateField, removeField } = useFormFields({
+    formData,
+    updateFormData
   });
-  const [allowedUserEmail, setAllowedUserEmail] = useState('');
-  const [allowedUserName, setAllowedUserName] = useState('');
 
-  // Centralized addField function that works for both click and drag & drop
-  const addField = useCallback((fieldType: string) => {
-    console.log("useFormBuilder - addField called:", {
-      fieldType,
-      formId: formData.id,
-      currentUserEmail: currentUser?.email,
-      formOwnerId: formData.ownerId,
-      collaborators: formData.collaborators
-    });
+  // Use focused form operations
+  const { handleCreateForm, handleUpdateForm } = useFormOperations();
 
-    // Check permissions before adding field
-    const canEdit = canEditFormById(formData.id || '');
-    if (!canEdit) {
-      console.warn("useFormBuilder - Field addition blocked: insufficient permissions");
-      toast({
-        title: 'Sin permisos',
-        description: 'No tienes permisos para añadir campos a este formulario.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    const newField: FormField = {
-      id: crypto.randomUUID(),
-      type: fieldType as any,
-      label: '',
-      required: false,
-      options: fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox' ? [
-        { id: crypto.randomUUID(), label: 'Opción 1', value: 'option_1' },
-        { id: crypto.randomUUID(), label: 'Opción 2', value: 'option_2' }
-      ] : fieldType === 'yesno' ? [
-        { id: 'yes', label: 'Sí', value: 'yes' },
-        { id: 'no', label: 'No', value: 'no' }
-      ] : undefined
-    };
-
-    console.log("useFormBuilder - Adding new field:", {
-      newField: {
-        id: newField.id,
-        type: newField.type,
-        label: newField.label
-      }
-    });
-
-    setFormData(prev => {
-      const updatedData = {
-        ...prev,
-        fields: [...(prev.fields || []), newField],
-      };
-      console.log("useFormBuilder - Updated form data with new field. Total fields:", updatedData.fields.length);
-      
-      toast({
-        title: 'Campo añadido',
-        description: `Se añadió un campo de tipo "${fieldType}" al formulario.`,
-      });
-      
-      return updatedData;
-    });
-  }, [formData.id, formData.ownerId, formData.collaborators, currentUser?.email, canEditFormById]);
-
-  // Add drag and drop functionality with the centralized addField
+  // Add drag and drop functionality
   const { handleDragEnd } = useDragAndDrop({
     formData,
-    setFormData,
-    addField // Use the same addField function
+    setFormData: updateFormData,
+    addField
   });
-
-  // Enhanced form data sync with better collaborators handling
-  const syncFormData = useCallback((sourceForm: Form) => {
-    console.log("useFormBuilder - Syncing form data:", {
-      formId: sourceForm.id,
-      title: sourceForm.title,
-      showTotalScore: sourceForm.showTotalScore,
-      scoreRangesCount: sourceForm.scoreRanges?.length || 0,
-      collaborators: sourceForm.collaborators || [],
-      collaboratorsCount: sourceForm.collaborators?.length || 0
-    });
-    
-    setFormData(prevData => {
-      const newData = { ...sourceForm };
-      
-      // Ensure scoreRanges is always an array
-      if (!Array.isArray(newData.scoreRanges)) {
-        newData.scoreRanges = [];
-      }
-      
-      // Enhanced collaborators handling with validation
-      if (!Array.isArray(newData.collaborators)) {
-        console.warn("useFormBuilder - Invalid collaborators data, converting to array:", newData.collaborators);
-        newData.collaborators = [];
-      } else {
-        // Filter and validate collaborators
-        newData.collaborators = newData.collaborators.filter(email => 
-          typeof email === 'string' && email.trim().length > 0
-        );
-      }
-      
-      // Only update if data has actually changed (deep comparison for collaborators)
-      const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
-      
-      if (hasChanged) {
-        console.log("useFormBuilder - Form data updated with collaborators:", {
-          collaborators: newData.collaborators,
-          collaboratorsCount: newData.collaborators.length
-        });
-        return newData;
-      }
-      
-      return prevData;
-    });
-    
-    setForm(sourceForm);
-  }, []);
 
   // Enhanced initialization with better error handling and retry logic
   useEffect(() => {
@@ -199,18 +92,14 @@ export const useFormBuilder = (id?: string) => {
             console.log("useFormBuilder - Found form:", {
               id: existingForm.id,
               title: existingForm.title,
-              showTotalScore: existingForm.showTotalScore,
-              scoreRangesCount: existingForm.scoreRanges?.length || 0,
-              collaborators: existingForm.collaborators || [],
+              fieldsCount: existingForm.fields?.length || 0,
               collaboratorsCount: existingForm.collaborators?.length || 0,
               canEdit: canEdit
             });
             
             syncFormData(existingForm);
           } else {
-            console.log("useFormBuilder - Form not found after retries. Available forms:", 
-              forms.map(f => ({ id: f.id, title: f.title, collaboratorsCount: f.collaborators?.length || 0 }))
-            );
+            console.log("useFormBuilder - Form not found after retries");
             toast({
               title: 'Formulario no encontrado',
               description: 'El formulario que intentas editar no existe o no se pudo cargar.',
@@ -231,59 +120,29 @@ export const useFormBuilder = (id?: string) => {
         setIsLoading(false);
       } else {
         console.log("useFormBuilder - Initializing new form");
-        const newFormData = {
-          id: '',
-          title: '',
-          description: '',
-          fields: [],
-          isPrivate: false,
-          allowedUsers: [],
-          collaborators: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          accessLink: '',
-          ownerId: '',
-          formColor: '#3b82f6',
-          allowViewOwnResponses: false,
-          allowEditOwnResponses: false,
-          showTotalScore: false,
-          scoreRanges: []
-        };
-        
-        setFormData(newFormData);
+        updateFormData(() => createInitialFormData());
         setIsLoading(false);
       }
     };
 
     initializeFormData();
-  }, [formId, getForm, navigate, syncFormData, forms, canEditFormById]);
-
-  // Listen for form changes and resync when needed
-  useEffect(() => {
-    if (formId && forms.length > 0) {
-      const currentForm = getForm(formId);
-      if (currentForm && form && currentForm.updatedAt !== form.updatedAt) {
-        console.log("useFormBuilder - Detected form update, resyncing");
-        syncFormData(currentForm);
-      }
-    }
-  }, [forms, formId, getForm, form, syncFormData]);
+  }, [formId, getForm, navigate, syncFormData, canEditFormById, setIsLoading, updateFormData, createInitialFormData]);
 
   const isEditMode = Boolean(formId);
 
+  // Form property handlers
   const handleTitleChange = useCallback((title: string) => {
-    setFormData(prev => ({ ...prev, title }));
-  }, []);
+    updateFormData(prev => ({ ...prev, title }));
+  }, [updateFormData]);
 
   const handleDescriptionChange = useCallback((description: string) => {
-    setFormData(prev => ({ ...prev, description }));
-  }, []);
+    updateFormData(prev => ({ ...prev, description }));
+  }, [updateFormData]);
 
   const handlePrivateChange = useCallback((isPrivate: boolean) => {
-    setFormData(prev => ({ ...prev, isPrivate }));
-  }, []);
+    updateFormData(prev => ({ ...prev, isPrivate }));
+  }, [updateFormData]);
 
-  // Enhanced scoring toggle with validation
   const handleToggleFormScoring = useCallback((enabled: boolean) => {
     console.log("useFormBuilder - Toggle scoring:", enabled);
     
@@ -300,14 +159,13 @@ export const useFormBuilder = (id?: string) => {
       }
     }
     
-    setFormData(prev => ({ 
+    updateFormData(prev => ({ 
       ...prev, 
       showTotalScore: enabled,
       scoreRanges: enabled ? prev.scoreRanges : []
     }));
-  }, [formData.fields]);
+  }, [formData.fields, updateFormData]);
 
-  // Simple score ranges save - just update local state (no automatic saving)
   const handleSaveScoreRanges = useCallback((ranges: any[]) => {
     console.log("useFormBuilder - Update score ranges in form data:", ranges.length);
     
@@ -320,46 +178,13 @@ export const useFormBuilder = (id?: string) => {
       range.min <= range.max
     );
     
-    setFormData(prev => ({ 
+    updateFormData(prev => ({ 
       ...prev, 
       scoreRanges: [...validRanges]
     }));
-  }, []);
+  }, [updateFormData]);
 
-  const updateField = (id: string, updatedField: FormField) => {
-    setFormData(prev => {
-      const updatedFormData = {
-        ...prev,
-        fields: (prev.fields || []).map(field =>
-          field.id === id ? updatedField : field
-        ),
-      };
-      
-      // Check if scoring should be disabled
-      const hasFieldsWithNumericValues = updatedFormData.fields.some(field => field.hasNumericValues === true);
-      
-      if (!hasFieldsWithNumericValues && updatedFormData.showTotalScore) {
-        console.log("useFormBuilder - Disabling scoring: no numeric fields");
-        updatedFormData.showTotalScore = false;
-        updatedFormData.scoreRanges = [];
-        
-        toast({
-          title: 'Puntuación deshabilitada',
-          description: 'Se deshabilitó porque ningún campo tiene valores numéricos.',
-        });
-      }
-      
-      return updatedFormData;
-    });
-  };
-
-  const removeField = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      fields: (prev.fields || []).filter(field => field.id !== id),
-    }));
-  };
-
+  // User management handlers
   const addAllowedUser = async () => {
     if (!allowedUserEmail || !allowedUserName) {
       toast({
@@ -370,7 +195,6 @@ export const useFormBuilder = (id?: string) => {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(allowedUserEmail)) {
       toast({
@@ -383,7 +207,6 @@ export const useFormBuilder = (id?: string) => {
 
     const lowerCaseEmail = allowedUserEmail.toLowerCase();
 
-    // Check if the email is already in the allowed users list
     if (formData.allowedUsers?.includes(lowerCaseEmail)) {
       toast({
         title: "Usuario ya añadido",
@@ -394,12 +217,10 @@ export const useFormBuilder = (id?: string) => {
     }
 
     try {
-      // Add user to the usuario_invitado table in Supabase
       const newInvitedUser = await addInvitedUser(allowedUserName, lowerCaseEmail);
       
       if (newInvitedUser) {
-        // Add user to the form's allowed users list
-        setFormData(prev => ({
+        updateFormData(prev => ({
           ...prev,
           allowedUsers: [...(prev.allowedUsers || []), lowerCaseEmail],
         }));
@@ -409,7 +230,7 @@ export const useFormBuilder = (id?: string) => {
         
         toast({
           title: "Usuario añadido",
-          description: `${allowedUserName} (${lowerCaseEmail}) ha sido añadido al formulario y a la lista de usuarios invitados`,
+          description: `${allowedUserName} (${lowerCaseEmail}) ha sido añadido al formulario`,
         });
       }
     } catch (error) {
@@ -423,29 +244,29 @@ export const useFormBuilder = (id?: string) => {
   };
 
   const removeAllowedUser = (email: string) => {
-    setFormData(prev => ({
+    updateFormData(prev => ({
       ...prev,
       allowedUsers: (prev.allowedUsers || []).filter(user => user !== email),
     }));
   };
 
+  // Settings handlers
   const handleAllowViewOwnResponsesChange = (allow: boolean) => {
-    setFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
+    updateFormData(prev => ({ ...prev, allowViewOwnResponses: allow }));
   };
 
   const handleAllowEditOwnResponsesChange = (allow: boolean) => {
-    setFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
+    updateFormData(prev => ({ ...prev, allowEditOwnResponses: allow }));
   };
 
   const handleFormColorChange = (color: string) => {
-    setFormData(prev => ({ ...prev, formColor: color }));
+    updateFormData(prev => ({ ...prev, formColor: color }));
   };
 
   const handleHttpConfigChange = (config: any) => {
-    setFormData(prev => ({ ...prev, httpConfig: config }));
+    updateFormData(prev => ({ ...prev, httpConfig: config }));
   };
 
-  // Enhanced collaborators change handler with validation and logging
   const handleCollaboratorsChange = useCallback((collaborators: string[]) => {
     console.log("useFormBuilder - handleCollaboratorsChange called:", {
       newCollaborators: collaborators,
@@ -453,7 +274,6 @@ export const useFormBuilder = (id?: string) => {
       newCount: collaborators.length
     });
     
-    // Validate and sanitize collaborators array
     const validCollaborators = Array.isArray(collaborators) 
       ? collaborators.filter(email => typeof email === 'string' && email.trim().length > 0)
       : [];
@@ -464,11 +284,11 @@ export const useFormBuilder = (id?: string) => {
       removedCount: collaborators.length - validCollaborators.length
     });
     
-    setFormData(prev => ({ 
+    updateFormData(prev => ({ 
       ...prev, 
       collaborators: validCollaborators 
     }));
-  }, [formData.collaborators]);
+  }, [formData.collaborators, updateFormData]);
 
   const handleSubmit = useCallback(async () => {
     console.log("useFormBuilder - handleSubmit with collaborators:", {
@@ -501,54 +321,7 @@ export const useFormBuilder = (id?: string) => {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, isEditMode, formId]);
-
-  const handleCreateForm = async (formData: Partial<Form>) => {
-    try {
-      setIsSaving(true);
-      console.log("useFormBuilder - Creating form with collaborators:", formData.collaborators);
-      
-      const newForm = await createForm(formData);
-      console.log("useFormBuilder - Form created successfully:", newForm);
-      
-      navigate('/dashboard-admin');
-      
-      toast({
-        title: 'Formulario creado',
-        description: `"${newForm.title}" ha sido creado exitosamente`,
-      });
-    } catch (error) {
-      console.error("useFormBuilder - Error creating form:", error);
-      toast({
-        title: 'Error al crear formulario',
-        description: 'Algo salió mal al crear el formulario.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleUpdateForm = async (id: string, formData: Partial<Form>) => {
-    try {
-      setIsSaving(true);
-      console.log("useFormBuilder - Updating form with collaborators:", {
-        id,
-        collaborators: formData.collaborators,
-        collaboratorsCount: formData.collaborators?.length || 0
-      });
-      
-      await updateForm(id, formData);
-      
-      console.log("useFormBuilder - Form update completed successfully");
-      // Don't show success message here since it's already shown in updateFormOperation
-    } catch (error) {
-      console.error("useFormBuilder - Error updating form:", error);
-      // Error message is already shown in updateFormOperation
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  }, [formData, isEditMode, formId, handleCreateForm, handleUpdateForm, setIsSaving]);
 
   return {
     form,

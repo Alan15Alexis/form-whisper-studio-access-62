@@ -4,7 +4,7 @@ import { useFormPermissions } from "@/hooks/useFormPermissions";
 
 interface DragDropContextProps {
   formData: { fields?: FormField[], id?: string };
-  setFormData: (data: any) => void;
+  setFormData: (updater: (prev: any) => any) => void;
   addField: (type: string) => void;
 }
 
@@ -61,16 +61,19 @@ export function useDragAndDrop({ formData, setFormData, addField }: DragDropCont
         totalFields: formData.fields.length
       });
       
-      const reorderedFields = Array.from(formData.fields);
-      const [removed] = reorderedFields.splice(source.index, 1);
-      reorderedFields.splice(destination.index, 0, removed);
-      
-      setFormData({
-        ...formData,
-        fields: reorderedFields,
-      });
+      setFormData((prev: any) => {
+        const reorderedFields = Array.from(prev.fields || []);
+        const [removed] = reorderedFields.splice(source.index, 1);
+        reorderedFields.splice(destination.index, 0, removed);
+        
+        const updated = {
+          ...prev,
+          fields: reorderedFields,
+        };
 
-      console.log("useDragAndDrop - Fields reordered successfully");
+        console.log("useDragAndDrop - Fields reordered successfully");
+        return updated;
+      });
     }
   };
 
