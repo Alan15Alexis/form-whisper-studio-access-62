@@ -39,7 +39,7 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       options: getDefaultOptions(fieldType)
     };
 
-    console.log("useFormFields - Adding new field:", {
+    console.log("useFormFields - Creating new field:", {
       newField: {
         id: newField.id,
         type: newField.type,
@@ -48,24 +48,36 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
     });
 
     updateFormData(prev => {
+      const currentFields = Array.isArray(prev.fields) ? prev.fields : [];
+      const updatedFields = [...currentFields, newField];
+      
       const updatedData = {
         ...prev,
-        fields: [...(prev.fields || []), newField],
+        fields: updatedFields,
       };
       
-      console.log("useFormFields - Updated form data with new field. Total fields:", updatedData.fields.length);
-      
-      // Show success toast
-      toast({
-        title: 'Campo añadido',
-        description: `Se añadió un campo de tipo "${fieldType}" al formulario.`,
+      console.log("useFormFields - Updated form data:", {
+        previousFieldsCount: currentFields.length,
+        newFieldsCount: updatedFields.length,
+        newFieldId: newField.id,
+        allFieldIds: updatedFields.map(f => f.id)
       });
+      
+      // Show success toast after state update
+      setTimeout(() => {
+        toast({
+          title: 'Campo añadido',
+          description: `Se añadió un campo de tipo "${fieldType}" al formulario.`,
+        });
+      }, 100);
       
       return updatedData;
     });
   }, [formData.id, updateFormData, canEditFormById]);
 
   const updateField = useCallback((id: string, updatedField: FormField) => {
+    console.log("useFormFields - updateField called:", { id, fieldType: updatedField.type });
+    
     updateFormData(prev => {
       const updatedFormData = {
         ...prev,
@@ -93,6 +105,8 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
   }, [updateFormData]);
 
   const removeField = useCallback((id: string) => {
+    console.log("useFormFields - removeField called:", { id });
+    
     updateFormData(prev => ({
       ...prev,
       fields: (prev.fields || []).filter(field => field.id !== id),

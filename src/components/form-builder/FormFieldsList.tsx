@@ -29,7 +29,8 @@ const FormFieldsList = ({
   console.log("FormFieldsList - Rendering with:", {
     formId: formData.id,
     formShowTotalScore,
-    fieldsCount: formData.fields?.length || 0
+    fieldsCount: formData.fields?.length || 0,
+    fieldsData: formData.fields?.map(f => ({ id: f.id, type: f.type, label: f.label })) || []
   });
 
   // Get permission details for debugging and UI
@@ -45,7 +46,8 @@ const FormFieldsList = ({
       fieldType,
       canEdit,
       userRole,
-      formId: formData.id
+      formId: formData.id,
+      currentFieldsCount: formData.fields?.length || 0
     });
 
     if (!canEdit) {
@@ -56,6 +58,9 @@ const FormFieldsList = ({
     console.log("FormFieldsList - Proceeding with field addition");
     addField(fieldType);
   };
+  
+  // Ensure we have a valid fields array
+  const fieldsArray = Array.isArray(formData.fields) ? formData.fields : [];
   
   return (
     <div className="flex gap-6">
@@ -109,8 +114,8 @@ const FormFieldsList = ({
                 !canEdit && "bg-gray-50 opacity-75"
               )}
             >
-              {formData.fields && formData.fields.length > 0 ? (
-                formData.fields.map((field, index) => (
+              {fieldsArray.length > 0 ? (
+                fieldsArray.map((field, index) => (
                   <Draggable key={field.id} draggableId={field.id} index={index} isDragDisabled={!canEdit}>
                     {(provided, snapshot) => (
                       <div
@@ -158,7 +163,7 @@ const FormFieldsList = ({
           )}
         </Droppable>
         
-        {formShowTotalScore && formData.fields && formData.fields.some(f => f.hasNumericValues) && (
+        {formShowTotalScore && fieldsArray.some(f => f.hasNumericValues) && (
           <div className="mt-4 p-4 border rounded-lg bg-secondary/10">
             <h3 className="font-medium">Puntuación Total</h3>
             <p className="text-sm text-muted-foreground mt-1">
@@ -176,7 +181,9 @@ const FormFieldsList = ({
             Role: {userRole}<br />
             Owner: {permissionSummary.debugInfo.formOwner}<br />
             Collaborators: {JSON.stringify(permissionSummary.debugInfo.collaborators)}<br />
-            Current User: {permissionSummary.userEmail}
+            Current User: {permissionSummary.userEmail}<br />
+            Fields Count: {fieldsArray.length}<br />
+            Fields: {JSON.stringify(fieldsArray.map(f => ({ id: f.id, type: f.type })))}
           </div>
         )}
       </div>

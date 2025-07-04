@@ -32,12 +32,20 @@ export const useFormState = () => {
   const updateFormData = useCallback((updater: (prev: Form) => Form) => {
     setFormData(prev => {
       const updated = updater(prev);
+      
       console.log("useFormState - Form data updated:", {
         fieldsCount: updated.fields?.length || 0,
         showTotalScore: updated.showTotalScore,
-        collaboratorsCount: updated.collaborators?.length || 0
+        collaboratorsCount: updated.collaborators?.length || 0,
+        fieldIds: updated.fields?.map(f => f.id) || []
       });
-      return updated;
+      
+      // Force re-render by creating a completely new object
+      return {
+        ...updated,
+        fields: updated.fields ? [...updated.fields] : [],
+        updatedAt: new Date().toISOString()
+      };
     });
   }, []);
 
@@ -48,11 +56,15 @@ export const useFormState = () => {
       showTotalScore: sourceForm.showTotalScore,
       scoreRangesCount: sourceForm.scoreRanges?.length || 0,
       collaborators: sourceForm.collaborators || [],
-      collaboratorsCount: sourceForm.collaborators?.length || 0
+      collaboratorsCount: sourceForm.collaborators?.length || 0,
+      fieldsCount: sourceForm.fields?.length || 0
     });
     
     setFormData(prevData => {
-      const newData = { ...sourceForm };
+      const newData = { 
+        ...sourceForm,
+        fields: Array.isArray(sourceForm.fields) ? [...sourceForm.fields] : []
+      };
       
       // Ensure scoreRanges is always an array
       if (!Array.isArray(newData.scoreRanges)) {
@@ -76,7 +88,8 @@ export const useFormState = () => {
       if (hasChanged) {
         console.log("useFormState - Form data updated with collaborators:", {
           collaborators: newData.collaborators,
-          collaboratorsCount: newData.collaborators.length
+          collaboratorsCount: newData.collaborators.length,
+          fieldsCount: newData.fields.length
         });
         return newData;
       }
