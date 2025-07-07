@@ -24,7 +24,7 @@ const FormFieldsList = ({
   onToggleFormScoring,
   formShowTotalScore,
   addField,
-  updateTrigger
+  updateTrigger = 0
 }: FormFieldsListProps) => {
   const { canEditForm, getUserRole, getPermissionSummary } = useFormPermissions();
   
@@ -36,6 +36,7 @@ const FormFieldsList = ({
     collaboratorsCount: formData.collaborators?.length || 0,
     collaborators: formData.collaborators || [],
     updateTrigger,
+    updateTriggerType: typeof updateTrigger,
     timestamp: new Date().toISOString()
   });
 
@@ -52,8 +53,14 @@ const FormFieldsList = ({
       userRole,
       formId: formData.id,
       currentFieldsCount: formData.fields?.length || 0,
+      updateTrigger,
       timestamp: new Date().toISOString()
     });
+
+    if (!canEdit) {
+      console.warn("FormFieldsList - Field addition blocked: insufficient permissions");
+      return;
+    }
 
     console.log("FormFieldsList - Proceeding with field addition");
     addField(fieldType);
@@ -61,6 +68,11 @@ const FormFieldsList = ({
   
   // Ensure we have a valid fields array with unique keys
   const fieldsArray = Array.isArray(formData.fields) ? formData.fields : [];
+  
+  // Create a stable key for each field that includes the updateTrigger
+  const getFieldKey = (field: FormField, index: number) => {
+    return `${field.id}-${updateTrigger}-${index}`;
+  };
   
   return (
     <div className="flex gap-6">
@@ -122,7 +134,7 @@ const FormFieldsList = ({
               {fieldsArray.length > 0 ? (
                 fieldsArray.map((field, index) => (
                   <Draggable 
-                    key={`${field.id}-${updateTrigger || 0}`} 
+                    key={getFieldKey(field, index)} 
                     draggableId={field.id} 
                     index={index} 
                     isDragDisabled={!canEdit}
@@ -154,6 +166,12 @@ const FormFieldsList = ({
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-2">Haz clic en un campo de la barra lateral para añadirlo</p>
                   <p className="text-sm text-gray-400">O arrastra campos aquí para reordenarlos</p>
+                  {!canEdit && (
+                    <div className="flex items-center justify-center gap-2 mt-3 p-2 bg-yellow-100 rounded">
+                      <Lock className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-yellow-700">Sin permisos de edición</span>
+                    </div>
+                  )}
                 </div>
               )}
               {provided.placeholder}
@@ -182,6 +200,7 @@ const FormFieldsList = ({
             Current User: {permissionSummary.userEmail}<br />
             Fields Count: {fieldsArray.length}<br />
             Update Trigger: {updateTrigger}<br />
+            Update Trigger Type: {typeof updateTrigger}<br />
             Fields: {JSON.stringify(fieldsArray.map(f => ({ id: f.id, type: f.type })))}
           </div>
         )}

@@ -119,6 +119,11 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       fields: (prev.fields || []).filter(field => field.id !== id),
       updatedAt: new Date().toISOString()
     }));
+
+    toast({
+      title: 'Campo eliminado',
+      description: 'El campo ha sido eliminado del formulario.',
+    });
   }, [updateFormData]);
 
   return {
