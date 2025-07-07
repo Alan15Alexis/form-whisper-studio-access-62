@@ -29,6 +29,7 @@ interface FormBuilderTabsProps {
   allowedUserName: string;
   setAllowedUserName: (name: string) => void;
   onCollaboratorsChange?: (collaborators: string[]) => void;
+  updateTrigger: number; // Add the missing updateTrigger prop
 }
 
 const FormBuilderTabs = ({
@@ -52,8 +53,12 @@ const FormBuilderTabs = ({
   formId,
   allowedUserName,
   setAllowedUserName,
-  onCollaboratorsChange
+  onCollaboratorsChange,
+  updateTrigger // Accept the updateTrigger prop
 }: FormBuilderTabsProps) => {
+  // Force re-render when updateTrigger changes
+  console.log("FormBuilderTabs - Render triggered:", { updateTrigger, fieldsCount: formData.fields?.length || 0 });
+
   return (
     <Tabs defaultValue="basic" className="w-full">
       <TabsList className="grid w-full grid-cols-5 mb-6">
