@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from '@/contexts/form';
@@ -32,6 +31,7 @@ export const useFormBuilder = (id?: string) => {
     formData,
     updateFormData,
     syncFormData,
+    updateTrigger,
     allowedUserEmail,
     setAllowedUserEmail,
     allowedUserName,
@@ -329,6 +329,7 @@ export const useFormBuilder = (id?: string) => {
     isSaving,
     formData,
     isEditMode,
+    updateTrigger,
     allowedUserEmail,
     allowedUserName,
     setAllowedUserEmail,

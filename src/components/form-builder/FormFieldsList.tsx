@@ -4,8 +4,9 @@ import FormFieldEditor from "@/components/FormFieldEditor";
 import { Droppable, Draggable } from "react-beautiful-dnd";
 import { cn } from "@/lib/utils";
 import FieldsSidebar from "./FieldsSidebar";
+import CollaboratorsCard from "./CollaboratorsCard";
 import { useFormPermissions } from "@/hooks/useFormPermissions";
-import { AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock, Users } from "lucide-react";
 
 interface FormFieldsListProps {
   formData: Partial<Form>;
@@ -14,6 +15,7 @@ interface FormFieldsListProps {
   onToggleFormScoring?: (enabled: boolean) => void;
   formShowTotalScore?: boolean;
   addField: (fieldType: string) => void;
+  updateTrigger?: number; // Add trigger prop to force re-renders
 }
 
 const FormFieldsList = ({ 
@@ -22,7 +24,8 @@ const FormFieldsList = ({
   removeField,
   onToggleFormScoring,
   formShowTotalScore,
-  addField
+  addField,
+  updateTrigger // Use this to force re-renders when needed
 }: FormFieldsListProps) => {
   const { canEditForm, getUserRole, getPermissionSummary } = useFormPermissions();
   
@@ -30,15 +33,17 @@ const FormFieldsList = ({
     formId: formData.id,
     formShowTotalScore,
     fieldsCount: formData.fields?.length || 0,
-    fieldsData: formData.fields?.map(f => ({ id: f.id, type: f.type, label: f.label })) || []
+    fieldsData: formData.fields?.map(f => ({ id: f.id, type: f.type, label: f.label })) || [],
+    collaboratorsCount: formData.collaborators?.length || 0,
+    collaborators: formData.collaborators || [],
+    updateTrigger,
+    timestamp: new Date().toISOString()
   });
 
   // Get permission details for debugging and UI
   const permissionSummary = formData.id ? getPermissionSummary(formData.id) : null;
   const canEdit = canEditForm(formData as Form);
   const userRole = getUserRole(formData as Form);
-
-  console.log("FormFieldsList - Permission summary:", permissionSummary);
 
   // Enhanced addField wrapper with permission check and debugging
   const handleAddField = (fieldType: string) => {
@@ -47,7 +52,8 @@ const FormFieldsList = ({
       canEdit,
       userRole,
       formId: formData.id,
-      currentFieldsCount: formData.fields?.length || 0
+      currentFieldsCount: formData.fields?.length || 0,
+      timestamp: new Date().toISOString()
     });
 
     if (!canEdit) {
@@ -65,7 +71,7 @@ const FormFieldsList = ({
   return (
     <div className="flex gap-6">
       {/* Sidebar with draggable field types */}
-      <div className="w-80 flex-shrink-0">
+      <div className="w-80 flex-shrink-0 space-y-4">
         {canEdit ? (
           <FieldsSidebar onAddField={handleAddField} />
         ) : (
@@ -85,12 +91,35 @@ const FormFieldsList = ({
             )}
           </div>
         )}
+
+        {/* Collaborators Card - Show collaborators assigned to the form */}
+        {formData.collaborators && formData.collaborators.length > 0 && (
+          <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-5 w-5 text-blue-600" />
+              <h3 className="font-medium text-blue-800">Colaboradores del Formulario</h3>
+            </div>
+            <div className="space-y-2">
+              {formData.collaborators.map((collaborator, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-gray-700">{collaborator}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              {formData.collaborators.length} colaborador{formData.collaborators.length !== 1 ? 'es' : ''} asignado{formData.collaborators.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        )}
       </div>
       
       {/* Main form fields area */}
       <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Campos del Formulario</h3>
+          <h3 className="text-lg font-medium">
+            Campos del Formulario ({fieldsArray.length})
+          </h3>
           {permissionSummary && (
             <div className="text-sm text-gray-500">
               Rol: <span className="font-medium capitalize">{userRole}</span>
@@ -116,7 +145,7 @@ const FormFieldsList = ({
             >
               {fieldsArray.length > 0 ? (
                 fieldsArray.map((field, index) => (
-                  <Draggable key={field.id} draggableId={field.id} index={index} isDragDisabled={!canEdit}>
+                  <Draggable key={`${field.id}-${updateTrigger}`} draggableId={field.id} index={index} isDragDisabled={!canEdit}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
@@ -144,8 +173,8 @@ const FormFieldsList = ({
                 <div className="text-center py-8">
                   {canEdit ? (
                     <>
-                      <p className="text-gray-500 mb-2">Arrastra campos desde la barra lateral para comenzar</p>
-                      <p className="text-sm text-gray-400">Los campos aparecerán aquí y podrás reordenarlos arrastrándolos</p>
+                      <p className="text-gray-500 mb-2">Haz clic en un campo de la barra lateral para añadirlo</p>
+                      <p className="text-sm text-gray-400">O arrastra campos aquí para reordenarlos</p>
                     </>
                   ) : (
                     <>
@@ -183,6 +212,7 @@ const FormFieldsList = ({
             Collaborators: {JSON.stringify(permissionSummary.debugInfo.collaborators)}<br />
             Current User: {permissionSummary.userEmail}<br />
             Fields Count: {fieldsArray.length}<br />
+            Update Trigger: {updateTrigger}<br />
             Fields: {JSON.stringify(fieldsArray.map(f => ({ id: f.id, type: f.type })))}
           </div>
         )}

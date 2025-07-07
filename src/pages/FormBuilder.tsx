@@ -15,6 +15,7 @@ const FormBuilder = () => {
     isSaving,
     isEditMode,
     isLoading,
+    updateTrigger, // Get the update trigger
     handleTitleChange,
     handleDescriptionChange,
     handlePrivateChange,
@@ -82,7 +83,9 @@ const FormBuilder = () => {
     id: safeFormData.id,
     showTotalScore: safeFormData.showTotalScore,
     scoreRangesCount: safeFormData.scoreRanges.length,
-    collaboratorsCount: safeFormData.collaborators.length
+    collaboratorsCount: safeFormData.collaborators.length,
+    fieldsCount: safeFormData.fields?.length || 0,
+    updateTrigger
   });
 
   return (
@@ -118,6 +121,7 @@ const FormBuilder = () => {
             allowedUserName={allowedUserName}
             setAllowedUserName={setAllowedUserName}
             onCollaboratorsChange={handleCollaboratorsChange}
+            updateTrigger={updateTrigger} // Pass the update trigger
           />
         </DragDropContext>
       </div>

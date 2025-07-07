@@ -16,7 +16,8 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
     console.log("useFormFields - addField called:", {
       fieldType,
       formId: formData.id,
-      currentFieldsCount: formData.fields?.length || 0
+      currentFieldsCount: formData.fields?.length || 0,
+      timestamp: new Date().toISOString()
     });
 
     // Check permissions before adding field
@@ -44,30 +45,33 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
         id: newField.id,
         type: newField.type,
         label: newField.label
-      }
+      },
+      timestamp: new Date().toISOString()
     });
 
     updateFormData(prev => {
-      const currentFields = Array.isArray(prev.fields) ? prev.fields : [];
+      const currentFields = Array.isArray(prev.fields) ? [...prev.fields] : [];
       const updatedFields = [...currentFields, newField];
       
       const updatedData = {
         ...prev,
         fields: updatedFields,
+        updatedAt: new Date().toISOString() // Force timestamp update
       };
       
-      console.log("useFormFields - Updated form data:", {
+      console.log("useFormFields - Form data after field addition:", {
         previousFieldsCount: currentFields.length,
         newFieldsCount: updatedFields.length,
         newFieldId: newField.id,
-        allFieldIds: updatedFields.map(f => f.id)
+        allFieldIds: updatedFields.map(f => f.id),
+        timestamp: new Date().toISOString()
       });
       
-      // Show success toast after state update
+      // Show success toast
       setTimeout(() => {
         toast({
           title: 'Campo añadido',
-          description: `Se añadió un campo de tipo "${fieldType}" al formulario.`,
+          description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario.`,
         });
       }, 100);
       
@@ -82,8 +86,9 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       const updatedFormData = {
         ...prev,
         fields: (prev.fields || []).map(field =>
-          field.id === id ? updatedField : field
+          field.id === id ? { ...updatedField } : field
         ),
+        updatedAt: new Date().toISOString()
       };
       
       // Check if scoring should be disabled
@@ -110,6 +115,7 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
     updateFormData(prev => ({
       ...prev,
       fields: (prev.fields || []).filter(field => field.id !== id),
+      updatedAt: new Date().toISOString()
     }));
   }, [updateFormData]);
 

@@ -26,6 +26,7 @@ export const useFormState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Form>(createInitialFormData());
+  const [updateTrigger, setUpdateTrigger] = useState(0); // Force re-render trigger
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
@@ -37,15 +38,22 @@ export const useFormState = () => {
         fieldsCount: updated.fields?.length || 0,
         showTotalScore: updated.showTotalScore,
         collaboratorsCount: updated.collaborators?.length || 0,
-        fieldIds: updated.fields?.map(f => f.id) || []
+        fieldIds: updated.fields?.map(f => f.id) || [],
+        timestamp: new Date().toISOString()
       });
       
-      // Force re-render by creating a completely new object
-      return {
+      // Force complete state recreation and trigger re-render
+      const newFormData = {
         ...updated,
-        fields: updated.fields ? [...updated.fields] : [],
+        fields: updated.fields ? updated.fields.map(field => ({ ...field })) : [],
+        collaborators: updated.collaborators ? [...updated.collaborators] : [],
         updatedAt: new Date().toISOString()
       };
+      
+      // Trigger a re-render by updating the trigger
+      setUpdateTrigger(prev => prev + 1);
+      
+      return newFormData;
     });
   }, []);
 
@@ -63,7 +71,7 @@ export const useFormState = () => {
     setFormData(prevData => {
       const newData = { 
         ...sourceForm,
-        fields: Array.isArray(sourceForm.fields) ? [...sourceForm.fields] : []
+        fields: Array.isArray(sourceForm.fields) ? sourceForm.fields.map(field => ({ ...field })) : []
       };
       
       // Ensure scoreRanges is always an array
@@ -82,19 +90,10 @@ export const useFormState = () => {
         );
       }
       
-      // Only update if data has actually changed (deep comparison for collaborators)
-      const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
+      // Always trigger update
+      setUpdateTrigger(prev => prev + 1);
       
-      if (hasChanged) {
-        console.log("useFormState - Form data updated with collaborators:", {
-          collaborators: newData.collaborators,
-          collaboratorsCount: newData.collaborators.length,
-          fieldsCount: newData.fields.length
-        });
-        return newData;
-      }
-      
-      return prevData;
+      return newData;
     });
     
     setForm(sourceForm);
@@ -111,6 +110,7 @@ export const useFormState = () => {
     setFormData,
     updateFormData,
     syncFormData,
+    updateTrigger, // Export the trigger for components that need to react to updates
     allowedUserEmail,
     setAllowedUserEmail,
     allowedUserName,
