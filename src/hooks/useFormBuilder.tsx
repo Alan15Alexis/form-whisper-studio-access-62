@@ -37,14 +37,14 @@ export const useFormBuilder = (id?: string) => {
     createInitialFormData
   } = useFormState();
 
-  // Use focused field management
-  const { addField, updateField, removeField } = useFormFields({
-    formData,
-    updateFormData
-  });
-
   // Use focused form operations
   const { handleCreateForm, handleUpdateForm } = useFormOperations();
+
+  // Use focused field management - pass formId for permission checks
+  const { addField, updateField, removeField } = useFormFields({
+    formData: { ...formData, id: formId || formData.id },
+    updateFormData
+  });
 
   // Use form properties management
   const {
@@ -65,14 +65,18 @@ export const useFormBuilder = (id?: string) => {
     setAllowedUserName
   });
 
-  // Use form settings management
+  // Use form settings management with auto-save capability
   const {
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
     handleFormColorChange,
     handleHttpConfigChange,
     handleCollaboratorsChange
-  } = useFormSettings({ updateFormData });
+  } = useFormSettings({ 
+    updateFormData,
+    handleUpdateForm,
+    formId 
+  });
 
   // Use form initialization
   useFormInitialization({

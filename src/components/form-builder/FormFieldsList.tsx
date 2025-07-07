@@ -4,7 +4,6 @@ import FormFieldEditor from "@/components/FormFieldEditor";
 import { Droppable, Draggable } from "react-beautiful-dnd";
 import { cn } from "@/lib/utils";
 import FieldsSidebar from "./FieldsSidebar";
-import CollaboratorsCard from "./CollaboratorsCard";
 import { useFormPermissions } from "@/hooks/useFormPermissions";
 import { AlertCircle, Lock, Users } from "lucide-react";
 
@@ -15,7 +14,7 @@ interface FormFieldsListProps {
   onToggleFormScoring?: (enabled: boolean) => void;
   formShowTotalScore?: boolean;
   addField: (fieldType: string) => void;
-  updateTrigger?: number; // Add trigger prop to force re-renders
+  updateTrigger?: number;
 }
 
 const FormFieldsList = ({ 
@@ -25,7 +24,7 @@ const FormFieldsList = ({
   onToggleFormScoring,
   formShowTotalScore,
   addField,
-  updateTrigger // Use this to force re-renders when needed
+  updateTrigger
 }: FormFieldsListProps) => {
   const { canEditForm, getUserRole, getPermissionSummary } = useFormPermissions();
   
@@ -56,41 +55,18 @@ const FormFieldsList = ({
       timestamp: new Date().toISOString()
     });
 
-    if (!canEdit) {
-      console.warn("FormFieldsList - Field addition blocked: insufficient permissions");
-      return;
-    }
-
     console.log("FormFieldsList - Proceeding with field addition");
     addField(fieldType);
   };
   
-  // Ensure we have a valid fields array
+  // Ensure we have a valid fields array with unique keys
   const fieldsArray = Array.isArray(formData.fields) ? formData.fields : [];
   
   return (
     <div className="flex gap-6">
       {/* Sidebar with draggable field types */}
       <div className="w-80 flex-shrink-0 space-y-4">
-        {canEdit ? (
-          <FieldsSidebar onAddField={handleAddField} />
-        ) : (
-          <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-            <div className="flex items-center gap-2 mb-3">
-              <Lock className="h-5 w-5 text-gray-500" />
-              <h3 className="font-medium text-gray-700">Campos Disponibles</h3>
-            </div>
-            <p className="text-sm text-gray-500 mb-3">
-              Solo {userRole === 'owner' ? 'el propietario' : 'los colaboradores'} pueden añadir campos
-            </p>
-            {userRole === 'viewer' && (
-              <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-                <AlertCircle className="h-4 w-4" />
-                Modo solo lectura
-              </div>
-            )}
-          </div>
-        )}
+        <FieldsSidebar onAddField={handleAddField} />
 
         {/* Collaborators Card - Show collaborators assigned to the form */}
         {formData.collaborators && formData.collaborators.length > 0 && (
@@ -101,7 +77,7 @@ const FormFieldsList = ({
             </div>
             <div className="space-y-2">
               {formData.collaborators.map((collaborator, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
+                <div key={`${collaborator}-${index}`} className="flex items-center gap-2 p-2 bg-white rounded border">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span className="text-sm font-medium text-gray-700">{collaborator}</span>
                 </div>
@@ -145,7 +121,12 @@ const FormFieldsList = ({
             >
               {fieldsArray.length > 0 ? (
                 fieldsArray.map((field, index) => (
-                  <Draggable key={`${field.id}-${updateTrigger}`} draggableId={field.id} index={index} isDragDisabled={!canEdit}>
+                  <Draggable 
+                    key={`${field.id}-${updateTrigger || 0}`} 
+                    draggableId={field.id} 
+                    index={index} 
+                    isDragDisabled={!canEdit}
+                  >
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
@@ -171,20 +152,8 @@ const FormFieldsList = ({
                 ))
               ) : (
                 <div className="text-center py-8">
-                  {canEdit ? (
-                    <>
-                      <p className="text-gray-500 mb-2">Haz clic en un campo de la barra lateral para añadirlo</p>
-                      <p className="text-sm text-gray-400">O arrastra campos aquí para reordenarlos</p>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500 mb-2">Este formulario no tiene campos</p>
-                      <p className="text-sm text-gray-400">
-                        Solo {userRole === 'owner' ? 'el propietario' : 'los colaboradores'} pueden añadir campos
-                      </p>
-                    </>
-                  )}
+                  <p className="text-gray-500 mb-2">Haz clic en un campo de la barra lateral para añadirlo</p>
+                  <p className="text-sm text-gray-400">O arrastra campos aquí para reordenarlos</p>
                 </div>
               )}
               {provided.placeholder}

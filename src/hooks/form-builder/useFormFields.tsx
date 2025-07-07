@@ -20,16 +20,18 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       timestamp: new Date().toISOString()
     });
 
-    // Check permissions before adding field
-    const canEdit = formData.id ? canEditFormById(formData.id) : true;
-    if (!canEdit) {
-      console.warn("useFormFields - Field addition blocked: insufficient permissions");
-      toast({
-        title: 'Sin permisos',
-        description: 'No tienes permisos para añadir campos a este formulario.',
-        variant: 'destructive',
-      });
-      return;
+    // Check permissions before adding field - only if we have a form ID
+    if (formData.id) {
+      const canEdit = canEditFormById(formData.id);
+      if (!canEdit) {
+        console.warn("useFormFields - Field addition blocked: insufficient permissions");
+        toast({
+          title: 'Sin permisos',
+          description: 'No tienes permisos para añadir campos a este formulario.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     const newField: FormField = {
@@ -56,7 +58,7 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       const updatedData = {
         ...prev,
         fields: updatedFields,
-        updatedAt: new Date().toISOString() // Force timestamp update
+        updatedAt: new Date().toISOString()
       };
       
       console.log("useFormFields - Form data after field addition:", {
@@ -67,16 +69,16 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
         timestamp: new Date().toISOString()
       });
       
-      // Show success toast
-      setTimeout(() => {
-        toast({
-          title: 'Campo añadido',
-          description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario.`,
-        });
-      }, 100);
-      
       return updatedData;
     });
+
+    // Show success toast after state update
+    setTimeout(() => {
+      toast({
+        title: 'Campo añadido',
+        description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario.`,
+      });
+    }, 100);
   }, [formData.id, updateFormData, canEditFormById]);
 
   const updateField = useCallback((id: string, updatedField: FormField) => {
