@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { FormField } from '@/types/form';
 import { toast } from '@/hooks/toast';
@@ -7,12 +6,13 @@ import { useFormPermissions } from '@/hooks/useFormPermissions';
 interface UseFormFieldsProps {
   formData: any;
   updateFormData: (updater: (prev: any) => any) => void;
+  handleUpdateForm?: (formId: string, formData: any) => Promise<any>; // Add auto-save capability
 }
 
-export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) => {
+export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: UseFormFieldsProps) => {
   const { canEditFormById } = useFormPermissions();
 
-  const addField = useCallback((fieldType: string) => {
+  const addField = useCallback(async (fieldType: string) => {
     console.log("useFormFields - addField called:", {
       fieldType,
       formId: formData.id,
@@ -51,11 +51,13 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       timestamp: new Date().toISOString()
     });
 
+    // Update local state first
+    let updatedFormData: any;
     updateFormData(prev => {
       const currentFields = Array.isArray(prev.fields) ? [...prev.fields] : [];
       const updatedFields = [...currentFields, newField];
       
-      const updatedData = {
+      updatedFormData = {
         ...prev,
         fields: updatedFields,
         updatedAt: new Date().toISOString()
@@ -69,23 +71,49 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
         timestamp: new Date().toISOString()
       });
       
-      return updatedData;
+      return updatedFormData;
     });
 
-    // Show success toast after state update
-    setTimeout(() => {
+    // Auto-save to database if we have a form ID and update function
+    if (formData.id && handleUpdateForm && updatedFormData) {
+      try {
+        console.log("useFormFields - Auto-saving field to database:", {
+          formId: formData.id,
+          newFieldId: newField.id,
+          totalFields: updatedFormData.fields.length
+        });
+        
+        await handleUpdateForm(formData.id, updatedFormData);
+        
+        console.log("useFormFields - Field auto-saved successfully to database");
+        
+        toast({
+          title: 'Campo añadido',
+          description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario y se guardó en la base de datos.`,
+        });
+      } catch (error) {
+        console.error("useFormFields - Error auto-saving field:", error);
+        toast({
+          title: 'Error al guardar',
+          description: 'El campo se añadió localmente pero no se pudo guardar en la base de datos.',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // Show success toast for local update only (when creating new form)
       toast({
         title: 'Campo añadido',
         description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario.`,
       });
-    }, 100);
-  }, [formData.id, updateFormData, canEditFormById]);
+    }
+  }, [formData.id, updateFormData, canEditFormById, handleUpdateForm]);
 
-  const updateField = useCallback((id: string, updatedField: FormField) => {
+  const updateField = useCallback(async (id: string, updatedField: FormField) => {
     console.log("useFormFields - updateField called:", { id, fieldType: updatedField.type });
     
+    let updatedFormData: any;
     updateFormData(prev => {
-      const updatedFormData = {
+      updatedFormData = {
         ...prev,
         fields: (prev.fields || []).map(field =>
           field.id === id ? { ...updatedField } : field
@@ -109,22 +137,63 @@ export const useFormFields = ({ formData, updateFormData }: UseFormFieldsProps) 
       
       return updatedFormData;
     });
-  }, [updateFormData]);
 
-  const removeField = useCallback((id: string) => {
+    // Auto-save field updates to database
+    if (formData.id && handleUpdateForm && updatedFormData) {
+      try {
+        console.log("useFormFields - Auto-saving field update to database");
+        await handleUpdateForm(formData.id, updatedFormData);
+        console.log("useFormFields - Field update auto-saved successfully");
+      } catch (error) {
+        console.error("useFormFields - Error auto-saving field update:", error);
+        toast({
+          title: 'Error al guardar',
+          description: 'Los cambios no se pudieron guardar en la base de datos.',
+          variant: 'destructive',
+        });
+      }
+    }
+  }, [updateFormData, formData.id, handleUpdateForm]);
+
+  const removeField = useCallback(async (id: string) => {
     console.log("useFormFields - removeField called:", { id });
     
-    updateFormData(prev => ({
-      ...prev,
-      fields: (prev.fields || []).filter(field => field.id !== id),
-      updatedAt: new Date().toISOString()
-    }));
-
-    toast({
-      title: 'Campo eliminado',
-      description: 'El campo ha sido eliminado del formulario.',
+    let updatedFormData: any;
+    updateFormData(prev => {
+      updatedFormData = {
+        ...prev,
+        fields: (prev.fields || []).filter(field => field.id !== id),
+        updatedAt: new Date().toISOString()
+      };
+      return updatedFormData;
     });
-  }, [updateFormData]);
+
+    // Auto-save field removal to database
+    if (formData.id && handleUpdateForm && updatedFormData) {
+      try {
+        console.log("useFormFields - Auto-saving field removal to database");
+        await handleUpdateForm(formData.id, updatedFormData);
+        console.log("useFormFields - Field removal auto-saved successfully");
+        
+        toast({
+          title: 'Campo eliminado',
+          description: 'El campo ha sido eliminado del formulario y guardado en la base de datos.',
+        });
+      } catch (error) {
+        console.error("useFormFields - Error auto-saving field removal:", error);
+        toast({
+          title: 'Error al guardar',
+          description: 'El campo se eliminó localmente pero no se pudo guardar en la base de datos.',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: 'Campo eliminado',
+        description: 'El campo ha sido eliminado del formulario.',
+      });
+    }
+  }, [updateFormData, formData.id, handleUpdateForm]);
 
   return {
     addField,

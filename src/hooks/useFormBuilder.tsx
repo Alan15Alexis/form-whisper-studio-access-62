@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from '@/hooks/toast';
@@ -40,13 +39,13 @@ export const useFormBuilder = (id?: string) => {
   // Use focused form operations
   const { handleCreateForm, handleUpdateForm } = useFormOperations();
 
-  // Use focused field management - pass formId for permission checks
+  // Use focused field management - pass handleUpdateForm for auto-saving
   const { addField, updateField, removeField } = useFormFields({
     formData: { ...formData, id: formId || formData.id },
-    updateFormData
+    updateFormData,
+    handleUpdateForm: formId ? handleUpdateForm : undefined // Only enable auto-save for existing forms
   });
 
-  // Use form properties management
   const {
     handleTitleChange,
     handleDescriptionChange,
@@ -55,7 +54,6 @@ export const useFormBuilder = (id?: string) => {
     handleSaveScoreRanges
   } = useFormProperties({ formData, updateFormData });
 
-  // Use user management
   const { addAllowedUser, removeAllowedUser } = useUserManagement({
     formData,
     updateFormData,
@@ -65,7 +63,6 @@ export const useFormBuilder = (id?: string) => {
     setAllowedUserName
   });
 
-  // Use form settings management with auto-save capability
   const {
     handleAllowViewOwnResponsesChange,
     handleAllowEditOwnResponsesChange,
@@ -78,7 +75,6 @@ export const useFormBuilder = (id?: string) => {
     formId 
   });
 
-  // Use form initialization
   useFormInitialization({
     formId,
     syncFormData,
@@ -87,7 +83,6 @@ export const useFormBuilder = (id?: string) => {
     updateFormData
   });
 
-  // Add drag and drop functionality
   const { handleDragEnd } = useDragAndDrop({
     formData,
     setFormData: updateFormData,
