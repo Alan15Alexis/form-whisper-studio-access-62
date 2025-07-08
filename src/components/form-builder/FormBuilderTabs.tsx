@@ -29,7 +29,7 @@ interface FormBuilderTabsProps {
   allowedUserName: string;
   setAllowedUserName: (name: string) => void;
   onCollaboratorsChange: (collaborators: string[]) => void;
-  updateTrigger: number; // Make sure we receive the trigger
+  updateTrigger: number;
 }
 
 const FormBuilderTabs = ({ 
@@ -80,34 +80,38 @@ const FormBuilderTabs = ({
           onToggleFormScoring={onToggleFormScoring}
           formShowTotalScore={formData.showTotalScore}
           addField={addField}
-          updateTrigger={updateTrigger} // Pass the correct trigger value
+          updateTrigger={updateTrigger}
         />
       </TabsContent>
 
       <TabsContent value="settings" className="space-y-6">
         <FormSettings
-          formData={formData}
-          onToggleFormScoring={onToggleFormScoring}
-          onSaveScoreRanges={onSaveScoreRanges}
+          isPrivate={formData.isPrivate || false}
+          onPrivateChange={onPrivateChange}
+          allowViewOwnResponses={formData.allowViewOwnResponses}
           onAllowViewOwnResponsesChange={onAllowViewOwnResponsesChange}
+          allowEditOwnResponses={formData.allowEditOwnResponses}
           onAllowEditOwnResponsesChange={onAllowEditOwnResponsesChange}
+          formColor={formData.formColor}
           onFormColorChange={onFormColorChange}
+          httpConfig={formData.httpConfig}
           onHttpConfigChange={onHttpConfigChange}
-          onCollaboratorsChange={onCollaboratorsChange}
+          formFields={formData.fields}
           formId={formId}
+          collaborators={formData.collaborators}
+          onCollaboratorsChange={onCollaboratorsChange}
         />
       </TabsContent>
 
       <TabsContent value="access" className="space-y-6">
         <AccessControl
-          formData={formData}
-          onPrivateChange={onPrivateChange}
+          allowedUsers={formData.allowedUsers || []}
           allowedUserEmail={allowedUserEmail}
-          setAllowedUserEmail={setAllowedUserEmail}
-          addAllowedUser={addAllowedUser}
-          removeAllowedUser={removeAllowedUser}
+          onAllowedUserEmailChange={setAllowedUserEmail}
+          onAddAllowedUser={addAllowedUser}
+          onRemoveAllowedUser={removeAllowedUser}
           allowedUserName={allowedUserName}
-          setAllowedUserName={setAllowedUserName}
+          onAllowedUserNameChange={setAllowedUserName}
         />
       </TabsContent>
 
