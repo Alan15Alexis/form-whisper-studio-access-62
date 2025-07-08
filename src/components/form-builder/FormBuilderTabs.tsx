@@ -1,20 +1,20 @@
 
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form } from "@/types/form";
 import FormBasicInfo from "./FormBasicInfo";
 import FormFieldsList from "./FormFieldsList";
 import FormSettings from "./FormSettings";
 import AccessControl from "./AccessControl";
-import ScoreRangesTab from "./ScoreRangesTab";
+import { FormField, Form } from "@/types/form";
 
 interface FormBuilderTabsProps {
-  formData: Form;
+  formData: Partial<Form>;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onPrivateChange: (isPrivate: boolean) => void;
   onToggleFormScoring: (enabled: boolean) => void;
-  onSaveScoreRanges: (ranges: any[]) => void;
-  updateField: (id: string, field: any) => void;
+  onSaveScoreRanges: (ranges: Array<{ min: number; max: number; message: string }>) => void;
+  updateField: (id: string, updatedField: FormField) => void;
   removeField: (id: string) => void;
   allowedUserEmail: string;
   setAllowedUserEmail: (email: string) => void;
@@ -28,13 +28,13 @@ interface FormBuilderTabsProps {
   formId?: string;
   allowedUserName: string;
   setAllowedUserName: (name: string) => void;
-  onCollaboratorsChange?: (collaborators: string[]) => void;
-  updateTrigger: number; // Add the missing updateTrigger prop
+  onCollaboratorsChange: (collaborators: string[]) => void;
+  updateTrigger: number; // Make sure we receive the trigger
 }
 
-const FormBuilderTabs = ({
-  formData,
-  onTitleChange,
+const FormBuilderTabs = ({ 
+  formData, 
+  onTitleChange, 
   onDescriptionChange,
   onPrivateChange,
   onToggleFormScoring,
@@ -54,30 +54,25 @@ const FormBuilderTabs = ({
   allowedUserName,
   setAllowedUserName,
   onCollaboratorsChange,
-  updateTrigger // Accept the updateTrigger prop
+  updateTrigger
 }: FormBuilderTabsProps) => {
-  // Force re-render when updateTrigger changes
-  console.log("FormBuilderTabs - Render triggered:", { updateTrigger, fieldsCount: formData.fields?.length || 0 });
+  const [activeTab, setActiveTab] = useState("fields");
+
+  console.log("FormBuilderTabs - Render triggered:", {
+    updateTrigger,
+    fieldsCount: formData.fields?.length || 0
+  });
 
   return (
-    <Tabs defaultValue="basic" className="w-full">
-      <TabsList className="grid w-full grid-cols-5 mb-6">
-        <TabsTrigger value="basic" className="text-sm">Básico</TabsTrigger>
-        <TabsTrigger value="fields" className="text-sm">Campos</TabsTrigger>
-        <TabsTrigger value="settings" className="text-sm">Configuración</TabsTrigger>
-        <TabsTrigger value="access" className="text-sm">Acceso</TabsTrigger>
-        <TabsTrigger value="scoring" className="text-sm">Puntuación</TabsTrigger>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="fields">Campos</TabsTrigger>
+        <TabsTrigger value="settings">Configuración</TabsTrigger>
+        <TabsTrigger value="access">Acceso</TabsTrigger>
+        <TabsTrigger value="basic">Información</TabsTrigger>
       </TabsList>
-      
-      <TabsContent value="basic" className="mt-6">
-        <FormBasicInfo
-          formData={formData}
-          onTitleChange={onTitleChange}
-          onDescriptionChange={onDescriptionChange}
-        />
-      </TabsContent>
-      
-      <TabsContent value="fields" className="mt-6">
+
+      <TabsContent value="fields" className="space-y-6">
         <FormFieldsList
           formData={formData}
           updateField={updateField}
@@ -85,47 +80,42 @@ const FormBuilderTabs = ({
           onToggleFormScoring={onToggleFormScoring}
           formShowTotalScore={formData.showTotalScore}
           addField={addField}
+          updateTrigger={updateTrigger} // Pass the correct trigger value
         />
       </TabsContent>
-      
-      <TabsContent value="settings" className="mt-6">
+
+      <TabsContent value="settings" className="space-y-6">
         <FormSettings
-          isPrivate={formData.isPrivate || false}
-          onPrivateChange={onPrivateChange}
-          allowViewOwnResponses={formData.allowViewOwnResponses}
-          onAllowViewOwnResponsesChange={onAllowViewOwnResponsesChange}
-          allowEditOwnResponses={formData.allowEditOwnResponses}
-          onAllowEditOwnResponsesChange={onAllowEditOwnResponsesChange}
-          formColor={formData.formColor}
-          onFormColorChange={onFormColorChange}
-          httpConfig={formData.httpConfig}
-          onHttpConfigChange={onHttpConfigChange}
-          formFields={formData.fields}
-          formId={formId}
-          collaborators={formData.collaborators || []}
-          onCollaboratorsChange={onCollaboratorsChange}
-        />
-      </TabsContent>
-      
-      <TabsContent value="access" className="mt-6">
-        <AccessControl
-          allowedUsers={formData.allowedUsers || []}
-          allowedUserEmail={allowedUserEmail}
-          allowedUserName={allowedUserName}
-          onAllowedUserEmailChange={setAllowedUserEmail}
-          onAllowedUserNameChange={setAllowedUserName}
-          onAddAllowedUser={addAllowedUser}
-          onRemoveAllowedUser={removeAllowedUser}
-        />
-      </TabsContent>
-      
-      <TabsContent value="scoring" className="mt-6">
-        <ScoreRangesTab
-          formFields={formData.fields || []}
-          showTotalScore={formData.showTotalScore || false}
+          formData={formData}
           onToggleFormScoring={onToggleFormScoring}
           onSaveScoreRanges={onSaveScoreRanges}
-          scoreRanges={formData.scoreRanges || []}
+          onAllowViewOwnResponsesChange={onAllowViewOwnResponsesChange}
+          onAllowEditOwnResponsesChange={onAllowEditOwnResponsesChange}
+          onFormColorChange={onFormColorChange}
+          onHttpConfigChange={onHttpConfigChange}
+          onCollaboratorsChange={onCollaboratorsChange}
+          formId={formId}
+        />
+      </TabsContent>
+
+      <TabsContent value="access" className="space-y-6">
+        <AccessControl
+          formData={formData}
+          onPrivateChange={onPrivateChange}
+          allowedUserEmail={allowedUserEmail}
+          setAllowedUserEmail={setAllowedUserEmail}
+          addAllowedUser={addAllowedUser}
+          removeAllowedUser={removeAllowedUser}
+          allowedUserName={allowedUserName}
+          setAllowedUserName={setAllowedUserName}
+        />
+      </TabsContent>
+
+      <TabsContent value="basic" className="space-y-6">
+        <FormBasicInfo
+          formData={formData}
+          onTitleChange={onTitleChange}
+          onDescriptionChange={onDescriptionChange}
         />
       </TabsContent>
     </Tabs>
