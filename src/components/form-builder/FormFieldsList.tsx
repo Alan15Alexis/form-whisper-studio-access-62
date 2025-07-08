@@ -35,8 +35,6 @@ const FormFieldsList = ({
     fieldsData: formData.fields?.map(f => ({ id: f.id, type: f.type, label: f.label })) || [],
     collaboratorsCount: formData.collaborators?.length || 0,
     collaborators: formData.collaborators || [],
-    updateTrigger,
-    updateTriggerType: typeof updateTrigger,
     timestamp: new Date().toISOString()
   });
 
@@ -53,7 +51,6 @@ const FormFieldsList = ({
       userRole,
       formId: formData.id,
       currentFieldsCount: formData.fields?.length || 0,
-      updateTrigger,
       timestamp: new Date().toISOString()
     });
 
@@ -66,13 +63,8 @@ const FormFieldsList = ({
     addField(fieldType);
   };
   
-  // Ensure we have a valid fields array with unique keys
+  // Ensure we have a valid fields array with stable keys
   const fieldsArray = Array.isArray(formData.fields) ? formData.fields : [];
-  
-  // Create a stable key for each field that includes the updateTrigger
-  const getFieldKey = (field: FormField, index: number) => {
-    return `${field.id}-${updateTrigger}-${index}`;
-  };
   
   return (
     <div className="flex gap-6">
@@ -134,7 +126,7 @@ const FormFieldsList = ({
               {fieldsArray.length > 0 ? (
                 fieldsArray.map((field, index) => (
                   <Draggable 
-                    key={getFieldKey(field, index)} 
+                    key={field.id} 
                     draggableId={field.id} 
                     index={index} 
                     isDragDisabled={!canEdit}
@@ -151,6 +143,7 @@ const FormFieldsList = ({
                         )}
                       >
                         <FormFieldEditor
+                          key={field.id}
                           field={field}
                           onChange={(updatedField) => canEdit && updateField(field.id, updatedField)}
                           onDelete={() => canEdit && removeField(field.id)}
@@ -199,8 +192,6 @@ const FormFieldsList = ({
             Collaborators: {JSON.stringify(permissionSummary.debugInfo.collaborators)}<br />
             Current User: {permissionSummary.userEmail}<br />
             Fields Count: {fieldsArray.length}<br />
-            Update Trigger: {updateTrigger}<br />
-            Update Trigger Type: {typeof updateTrigger}<br />
             Fields: {JSON.stringify(fieldsArray.map(f => ({ id: f.id, type: f.type })))}
           </div>
         )}

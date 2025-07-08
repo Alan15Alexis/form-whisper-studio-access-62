@@ -26,7 +26,7 @@ export const useFormState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Form>(createInitialFormData());
-  const [updateTrigger, setUpdateTrigger] = useState(0); // Force re-render trigger
+  const [updateTrigger, setUpdateTrigger] = useState(0);
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
@@ -42,7 +42,7 @@ export const useFormState = () => {
         timestamp: new Date().toISOString()
       });
       
-      // Force complete state recreation and trigger re-render
+      // Create stable form data without unnecessary re-renders
       const newFormData = {
         ...updated,
         fields: updated.fields ? updated.fields.map(field => ({ ...field })) : [],
@@ -50,8 +50,14 @@ export const useFormState = () => {
         updatedAt: new Date().toISOString()
       };
       
-      // Trigger a re-render by updating the trigger
-      setUpdateTrigger(prev => prev + 1);
+      // Only trigger re-render when fields array actually changes
+      const fieldsChanged = 
+        prev.fields?.length !== newFormData.fields?.length ||
+        prev.fields?.some((field, index) => field.id !== newFormData.fields?.[index]?.id);
+      
+      if (fieldsChanged) {
+        setUpdateTrigger(prev => prev + 1);
+      }
       
       return newFormData;
     });
@@ -90,8 +96,15 @@ export const useFormState = () => {
         );
       }
       
-      // Always trigger update
-      setUpdateTrigger(prev => prev + 1);
+      // Only trigger update if data actually changed
+      const dataChanged = 
+        prevData.fields?.length !== newData.fields?.length ||
+        prevData.fields?.some((field, index) => field.id !== newData.fields?.[index]?.id) ||
+        prevData.collaborators?.length !== newData.collaborators?.length;
+        
+      if (dataChanged) {
+        setUpdateTrigger(prev => prev + 1);
+      }
       
       return newData;
     });
@@ -110,7 +123,7 @@ export const useFormState = () => {
     setFormData,
     updateFormData,
     syncFormData,
-    updateTrigger, // Export the trigger for components that need to react to updates
+    updateTrigger,
     allowedUserEmail,
     setAllowedUserEmail,
     allowedUserName,
