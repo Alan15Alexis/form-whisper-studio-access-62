@@ -1,11 +1,12 @@
 
 import { FormField, Form } from "@/types/form";
-import FormFieldEditor from "@/components/FormFieldEditor";
-import { Droppable, Draggable } from "react-beautiful-dnd";
-import { cn } from "@/lib/utils";
-import FieldsSidebar from "./FieldsSidebar";
 import { useFormPermissions } from "@/hooks/useFormPermissions";
-import { AlertCircle, Lock, Users } from "lucide-react";
+import FieldsSidebar from "./FieldsSidebar";
+import FormFieldsHeader from "./FormFieldsHeader";
+import FormFieldsContainer from "./FormFieldsContainer";
+import FormCollaboratorsCard from "./FormCollaboratorsCard";
+import FormScoringIndicator from "./FormScoringIndicator";
+import FormFieldsDebugInfo from "./FormFieldsDebugInfo";
 
 interface FormFieldsListProps {
   formData: Partial<Form>;
@@ -26,7 +27,7 @@ const FormFieldsList = ({
   addField,
   updateTrigger = 0
 }: FormFieldsListProps) => {
-  const { canEditForm, getUserRole, getPermissionSummary } = useFormPermissions();
+  const { canEditForm } = useFormPermissions();
   
   console.log("FormFieldsList - Rendering with:", {
     formId: formData.id,
@@ -38,17 +39,13 @@ const FormFieldsList = ({
     timestamp: new Date().toISOString()
   });
 
-  // Get permission details for debugging and UI
-  const permissionSummary = formData.id ? getPermissionSummary(formData.id) : null;
   const canEdit = canEditForm(formData as Form);
-  const userRole = getUserRole(formData as Form);
 
   // Enhanced addField wrapper with permission check and debugging
   const handleAddField = (fieldType: string) => {
     console.log("FormFieldsList - handleAddField called:", {
       fieldType,
       canEdit,
-      userRole,
       formId: formData.id,
       currentFieldsCount: formData.fields?.length || 0,
       timestamp: new Date().toISOString()
@@ -71,130 +68,34 @@ const FormFieldsList = ({
       {/* Sidebar with draggable field types */}
       <div className="w-80 flex-shrink-0 space-y-4">
         <FieldsSidebar onAddField={handleAddField} />
-
-        {/* Collaborators Card - Show collaborators assigned to the form */}
-        {formData.collaborators && formData.collaborators.length > 0 && (
-          <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="h-5 w-5 text-blue-600" />
-              <h3 className="font-medium text-blue-800">Colaboradores del Formulario</h3>
-            </div>
-            <div className="space-y-2">
-              {formData.collaborators.map((collaborator, index) => (
-                <div key={`${collaborator}-${index}`} className="flex items-center gap-2 p-2 bg-white rounded border">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">{collaborator}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-blue-600 mt-2">
-              {formData.collaborators.length} colaborador{formData.collaborators.length !== 1 ? 'es' : ''} asignado{formData.collaborators.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        )}
+        <FormCollaboratorsCard collaborators={formData.collaborators || []} />
       </div>
       
       {/* Main form fields area */}
       <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">
-            Campos del Formulario ({fieldsArray.length})
-          </h3>
-          {permissionSummary && (
-            <div className="text-sm text-gray-500">
-              Rol: <span className="font-medium capitalize">{userRole}</span>
-              {permissionSummary.debugInfo.collaboratorCount > 0 && (
-                <span className="ml-2">
-                  • {permissionSummary.debugInfo.collaboratorCount} colaborador(es)
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        <FormFieldsHeader 
+          fieldsCount={fieldsArray.length} 
+          formData={formData} 
+        />
         
-        <Droppable droppableId="FORM_FIELDS" isDropDisabled={!canEdit}>
-          {(provided, snapshot) => (
-            <div
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-              className={cn(
-                "space-y-4 min-h-[200px] p-4 rounded-lg border-2 border-dashed",
-                snapshot.isDraggingOver && canEdit ? "border-primary bg-primary/5" : "border-gray-300",
-                !canEdit && "bg-gray-50 opacity-75"
-              )}
-            >
-              {fieldsArray.length > 0 ? (
-                fieldsArray.map((field, index) => (
-                  <Draggable 
-                    key={field.id} 
-                    draggableId={field.id} 
-                    index={index} 
-                    isDragDisabled={!canEdit}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={cn(
-                          "transition-all duration-200",
-                          snapshot.isDragging && "rotate-2 scale-105 shadow-lg",
-                          !canEdit && "cursor-not-allowed"
-                        )}
-                      >
-                        <FormFieldEditor
-                          key={field.id}
-                          field={field}
-                          onChange={(updatedField) => canEdit && updateField(field.id, updatedField)}
-                          onDelete={() => canEdit && removeField(field.id)}
-                          isDragging={snapshot.isDragging}
-                          formShowTotalScore={formShowTotalScore}
-                          onToggleFormScoring={onToggleFormScoring}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-2">Haz clic en un campo de la barra lateral para añadirlo</p>
-                  <p className="text-sm text-gray-400">O arrastra campos aquí para reordenarlos</p>
-                  {!canEdit && (
-                    <div className="flex items-center justify-center gap-2 mt-3 p-2 bg-yellow-100 rounded">
-                      <Lock className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm text-yellow-700">Sin permisos de edición</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+        <FormFieldsContainer
+          formData={formData}
+          fieldsArray={fieldsArray}
+          updateField={updateField}
+          removeField={removeField}
+          formShowTotalScore={formShowTotalScore}
+          onToggleFormScoring={onToggleFormScoring}
+        />
         
-        {formShowTotalScore && fieldsArray.some(f => f.hasNumericValues) && (
-          <div className="mt-4 p-4 border rounded-lg bg-secondary/10">
-            <h3 className="font-medium">Puntuación Total</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Este formulario mostrará la puntuación total y los mensajes personalizados 
-              según las respuestas seleccionadas.
-            </p>
-          </div>
-        )}
+        <FormScoringIndicator 
+          formShowTotalScore={formShowTotalScore}
+          fieldsArray={fieldsArray}
+        />
 
-        {/* Permission debugging info (only in development) */}
-        {process.env.NODE_ENV === 'development' && permissionSummary && (
-          <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono">
-            <strong>Debug Info:</strong><br />
-            Can Edit: {canEdit ? 'Yes' : 'No'}<br />
-            Role: {userRole}<br />
-            Owner: {permissionSummary.debugInfo.formOwner}<br />
-            Collaborators: {JSON.stringify(permissionSummary.debugInfo.collaborators)}<br />
-            Current User: {permissionSummary.userEmail}<br />
-            Fields Count: {fieldsArray.length}<br />
-            Fields: {JSON.stringify(fieldsArray.map(f => ({ id: f.id, type: f.type })))}
-          </div>
-        )}
+        <FormFieldsDebugInfo 
+          formData={formData}
+          fieldsArray={fieldsArray}
+        />
       </div>
     </div>
   );
