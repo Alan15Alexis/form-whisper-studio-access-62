@@ -79,9 +79,10 @@ export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: Us
           handleUpdateForm(formData.id, updatedFormData)
             .then(() => {
               console.log("useFormFields - Field auto-saved successfully to database");
+              // Solo mostrar toast de guardado exitoso, no el de campo añadido
               toast({
-                title: 'Campo añadido',
-                description: `Se añadió un campo de tipo "${newField.label}" al formulario y se guardó en la base de datos.`,
+                title: 'Campo guardado',
+                description: 'El campo se añadió y guardó correctamente en la base de datos.',
               });
               resolve();
             })

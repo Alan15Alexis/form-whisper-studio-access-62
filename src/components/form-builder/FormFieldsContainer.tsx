@@ -1,10 +1,11 @@
 
 import { FormField, Form } from "@/types/form";
 import FormFieldEditor from "@/components/FormFieldEditor";
-import { Droppable, Draggable } from "react-beautiful-dnd";
+import { Draggable } from "react-beautiful-dnd";
 import { cn } from "@/lib/utils";
 import { useFormPermissions } from "@/hooks/useFormPermissions";
 import { Lock } from "lucide-react";
+import StrictModeDroppable from "./StrictModeDroppable";
 
 interface FormFieldsContainerProps {
   formData: Partial<Form>;
@@ -27,7 +28,7 @@ const FormFieldsContainer = ({
   const canEdit = canEditForm(formData as Form);
 
   return (
-    <Droppable droppableId="FORM_FIELDS" isDropDisabled={!canEdit}>
+    <StrictModeDroppable droppableId="FORM_FIELDS" isDropDisabled={!canEdit}>
       {(provided, snapshot) => (
         <div
           {...provided.droppableProps}
@@ -85,7 +86,7 @@ const FormFieldsContainer = ({
           {provided.placeholder}
         </div>
       )}
-    </Droppable>
+    </StrictModeDroppable>
   );
 };
 
