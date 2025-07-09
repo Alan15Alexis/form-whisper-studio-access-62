@@ -238,8 +238,8 @@ const SuperAdminDashboard = () => {
         <header className="border-b shadow-sm bg-white">
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center space-x-2">
-              <Shield className="h-8 w-8 text-red-600" />
-              <span className="text-xl font-bold text-red-600">Super Administrador</span>
+              <Shield className="h-8 w-8 text-blue-600" />
+              <span className="text-xl font-bold text-blue-600">Super Administrador</span>
             </div>
             <Button variant="ghost" onClick={handleLogout} className="flex items-center">
               <LogOut className="mr-2 h-4 w-4" />
@@ -269,8 +269,8 @@ const SuperAdminDashboard = () => {
       <header className="border-b shadow-sm bg-white">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <Shield className="h-8 w-8 text-red-600" />
-            <span className="text-xl font-bold text-red-600">Super Administrador</span>
+            <Shield className="h-8 w-8 text-blue-600" />
+            <span className="text-xl font-bold text-blue-600">Super Administrador</span>
           </div>
           <Button variant="ghost" onClick={handleLogout} className="flex items-center">
             <LogOut className="mr-2 h-4 w-4" />

@@ -94,7 +94,7 @@ const LoginAdmin = () => {
         <Card className="w-full max-w-md shadow-lg border-gray-200">
           <CardHeader className="space-y-1">
             <div className="flex items-center justify-center mb-4">
-              <Shield className="h-12 w-12 text-red-600" />
+              <Shield className="h-12 w-12 text-blue-600" />
             </div>
             <CardTitle className="text-2xl font-bold text-center">Super Administrador</CardTitle>
             <CardDescription className="text-center">
@@ -145,7 +145,7 @@ const LoginAdmin = () => {
 
               <Button 
                 type="submit" 
-                className="w-full bg-red-600 hover:bg-red-700" 
+                className="w-full bg-blue-600 hover:bg-blue-700" 
                 disabled={isLoading}
               >
                 {isLoading ? (
