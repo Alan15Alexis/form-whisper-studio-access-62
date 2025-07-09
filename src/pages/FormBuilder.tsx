@@ -4,6 +4,7 @@ import Layout from "@/components/Layout";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
 import FormBuilderHeader from "@/components/form-builder/FormBuilderHeader";
 import FormBuilderTabs from "@/components/form-builder/FormBuilderTabs";
+import { FormBuilderContainer } from "@/components/form-builder/FormBuilderContainer";
 import { DragDropContext } from "react-beautiful-dnd";
 
 const FormBuilder = () => {
@@ -15,7 +16,7 @@ const FormBuilder = () => {
     isSaving,
     isEditMode,
     isLoading,
-    updateTrigger, // Get the update trigger
+    updateTrigger,
     handleTitleChange,
     handleDescriptionChange,
     handlePrivateChange,
@@ -37,38 +38,8 @@ const FormBuilder = () => {
     handleCollaboratorsChange
   } = useFormBuilder(id);
 
-  // Show loading state while form data is being loaded
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="container py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-gray-500">
-              Cargando datos del formulario...
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  // Add a safety check to ensure formData is not undefined before rendering
-  if (!formData) {
-    return (
-      <Layout>
-        <div className="container py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-red-500">
-              Error: No se pudo cargar el formulario
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   // Clean up data to prevent serialization issues
-  const safeFormData = {
+  const safeFormData = formData ? {
     ...formData,
     showTotalScore: Boolean(formData.showTotalScore),
     scoreRanges: Array.isArray(formData.scoreRanges) ? formData.scoreRanges.map(range => ({
@@ -77,9 +48,9 @@ const FormBuilder = () => {
       message: String(range.message || '')
     })) : [],
     collaborators: Array.isArray(formData.collaborators) ? formData.collaborators : []
-  };
+  } : null;
 
-  console.log("FormBuilder - Safe formData:", {
+  console.log("FormBuilder - Safe formData:", safeFormData && {
     id: safeFormData.id,
     showTotalScore: safeFormData.showTotalScore,
     scoreRangesCount: safeFormData.scoreRanges.length,
@@ -90,41 +61,49 @@ const FormBuilder = () => {
 
   return (
     <Layout>
-      <div className="container py-8">
-        <FormBuilderHeader
-          isEditMode={isEditMode}
-          formTitle={safeFormData.title || ''}
-          isSaving={isSaving}
-          onSave={handleSubmit}
-        />
+      <FormBuilderContainer 
+        isLoading={isLoading}
+        hasError={!safeFormData && !isLoading}
+        errorMessage="No se pudo cargar el formulario"
+      >
+        {safeFormData && (
+          <>
+            <FormBuilderHeader
+              isEditMode={isEditMode}
+              formTitle={safeFormData.title || ''}
+              isSaving={isSaving}
+              onSave={handleSubmit}
+            />
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <FormBuilderTabs
-            formData={safeFormData}
-            onTitleChange={handleTitleChange}
-            onDescriptionChange={handleDescriptionChange}
-            onPrivateChange={handlePrivateChange}
-            onToggleFormScoring={handleToggleFormScoring}
-            onSaveScoreRanges={handleSaveScoreRanges}
-            updateField={updateField}
-            removeField={removeField}
-            allowedUserEmail={allowedUserEmail}
-            setAllowedUserEmail={setAllowedUserEmail}
-            addAllowedUser={addAllowedUser}
-            removeAllowedUser={removeAllowedUser}
-            onAllowViewOwnResponsesChange={handleAllowViewOwnResponsesChange}
-            onAllowEditOwnResponsesChange={handleAllowEditOwnResponsesChange}
-            onFormColorChange={handleFormColorChange}
-            onHttpConfigChange={handleHttpConfigChange}
-            addField={addField}
-            formId={id}
-            allowedUserName={allowedUserName}
-            setAllowedUserName={setAllowedUserName}
-            onCollaboratorsChange={handleCollaboratorsChange}
-            updateTrigger={updateTrigger} // Pass the update trigger
-          />
-        </DragDropContext>
-      </div>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <FormBuilderTabs
+                formData={safeFormData}
+                onTitleChange={handleTitleChange}
+                onDescriptionChange={handleDescriptionChange}
+                onPrivateChange={handlePrivateChange}
+                onToggleFormScoring={handleToggleFormScoring}
+                onSaveScoreRanges={handleSaveScoreRanges}
+                updateField={updateField}
+                removeField={removeField}
+                allowedUserEmail={allowedUserEmail}
+                setAllowedUserEmail={setAllowedUserEmail}
+                addAllowedUser={addAllowedUser}
+                removeAllowedUser={removeAllowedUser}
+                onAllowViewOwnResponsesChange={handleAllowViewOwnResponsesChange}
+                onAllowEditOwnResponsesChange={handleAllowEditOwnResponsesChange}
+                onFormColorChange={handleFormColorChange}
+                onHttpConfigChange={handleHttpConfigChange}
+                addField={addField}
+                formId={id}
+                allowedUserName={allowedUserName}
+                setAllowedUserName={setAllowedUserName}
+                onCollaboratorsChange={handleCollaboratorsChange}
+                updateTrigger={updateTrigger}
+              />
+            </DragDropContext>
+          </>
+        )}
+      </FormBuilderContainer>
     </Layout>
   );
 };

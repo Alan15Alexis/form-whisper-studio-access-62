@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { FormField } from '@/types/form';
 import { toast } from '@/hooks/toast';
 import { useFormPermissions } from '@/hooks/useFormPermissions';
+import { createNewField, validateScoringAfterFieldUpdate } from './fieldOperations';
 
 interface UseFormFieldsProps {
   formData: any;
@@ -36,13 +37,7 @@ export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: Us
       }
     }
     
-    const newField: FormField = {
-      id: crypto.randomUUID(),
-      type: fieldType as any,
-      label: getDefaultLabel(fieldType),
-      required: false,
-      options: getDefaultOptions(fieldType)
-    };
+    const newField = createNewField(fieldType);
 
     console.log("useFormFields - Creating new field:", {
       newField: {
@@ -86,7 +81,7 @@ export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: Us
               console.log("useFormFields - Field auto-saved successfully to database");
               toast({
                 title: 'Campo añadido',
-                description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario y se guardó en la base de datos.`,
+                description: `Se añadió un campo de tipo "${newField.label}" al formulario y se guardó en la base de datos.`,
               });
               resolve();
             })
@@ -103,7 +98,7 @@ export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: Us
           // Show success toast for local update only (when creating new form)
           toast({
             title: 'Campo añadido',
-            description: `Se añadió un campo de tipo "${getDefaultLabel(fieldType)}" al formulario.`,
+            description: `Se añadió un campo de tipo "${newField.label}" al formulario.`,
           });
           resolve();
         }
@@ -127,17 +122,9 @@ export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: Us
         };
         
         // Check if scoring should be disabled
-        const hasFieldsWithNumericValues = updatedFormData.fields.some(field => field.hasNumericValues === true);
-        
-        if (!hasFieldsWithNumericValues && updatedFormData.showTotalScore) {
-          console.log("useFormFields - Disabling scoring: no numeric fields");
-          updatedFormData.showTotalScore = false;
-          updatedFormData.scoreRanges = [];
-          
-          toast({
-            title: 'Puntuación deshabilitada',
-            description: 'Se deshabilitó porque ningún campo tiene valores numéricos.',
-          });
+        const scoringUpdate = validateScoringAfterFieldUpdate(updatedFormData.fields, updatedFormData.showTotalScore);
+        if (scoringUpdate) {
+          Object.assign(updatedFormData, scoringUpdate);
         }
         
         // Auto-save field updates to database
@@ -217,49 +204,3 @@ export const useFormFields = ({ formData, updateFormData, handleUpdateForm }: Us
     removeField
   };
 };
-
-function getDefaultLabel(fieldType: string): string {
-  const labels: Record<string, string> = {
-    'text': 'Texto corto',
-    'textarea': 'Texto largo',
-    'select': 'Selección desplegable',
-    'radio': 'Selección individual',
-    'checkbox': 'Selección múltiple',
-    'email': 'Correo electrónico',
-    'number': 'Número',
-    'date': 'Fecha',
-    'time': 'Hora',
-    'yesno': 'Sí / No',
-    'image-select': 'Selección de imagen',
-    'fullname': 'Nombre completo',
-    'address': 'Dirección',
-    'phone': 'Teléfono',
-    'image-upload': 'Subir imagen',
-    'file-upload': 'Subir archivo',
-    'drawing': 'Dibujo',
-    'matrix': 'Matriz de selección',
-    'opinion-scale': 'Escala de opinión',
-    'star-rating': 'Calificación de estrellas',
-    'ranking': 'Clasificación',
-    'timer': 'Temporizador',
-    'terms': 'Términos y condiciones',
-    'signature': 'Firma'
-  };
-  
-  return labels[fieldType] || `Campo ${fieldType}`;
-}
-
-function getDefaultOptions(fieldType: string) {
-  if (fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox') {
-    return [
-      { id: crypto.randomUUID(), label: 'Opción 1', value: 'option_1' },
-      { id: crypto.randomUUID(), label: 'Opción 2', value: 'option_2' }
-    ];
-  } else if (fieldType === 'yesno') {
-    return [
-      { id: 'yes', label: 'Sí', value: 'yes' },
-      { id: 'no', label: 'No', value: 'no' }
-    ];
-  }
-  return undefined;
-}
