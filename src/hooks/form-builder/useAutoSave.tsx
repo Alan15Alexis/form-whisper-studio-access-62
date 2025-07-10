@@ -8,21 +8,23 @@ interface UseAutoSaveProps {
 }
 
 export const useAutoSave = ({ formId, handleUpdateForm }: UseAutoSaveProps) => {
-  const saveToDatabase = useCallback(async (updatedFormData: any, successMessage?: string) => {
+  const saveToDatabase = useCallback(async (updatedFormData: any, successMessage?: string, showSuccessToast: boolean = false) => {
     if (!formId || !handleUpdateForm) {
       return Promise.resolve();
     }
 
     console.log("useAutoSave - Starting auto-save to database:", {
       formId,
-      totalFields: updatedFormData.fields?.length || 0
+      totalFields: updatedFormData.fields?.length || 0,
+      showSuccessToast
     });
 
     try {
       await handleUpdateForm(formId, updatedFormData);
       console.log("useAutoSave - Auto-saved successfully to database");
       
-      if (successMessage) {
+      // Only show success toast when explicitly requested
+      if (showSuccessToast && successMessage) {
         toast({
           title: 'Guardado exitoso',
           description: successMessage,

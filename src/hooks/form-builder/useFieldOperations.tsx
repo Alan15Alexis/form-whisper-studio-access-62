@@ -62,9 +62,11 @@ export const useFieldOperations = ({
         
         // Auto-save to database if we have a form ID and update function
         if (formData.id && handleUpdateForm) {
+          // Show toast only for field creation as it's a significant user action
           saveToDatabase(
             updatedFormData, 
-            'El campo se añadió y guardó correctamente en la base de datos.'
+            `Campo "${newField.label}" añadido correctamente.`,
+            true // Show success toast for field creation
           )
             .then(resolve)
             .catch(reject);
@@ -101,10 +103,10 @@ export const useFieldOperations = ({
           Object.assign(updatedFormData, scoringUpdate);
         }
         
-        // Auto-save field updates to database
+        // Auto-save field updates to database (silent save - no toast for field updates)
         if (formData.id && handleUpdateForm) {
           console.log("useFieldOperations - Auto-saving field update to database");
-          saveToDatabase(updatedFormData)
+          saveToDatabase(updatedFormData, undefined, false) // Silent save
             .then(resolve)
             .catch(reject);
         } else {
@@ -130,9 +132,11 @@ export const useFieldOperations = ({
         // Auto-save field removal to database
         if (formData.id && handleUpdateForm) {
           console.log("useFieldOperations - Auto-saving field removal to database");
+          // Show toast for field deletion as it's a significant user action
           saveToDatabase(
             updatedFormData,
-            'El campo ha sido eliminado del formulario y guardado en la base de datos.'
+            'Campo eliminado correctamente.',
+            true // Show success toast for field deletion
           )
             .then(resolve)
             .catch(reject);

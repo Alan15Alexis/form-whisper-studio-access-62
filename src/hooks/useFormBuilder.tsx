@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from '@/hooks/toast';
@@ -52,7 +53,11 @@ export const useFormBuilder = (id?: string) => {
     handlePrivateChange,
     handleToggleFormScoring,
     handleSaveScoreRanges
-  } = useFormProperties({ formData, updateFormData });
+  } = useFormProperties({ 
+    formData, 
+    updateFormData,
+    handleUpdateForm: formId ? handleUpdateForm : undefined // Pass handleUpdateForm for auto-save
+  });
 
   const { addAllowedUser, removeAllowedUser } = useUserManagement({
     formData,
@@ -116,6 +121,10 @@ export const useFormBuilder = (id?: string) => {
     try {
       if (isEditMode && formId) {
         await handleUpdateForm(formId, formData);
+        toast({
+          title: 'Formulario guardado',
+          description: 'Los cambios se han guardado correctamente.',
+        });
       } else {
         await handleCreateForm(formData);
       }

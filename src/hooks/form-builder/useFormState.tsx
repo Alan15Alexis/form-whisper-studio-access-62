@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Form } from '@/types/form';
 
 const createInitialFormData = (): Form => ({
@@ -30,6 +30,12 @@ export const useFormState = () => {
   const [allowedUserEmail, setAllowedUserEmail] = useState('');
   const [allowedUserName, setAllowedUserName] = useState('');
 
+  // Memoize field IDs to detect actual changes
+  const fieldIds = useMemo(() => 
+    formData.fields?.map(f => f.id).join(',') || '', 
+    [formData.fields]
+  );
+
   const updateFormData = useCallback((updater: (prev: Form) => Form) => {
     setFormData(prev => {
       const updated = updater(prev);
@@ -50,18 +56,20 @@ export const useFormState = () => {
         updatedAt: new Date().toISOString()
       };
       
-      // Only trigger re-render when fields array actually changes
-      const fieldsChanged = 
-        prev.fields?.length !== newFormData.fields?.length ||
-        prev.fields?.some((field, index) => field.id !== newFormData.fields?.[index]?.id);
+      // Check if fields structure actually changed
+      const newFieldIds = newFormData.fields?.map(f => f.id).join(',') || '';
+      const fieldsStructureChanged = fieldIds !== newFieldIds;
       
-      if (fieldsChanged) {
+      // Only trigger re-render when fields structure actually changes or significant data changes
+      if (fieldsStructureChanged || 
+          prev.showTotalScore !== newFormData.showTotalScore ||
+          prev.collaborators?.length !== newFormData.collaborators?.length) {
         setUpdateTrigger(prev => prev + 1);
       }
       
       return newFormData;
     });
-  }, []);
+  }, [fieldIds]);
 
   const syncFormData = useCallback((sourceForm: Form) => {
     console.log("useFormState - Syncing form data:", {
@@ -96,11 +104,14 @@ export const useFormState = () => {
         );
       }
       
-      // Only trigger update if data actually changed
+      // Check if sync actually brings changes
+      const prevFieldIds = prevData.fields?.map(f => f.id).join(',') || '';
+      const newFieldIds = newData.fields?.map(f => f.id).join(',') || '';
+      
       const dataChanged = 
-        prevData.fields?.length !== newData.fields?.length ||
-        prevData.fields?.some((field, index) => field.id !== newData.fields?.[index]?.id) ||
-        prevData.collaborators?.length !== newData.collaborators?.length;
+        prevFieldIds !== newFieldIds ||
+        prevData.collaborators?.length !== newData.collaborators?.length ||
+        prevData.showTotalScore !== newData.showTotalScore;
         
       if (dataChanged) {
         setUpdateTrigger(prev => prev + 1);
